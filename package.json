@@ -1,0 +1,47 @@
+{
+  "name": "founder-os",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FOUNDER OS — personal operating system and AI agent command center",
+  "scripts": {
+    "dev": "next dev -p 4100",
+    "build": "next build",
+    "start": "next start -p 4100",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts",
+    "brain:docs": "tsx scripts/generate-brain-docs.ts"
+  },
+  "dependencies": {
+    "@notionhq/client": "^5.22.0",
+    "@slack/web-api": "^7.16.0",
+    "@types/d3-force": "^3.0.10",
+    "ai": "^6.0.208",
+    "better-sqlite3": "^11.3.0",
+    "d3-force": "^3.0.0",
+    "imapflow": "^1.4.0",
+    "lucide-react": "^0.441.0",
+    "next": "^14.2.13",
+    "node-ical": "^0.26.1",
+    "nodemailer": "^9.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "simple-icons": "^16.27.0",
+    "stripe": "^22.2.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.5.5",
+    "@types/nodemailer": "^8.0.1",
+    "@types/react": "^18.3.8",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.12",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  }
+}

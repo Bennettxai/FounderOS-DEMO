@@ -1,0 +1,748 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Terminal direction — phosphor green command deck.
+   Raw vars exist for the brain viz SVG and color-mix effects;
+   the same values live in tailwind.config.ts as os.* classes. */
+/* Theme-independent design constants — every skin shares the same motion.
+   These must live on a bare :root: scoping them to one theme silently kills
+   every var(--ease) animation on the others. */
+:root {
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Dark (phosphor terminal). */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #050807;
+  --bg-2: #070b09;
+  --surface: #0a0f0c;
+  --surface-2: #0f1511;
+  --surface-3: #141c17;
+  --border: #18211b;
+  --border-strong: #243029;
+  --text: #e4efe6;
+  --text-2: #8fa295;
+  --text-3: #54665b;
+  --accent: #3df08c;
+  --accent-2: #35d97e;
+  --accent-ink: #03140a;
+  --accent-soft: rgba(61, 240, 140, 0.08);
+  --accent-line: rgba(61, 240, 140, 0.25);
+  --ok: #3df08c;
+  --warn: #ffc53d;
+  --err: #ff6259;
+  --glow: 0 0 24px rgba(61, 240, 140, 0.18);
+  --grid: rgba(228, 239, 230, 0.018);
+  --brain-1: #8b7cff;
+  --brain-2: #5ec9f8;
+  --brain-3: #4ade96;
+  /* Funnel space — neutral blues by relationship temperature (green/red come
+     from the semantic ok/err tokens). */
+  --funnel-hot: #5ec9f8;
+  --funnel-warm: #3f7fd9;
+  --funnel-cold: #2e527e;
+  /* Segment hues, one per stage cluster (knowledge-graph style); a node fades
+     from its segment hue toward --err as contact ages. Conversion stays green. */
+  --funnel-s0: #5ec9f8;
+  --funnel-s1: #8b7cff;
+  --funnel-s2: #e3d872;
+  --funnel-s3: #2dd4bf;
+  --funnel-s4: #3df08c;
+  /* Two more hues so the radial view's 7 acquisition wedges each get one. */
+  --funnel-s5: #f096c8;
+  --funnel-s6: #f0a05a;
+  /* tool nodes on the knowledge graph (radial + directory + legend);
+     follows brain-2 everywhere except themes that override it */
+  --kg-tool: var(--brain-2);
+}
+
+/* Light — the swap: warm tan/paper with a Claude clay-orange accent. Status
+   colors (ok/warn/err) stay semantic — ok keeps green so a live system still
+   reads "green" in both themes; only the accent shifts cool→warm. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ece3d2;
+  --bg-2: #f1ead9;
+  --surface: #f6f0e4;
+  --surface-2: #efe7d6;
+  --surface-3: #e7decb;
+  --border: #ddd3bf;
+  --border-strong: #c9bda4;
+  --text: #2b2722;
+  --text-2: #6f675a;
+  --text-3: #9a9082;
+  --accent: #c96442;
+  --accent-2: #a84e30;
+  --accent-ink: #fdf7ee;
+  --accent-soft: rgba(201, 100, 66, 0.12);
+  --accent-line: rgba(201, 100, 66, 0.32);
+  --ok: #0b8a52;
+  --warn: #b7791f;
+  --err: #c0392b;
+  --glow: 0 1px 3px rgba(43, 39, 34, 0.14);
+  --grid: rgba(43, 39, 34, 0.04);
+  --brain-1: #7a5cf0;
+  --brain-2: #2b8fd8;
+  --brain-3: #c96442;
+  --funnel-hot: #1d8fd6;
+  --funnel-warm: #2f5fa8;
+  --funnel-cold: #6b83a3;
+  --funnel-s0: #1d8fd6;
+  --funnel-s1: #7a5cf0;
+  --funnel-s2: #a98f1c;
+  --funnel-s3: #0f9c8a;
+  --funnel-s4: #0b8a52;
+  --funnel-s5: #c04a8a;
+  --funnel-s6: #b5651d;
+  /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
+  --kg-tool: var(--brain-2);
+}
+
+/* Midnight — the neural view's deep navy promoted to a full skin: signal
+   blue accent, cool surfaces, status colors stay semantic. */
+:root[data-theme='midnight'] {
+  color-scheme: dark;
+  --bg: #070d1f;
+  --bg-2: #091126;
+  --surface: #0c142e;
+  --surface-2: #111a3a;
+  --surface-3: #172246;
+  --border: #1a2547;
+  --border-strong: #283765;
+  --text: #e8ecf9;
+  --text-2: #93a3cf;
+  --text-3: #5b6d9e;
+  --accent: #5ec9f8;
+  --accent-2: #48b4e6;
+  --accent-ink: #041019;
+  --accent-soft: rgba(94, 201, 248, 0.09);
+  --accent-line: rgba(94, 201, 248, 0.28);
+  --ok: #4ade96;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --glow: 0 0 24px rgba(94, 201, 248, 0.16);
+  --grid: rgba(232, 236, 249, 0.02);
+  --brain-1: #8b7cff;
+  --brain-2: #5ec9f8;
+  --brain-3: #4ade96;
+  --funnel-hot: #5ec9f8;
+  --funnel-warm: #3f7fd9;
+  --funnel-cold: #2e527e;
+  --funnel-s0: #5ec9f8;
+  --funnel-s1: #8b7cff;
+  --funnel-s2: #e3d872;
+  --funnel-s3: #2dd4bf;
+  --funnel-s4: #4ade96;
+  --funnel-s5: #f096c8;
+  --funnel-s6: #f0a05a;
+  /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
+  --kg-tool: var(--brain-2);
+}
+
+/* Ember — coal dark with the vault's reddish orange carrying the identity. */
+:root[data-theme='ember'] {
+  color-scheme: dark;
+  --bg: #0c0806;
+  --bg-2: #100a08;
+  --surface: #140d0a;
+  --surface-2: #1a120d;
+  --surface-3: #221711;
+  --border: #241812;
+  --border-strong: #38251b;
+  --text: #f2e9e2;
+  --text-2: #b39a8c;
+  --text-3: #755f52;
+  --accent: #e35c35;
+  --accent-2: #c94e2c;
+  --accent-ink: #180a05;
+  --accent-soft: rgba(227, 92, 53, 0.1);
+  --accent-line: rgba(227, 92, 53, 0.3);
+  --ok: #4ade96;
+  --warn: #fbbf24;
+  --err: #ff6259;
+  --glow: 0 0 24px rgba(227, 92, 53, 0.2);
+  --grid: rgba(242, 233, 226, 0.02);
+  --brain-1: #e35c35;
+  --brain-2: #f0a05a;
+  --brain-3: #d98d62;
+  --funnel-hot: #e35c35;
+  --funnel-warm: #b25538;
+  --funnel-cold: #6e4636;
+  --funnel-s0: #e35c35;
+  --funnel-s1: #f0a05a;
+  --funnel-s2: #e3d872;
+  --funnel-s3: #2dd4bf;
+  --funnel-s4: #4ade96;
+  --funnel-s5: #f096c8;
+  --funnel-s6: #b5651d;
+  /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
+  --kg-tool: var(--brain-2);
+}
+
+/* Mono — MONOLITH SIGNAL (design handoff 2026-07-10): white/grey structure
+   on bare black, boxes flattened, zero glow/grid, and a strict traffic-light
+   rule — color only ever means status: green good · yellow degraded · red bad. */
+/* Mono (Monolith Signal) — the default identity; bare :root rides along so a
+   pre-script or no-JS load already renders Monolith. */
+:root,
+:root[data-theme='mono'] {
+  color-scheme: dark;
+  --bg: #0a0a0a;
+  --bg-2: #0a0a0a;
+  --surface: #0a0a0a; /* boxes are gone — surfaces flatten to bg */
+  --surface-2: #141414; /* hover fill (nav rows, list rows) */
+  --surface-3: #1c1c1c;
+  --border: #242424; /* structural rules */
+  --border-strong: #3a3a3a; /* hover brighten, kbd, chip borders */
+  --text: #f2f2f2;
+  --text-2: #9c9c9c;
+  --text-3: #5c5c5c;
+  /* Accent IS white — active nav, primary badges, inverted fills. */
+  --accent: #f2f2f2;
+  --accent-2: #d4d4d4;
+  --accent-ink: #0a0a0a;
+  --accent-soft: rgba(242, 242, 242, 0.06);
+  --accent-line: rgba(242, 242, 242, 0.25);
+  /* The only three colors in the system. */
+  --ok: #2fd36f;
+  --warn: #ffb000;
+  --err: #ff2d3f;
+  --glow: none; /* glows are dead */
+  --grid: transparent; /* background grid is dead */
+  --hairline: #1c1c1c;
+  /* Brain viz — neutralized; structure is grey, agents carry status. */
+  --brain-1: #f2f2f2;
+  --brain-2: #9c9c9c;
+  --brain-3: #5c5c5c;
+  /* Funnel temperature = status semantics; segments = grey ramp,
+     conversion (s4) is the one green. */
+  --funnel-hot: var(--ok);
+  --funnel-warm: var(--warn);
+  --funnel-cold: #5c5c5c;
+  --funnel-s0: #f2f2f2;
+  --funnel-s1: #bdbdbd;
+  --funnel-s2: #8a8a8a;
+  --funnel-s3: #6e6e6e;
+  --funnel-s4: var(--ok);
+  --funnel-s5: #575757;
+  --funnel-s6: #474747;
+  /* Alex's call (2026-07-10): tools burn red on the monolith radial. */
+  --kg-tool: #ff2d3f;
+}
+
+/* Daylight — a calm, comfortable light skin (not the stark Monolith): white
+   cards lifted off a soft grey canvas, a legible grey text hierarchy, gentle
+   grey rules, and real color allowed back into the viz so charts and status
+   read clearly on white. */
+:root[data-theme='mono-light'] {
+  color-scheme: light;
+  --bg: #f5f6f8; /* soft cool-grey canvas — no white glare */
+  --bg-2: #eef0f3;
+  --surface: #ffffff; /* cards are white, lifted off the canvas */
+  --surface-2: #eceef1; /* hover fill (nav rows, list rows) */
+  --surface-3: #e2e5ea;
+  --border: #d6dae0; /* soft grey rules — clear but not harsh */
+  --border-strong: #bcc2ca; /* hover / emphasis / chips / kbd */
+  --text: #1b1e23; /* primary — near-black, soft on the eyes */
+  --text-2: #4c525b; /* muted — clearly legible mid grey */
+  --text-3: #737a84; /* dim — still readable, no wash-out */
+  /* Accent is a dark slate: active nav, primary badges, inverted fills. */
+  --accent: #1b1e23;
+  --accent-2: #363b42;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(27, 30, 35, 0.06);
+  --accent-line: rgba(27, 30, 35, 0.16);
+  /* Status stays vivid so it pops against the neutral greys. */
+  --ok: #17924e;
+  --warn: #b7791f;
+  --err: #d92d20;
+  --glow: 0 1px 2px rgba(27, 30, 35, 0.06); /* a whisper of lift on cards */
+  --grid: transparent;
+  --hairline: #e7e9ed; /* soft row dividers */
+  /* Viz carries real color here (not the Monolith grey rule) so graphs read. */
+  --brain-1: #6d5cf0;
+  --brain-2: #2b8fd8;
+  --brain-3: #17924e;
+  --funnel-hot: #d92d20;
+  --funnel-warm: #b7791f;
+  --funnel-cold: #6b83a3;
+  --funnel-s0: #2b8fd8;
+  --funnel-s1: #6d5cf0;
+  --funnel-s2: #b7791f;
+  --funnel-s3: #0f9c8a;
+  --funnel-s4: #17924e;
+  --funnel-s5: #c04a8a;
+  --funnel-s6: #7a828c;
+  --kg-tool: #d92d20;
+}
+
+/* Row-divider hairlines for every theme (mono sets its own above, and the
+   bare :root default already carries it). */
+:root[data-theme='dark'] {
+  --hairline: #141b16;
+}
+:root[data-theme='light'] {
+  --hairline: #e4dbc9;
+}
+:root[data-theme='midnight'] {
+  --hairline: #131c3a;
+}
+:root[data-theme='ember'] {
+  --hairline: #1d130e;
+}
+
+body {
+  @apply bg-os-bg font-sans text-os-text antialiased;
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 48px),
+    repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 48px);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 0;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-3);
+}
+
+/* Terminal cards answer the mouse with a border brighten only — no lift. */
+.hoverable {
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.hoverable:hover {
+  border-color: var(--border-strong);
+}
+.hoverable:active {
+  transition-duration: 0.06s;
+}
+
+/* Emblem spin/glow is dead — machinery, not mascots (Monolith lettering
+   pass; applies to every colorway). */
+.emblem {
+  transition: none;
+}
+.group:hover .emblem,
+.hoverable:hover .emblem {
+  transform: none;
+  filter: none;
+}
+
+.org-connector {
+  position: relative;
+}
+.org-connector::before {
+  content: '';
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  width: 1px;
+  height: 16px;
+  background: var(--border-strong);
+}
+
+/* ---------------- status dots (LED squares) ---------------- */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  flex-shrink: 0;
+  position: relative;
+  display: inline-block;
+}
+.dot.ok {
+  background: var(--ok);
+}
+/* Pulse ring replaced by an LED blink — steps(), not ease. */
+.dot.ok.pulse {
+  animation: led-blink 2.6s steps(1) infinite;
+}
+.dot.warn {
+  background: var(--warn);
+}
+.dot.err {
+  background: var(--err);
+}
+.dot.off {
+  background: transparent;
+  border: 1px solid var(--text-3);
+}
+@keyframes led-blink {
+  0%, 70%, 100% { opacity: 1; }
+  85% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dot.ok.pulse {
+    animation: none;
+  }
+}
+
+/* ---------------- terminal page furniture ---------------- */
+/* Eyebrow reads as a code comment. */
+.page-eyebrow::before {
+  content: '//';
+  font-weight: 700;
+}
+.caret-blink::after {
+  content: '▌';
+  margin-left: 4px;
+  animation: blink 1.1s steps(1) infinite;
+  color: var(--accent);
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret-blink::after {
+    animation: none;
+  }
+}
+
+/* View entrance — transform-only so content is never hidden if
+   animations are throttled or reduced-motion is on. */
+.view {
+  animation: view-in 0.24s var(--ease);
+}
+@keyframes view-in {
+  from {
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .view {
+    animation: none;
+  }
+}
+
+/* Pop-out overlays (G-Brain doctor/search): the scrim fades in and the
+   panel glides up into place — opening must never read as a blank snap. */
+.overlay-in {
+  animation: overlay-in 0.22s ease-out both;
+}
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+.panel-in {
+  animation: panel-in 0.3s var(--ease) 0.05s both;
+}
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlay-in,
+  .panel-in {
+    animation: none;
+  }
+}
+
+/* Finance bars: the month's number rises out of the hovered bar. */
+@keyframes fin-tip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+.fin-tip {
+  animation: fin-tip-in 0.16s var(--ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fin-tip {
+    animation: none;
+  }
+}
+
+/* ---------------- Funnel journey space ---------------- */
+/* Fullscreen: the space becomes the whole frame — built to be filmed. */
+/* Flow view: paths still in motion march toward the right edge. */
+.funnel-live {
+  stroke-dasharray: 7 5;
+  animation: funnel-dash 0.9s linear infinite;
+}
+@keyframes funnel-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+/* Expanding halo behind each client node — the "alive" heartbeat. */
+.funnel-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: funnel-halo 2.6s ease-out infinite;
+}
+@keyframes funnel-halo {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.65;
+  }
+  70%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .funnel-live {
+    animation: none;
+  }
+  .funnel-halo {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+.funnel-space-root:fullscreen {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--bg);
+  padding: 3vh 4vw;
+}
+
+/* Expanding halo behind a node — the "alive" heartbeat (hot leads, stalled
+   reds, and freshly-converted greens each set their own duration inline). */
+.funnel-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: funnel-halo 2.6s ease-out infinite;
+}
+@keyframes funnel-halo {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.65;
+  }
+  70%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+/* Hub rings breathe slowly so the sections read as living machinery. */
+.funnel-hub-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: funnel-hub 5.5s ease-in-out infinite;
+}
+@keyframes funnel-hub {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .funnel-halo,
+  .funnel-hub-ring {
+    animation: none;
+  }
+  .funnel-halo {
+    opacity: 0;
+  }
+}
+
+/* ---------------- Conductor living core ----------------
+   The super-agent's mark on the dock, the /agents chat, and the /org "AI Head"
+   card. Idle it is still (machinery, not mascots — see .emblem above). While an
+   agent is being chatted with (.thinking) an accent arc orbits the ring, the
+   core breathes, and a heartbeat halo pulses out. All motion is scoped to
+   .thinking and disabled under prefers-reduced-motion. */
+.conductor-emblem {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+}
+.conductor-emblem > * {
+  grid-area: 1 / 1;
+}
+.conductor-core {
+  position: relative;
+  z-index: 2;
+  width: calc(100% - 7px);
+  height: calc(100% - 7px);
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 50% 40%,
+    color-mix(in oklab, var(--text) 12%, var(--surface)),
+    var(--bg) 74%
+  );
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.conductor-ring {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--border-strong) 80%, transparent);
+}
+.conductor-sweep {
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  /* a comet: faint tail sharpening to a bright head, then gone */
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in oklab, var(--accent) 35%, transparent) 34deg,
+    var(--accent) 82deg,
+    transparent 104deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  filter: drop-shadow(0 0 3px color-mix(in oklab, var(--accent) 55%, transparent));
+  opacity: 0;
+}
+.conductor-halo {
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--accent) 32%, transparent),
+    transparent 68%
+  );
+  opacity: 0;
+}
+.conductor-emblem.thinking .conductor-sweep {
+  opacity: 1;
+  animation: conductor-sweep 1.1s linear infinite;
+}
+.conductor-emblem.thinking .conductor-halo {
+  animation: conductor-halo 1.9s ease-out infinite;
+}
+.conductor-emblem.thinking .conductor-core {
+  animation: conductor-breathe 1.9s ease-in-out infinite;
+}
+@keyframes conductor-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes conductor-halo {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.62;
+  }
+  70%,
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+@keyframes conductor-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 65%, var(--border-strong));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .conductor-emblem.thinking .conductor-sweep {
+    animation: none;
+    opacity: 0.55;
+  }
+  .conductor-emblem.thinking .conductor-halo {
+    animation: none;
+    opacity: 0;
+  }
+  .conductor-emblem.thinking .conductor-core {
+    animation: none;
+  }
+}
+
+/* ---------------- G-Brain viz ---------------- */
+.brain-stage {
+  background:
+    radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--brain-1) 10%, transparent), transparent 65%),
+    var(--surface);
+}
+.brain-ring {
+  transform-origin: 260px 260px;
+}
+.brain-ring.r1 {
+  animation: brain-spin 80s linear infinite;
+}
+.brain-ring.r2 {
+  animation: brain-spin 140s linear infinite reverse;
+}
+.brain-ring.r3 {
+  animation: brain-spin 220s linear infinite;
+}
+.brain-sweep {
+  transform-origin: 260px 260px;
+  animation: brain-spin 9s linear infinite;
+}
+@keyframes brain-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.brain-core-pulse {
+  transform-origin: 260px 260px;
+  animation: brain-core 3.2s ease-in-out infinite;
+}
+@keyframes brain-core {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-ring,
+  .brain-sweep,
+  .brain-core-pulse {
+    animation: none;
+  }
+}
+
+/* The content column glides aside for the Conductor dock (same ease as the
+   panel slide); while the panel is being drag-resized both move 1:1. */
+.os-shell {
+  transition: margin-right 420ms var(--ease);
+}
+html.conductor-dragging .os-shell {
+  transition: none;
+}
