@@ -4,7 +4,7 @@
   "private": true,
   "description": "FOUNDER OS — personal operating system and AI agent command center",
   "scripts": {
-    "dev": "next dev -p 4100",
+    "dev": "next dev -H 127.0.0.1 -p 4100",
     "build": "next build",
     "start": "next start -p 4100",
     "test": "vitest run",

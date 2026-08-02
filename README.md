@@ -203,14 +203,48 @@ so they never touch the seeded dev DB.
 
 ---
 
+## Access control
+
+Founder OS is a **single-operator** system. There are no user accounts and the
+data model has no tenancy, so access control is one shared token in front of
+everything rather than per-user auth.
+
+- **Locally, nothing changes.** With `FOUNDER_OS_ACCESS_TOKEN` unset, a dev
+  server behaves exactly as before, and `npm run dev` binds to `127.0.0.1` so it
+  is not reachable from the rest of the network.
+- **Deployed, a token is required.** A production server with no token set
+  refuses to serve and explains why. This app can read your inboxes, send mail
+  as you, and store a Stripe key, so a missing secret fails loudly rather than
+  serving all of that to anyone with the URL.
+
+Set it, then open the app and enter the same value once:
+
+```bash
+openssl rand -hex 32     # put the result in FOUNDER_OS_ACCESS_TOKEN
+```
+
+Scripts and agents can present it as a header instead:
+
+```bash
+curl -H "Authorization: Bearer $FOUNDER_OS_ACCESS_TOKEN" https://your-app/api/connections
+```
+
+Inbound webhooks (`/api/webhooks/…`) stay reachable without it, since third
+parties cannot present your token. They carry their own secrets, so set
+`MANYCHAT_WEBHOOK_SECRET` if you use the ManyChat ingest.
+
+---
+
 ## Deploying to Railway
 
 1. Create a Railway project and point it at this repo.
 2. Set the build command to `npm run build` and the start command to `npm start`
    (the app serves on the `PORT` Railway provides).
-3. Add a database service and any connector credentials as environment variables
+3. **Set `FOUNDER_OS_ACCESS_TOKEN`** to a fresh random value (see **Access
+   control** above). The app will not serve without it.
+4. Add a database service and any connector credentials as environment variables
    in the Railway dashboard.
-4. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
+5. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
    services and are referenced by URL from the app's environment.
 
 ---
