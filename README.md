@@ -92,12 +92,10 @@ it that way.
 
 ---
 
-## Knowledge layer: G-Brain and Optimal Engine
+## Knowledge layer: G-Brain
 
-The `/brain` graph you see in the demo is the visible surface of a two-part
+The `/brain` graph you see in the demo is the visible surface of G-Brain, the
 knowledge system that powers the production build.
-
-### G-Brain, the knowledge base
 
 Plain **Markdown files are the source of truth**. They're chunked and embedded
 into a vector store, so one store answers both **keyword** and **semantic**
@@ -106,25 +104,8 @@ unreachable, retrieval falls back to a local grep over the markdown: fewer
 smarts, zero downtime. The demo ships a stub provider; the production provider
 reads a live markdown store and a vector index.
 
-### Optimal Engine, the governed memory runtime
-
-Where G-Brain stores documents, **Optimal Engine governs what the OS actually
-"knows."** It's the system of record for memory, organized as a
-**Tenant, Organization, Workspace, Node** topology, with a disciplined truth
-lifecycle:
-
-```
-Source -> Signal -> Claim -> Fact -> Memory
-```
-
-Raw sources produce signals; signals become claims; claims are reviewed and
-promoted into verified facts; facts distill into durable memories the agents
-draw on. Agents may write sources, signals, and pending claims, but **facts are
-promotion-gated**: nothing becomes "known" without passing review. That keeps
-the OS's memory trustworthy as it scales across workspaces.
-
-Together: **G-Brain is the library; Optimal Engine is the librarian and the
-system of record.** The agents query both before they act.
+Every agent queries that same store before it acts, so the OS carries one shared
+memory instead of one per agent.
 
 ---
 
@@ -135,10 +116,10 @@ keeps the same repo-layer contract and swaps in real backends:
 
 - **Hosting: [Railway](https://railway.app).** The Next.js app deploys as a
   Railway service; the seeded SQLite store is replaced by a managed database,
-  and the knowledge services (G-Brain retrieval and Optimal Engine) run as
-  companion services alongside it. Env vars are managed per environment.
-- **Knowledge: G-Brain and Optimal Engine** become the live knowledge and memory
-  layer behind `/brain` and every agent.
+  and G-Brain retrieval runs as a companion service alongside it. Env vars are
+  managed per environment.
+- **Knowledge: G-Brain** becomes the live knowledge and memory layer behind
+  `/brain` and every agent.
 - **Connectors go live.** Because each connector already reports honest status,
   wiring a real source (IMAP inboxes, Slack, Stripe, Notion, a CRM, calendar,
   social) is just supplying credentials. The UI immediately reflects real state
@@ -244,8 +225,8 @@ parties cannot present your token. They carry their own secrets, so set
    control** above). The app will not serve without it.
 4. Add a database service and any connector credentials as environment variables
    in the Railway dashboard.
-5. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
-   services and are referenced by URL from the app's environment.
+5. Deploy. G-Brain runs as a companion service and is referenced by URL from the
+   app's environment.
 
 ---
 
