@@ -1,7 +1,9 @@
 import type { FounderDb } from '@/lib/db';
 import { PERSONAS } from '@/lib/personas-seed';
+import { runCostUsd } from '@/lib/agent-costs';
 import type {
   Agent,
+  AgentRun,
   AgentTask,
   Department,
   Domain,
@@ -1581,6 +1583,77 @@ const skills: Omit<Skill, 'markdown'>[] = [
   { id: 'skill-attribution', name: 'Revenue attribution', category: 'Ops', description: 'Ties content and calls to closed revenue via Trakyo.', ownerAgentId: null, status: 'planned', tools: ['trakyo', 'ghl'], order: 11 },
 ];
 
+// A deterministic xorshift stream seeded from a string (no Math.random), so the
+// seeded run history is stable across re-seeds.
+function seedRand(str: string): () => number {
+  let h = 2166136261 >>> 0;
+  for (const c of str) {
+    h ^= c.charCodeAt(0);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return () => {
+    h ^= h << 13; h >>>= 0;
+    h ^= h >> 17;
+    h ^= h << 5; h >>>= 0;
+    return (h >>> 0) / 4294967295;
+  };
+}
+
+// Leads/specialists run on the bigger model, workers on the cheaper one, so the
+// cost analysis has real spread. About a third of agents are pure-connector and
+// carry no token cost.
+const RUN_MODEL_BY_TIER: Record<string, string> = {
+  lead: 'claude-sonnet-5',
+  specialist: 'claude-sonnet-5',
+  worker: 'claude-haiku-4.5',
+};
+
+/**
+ * Seeded agent-run history so /agents shows live runtimes and estimated spend
+ * out of the box (larp-first). Stable ids (`seed-run-*`) keep re-seeds
+ * idempotent and let the operator's own real runs coexist. Real token usage
+ * flows in through lib/agents/runtime as agents actually run.
+ */
+function seededAgentRuns(agentList: Agent[]): AgentRun[] {
+  const now = Date.now();
+  const runs: AgentRun[] = [];
+  for (const a of agentList) {
+    const rnd = seedRand(`runs:${a.id}`);
+    const count = 5 + Math.floor(rnd() * 10); // 5..14 runs each
+    const usesModel = rnd() > 0.3; // ~2/3 of agents bill an LLM
+    const model = RUN_MODEL_BY_TIER[a.tier] ?? 'claude-sonnet-5';
+    for (let i = 0; i < count; i++) {
+      const startedAt = new Date(now - rnd() * 20 * 86_400_000).toISOString(); // within ~3 weeks
+      const durMs = 400 + Math.floor(rnd() * 7000);
+      const finishedAt = new Date(Date.parse(startedAt) + durMs).toISOString();
+      const ok = rnd() > 0.08;
+      let tokensIn: number | null = null;
+      let tokensOut: number | null = null;
+      let runModel: string | null = null;
+      let costUsd: number | null = null;
+      if (usesModel) {
+        tokensIn = 800 + Math.floor(rnd() * 14000);
+        tokensOut = 200 + Math.floor(rnd() * 4000);
+        runModel = model;
+        costUsd = Math.round(runCostUsd(tokensIn, tokensOut, runModel) * 1e6) / 1e6;
+      }
+      runs.push({
+        id: `seed-run-${a.id}-${i}`,
+        agentId: a.id,
+        startedAt,
+        finishedAt,
+        ok,
+        summary: ok ? `${a.name} completed a run.` : `${a.name} run failed and was retried.`,
+        model: runModel,
+        tokensIn,
+        tokensOut,
+        costUsd,
+      });
+    }
+  }
+  return runs;
+}
+
 export function seedDatabase(db: FounderDb): void {
   // INSERT OR REPLACE in every repo makes re-seeding idempotent by id.
   for (const d of departments) db.departments.insert(d);
@@ -1598,6 +1671,9 @@ export function seedDatabase(db: FounderDb): void {
   for (const s of skills) db.skills.insert({ ...s, markdown: skillDoc(s) });
   db.skills.deleteWhereIdNotIn(skills.map((s) => s.id));
   for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  // Seeded run history (idempotent by id) so /agents shows runtimes + spend; the
+  // operator's own real runs (uuid ids) coexist and add real token cost over time.
+  for (const r of seededAgentRuns(agents)) db.agentRuns.insert(r);
   for (const t of tools) db.tools.insert(t);
   for (const r of roadmap) db.roadmap.insert(r);
   for (const m of metrics) db.metrics.insert(m);

@@ -1,9 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import type { FounderDb } from '@/lib/db';
 import type { LlmToolSpec } from '@/lib/connectors/llm';
+import { runCostUsd } from '@/lib/agent-costs';
 import type { AgentRun, Broadcast } from '@/lib/schemas';
 
-export type AgentRunResult = { ok: boolean; summary: string; data?: unknown };
+export type AgentRunResult = {
+  ok: boolean;
+  summary: string;
+  data?: unknown;
+  /** LLM usage, when the run called the model. Priced onto the stored run. */
+  model?: string;
+  tokensIn?: number;
+  tokensOut?: number;
+};
 
 export type RuntimeAgent = {
   id: string;
@@ -43,6 +52,7 @@ export function createRuntime(db: FounderDb, agents: RuntimeAgent[]) {
       } catch (err) {
         result = { ok: false, summary: err instanceof Error ? err.message : String(err) };
       }
+      const priced = result.tokensIn != null || result.tokensOut != null;
       const run: AgentRun = {
         id: randomUUID(),
         agentId: id,
@@ -50,6 +60,10 @@ export function createRuntime(db: FounderDb, agents: RuntimeAgent[]) {
         finishedAt: new Date().toISOString(),
         ok: result.ok,
         summary: result.summary,
+        model: result.model ?? null,
+        tokensIn: result.tokensIn ?? null,
+        tokensOut: result.tokensOut ?? null,
+        costUsd: priced ? runCostUsd(result.tokensIn ?? 0, result.tokensOut ?? 0, result.model) : null,
       };
       db.agentRuns.insert(run);
       return run;

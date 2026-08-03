@@ -132,6 +132,12 @@ export const AgentRunSchema = z.object({
   finishedAt: z.string().min(1),
   ok: z.boolean(),
   summary: z.string(),
+  // LLM cost tracking (real-ready). Null on connector-only runs and legacy rows;
+  // populated from the gateway's token usage when an agent calls the model.
+  model: z.string().nullable().optional(),
+  tokensIn: z.number().nullable().optional(),
+  tokensOut: z.number().nullable().optional(),
+  costUsd: z.number().nullable().optional(),
 });
 
 export const BroadcastReplySchema = z.object({

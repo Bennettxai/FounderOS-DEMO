@@ -338,6 +338,18 @@ function migrateSkillsTable(db: InstanceType<typeof Database>): void {
   }
 }
 
+// agent_runs gained LLM cost columns after first ship: the model used and the
+// token usage + estimated cost, so /agents can show runtime and spend.
+function migrateAgentRunsTable(db: InstanceType<typeof Database>): void {
+  const columns = new Set(
+    (db.pragma('table_info(agent_runs)') as { name: string }[]).map((c) => c.name),
+  );
+  if (!columns.has('model')) db.exec('ALTER TABLE agent_runs ADD COLUMN model TEXT');
+  if (!columns.has('tokens_in')) db.exec('ALTER TABLE agent_runs ADD COLUMN tokens_in INTEGER');
+  if (!columns.has('tokens_out')) db.exec('ALTER TABLE agent_runs ADD COLUMN tokens_out INTEGER');
+  if (!columns.has('cost_usd')) db.exec('ALTER TABLE agent_runs ADD COLUMN cost_usd REAL');
+}
+
 type AgentRow = {
   id: string;
   department_id: string;
@@ -375,6 +387,7 @@ export function openDb(path: string) {
   migrateAgentsTable(db);
   migrateFunnelContactsTable(db);
   migrateSkillsTable(db);
+  migrateAgentRunsTable(db);
 
   const departments = {
     all(): Department[] {
@@ -560,6 +573,10 @@ export function openDb(path: string) {
       finishedAt: r.finished_at,
       ok: Boolean(r.ok),
       summary: r.summary,
+      model: r.model ?? null,
+      tokensIn: r.tokens_in ?? null,
+      tokensOut: r.tokens_out ?? null,
+      costUsd: r.cost_usd ?? null,
     });
 
   const agentRuns = {
@@ -577,8 +594,11 @@ export function openDb(path: string) {
     },
     insert(run: AgentRun): void {
       db.prepare(
-        'INSERT OR REPLACE INTO agent_runs (id, agent_id, started_at, finished_at, ok, summary) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(run.id, run.agentId, run.startedAt, run.finishedAt, run.ok ? 1 : 0, run.summary);
+        'INSERT OR REPLACE INTO agent_runs (id, agent_id, started_at, finished_at, ok, summary, model, tokens_in, tokens_out, cost_usd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(
+        run.id, run.agentId, run.startedAt, run.finishedAt, run.ok ? 1 : 0, run.summary,
+        run.model ?? null, run.tokensIn ?? null, run.tokensOut ?? null, run.costUsd ?? null,
+      );
     },
   };
 

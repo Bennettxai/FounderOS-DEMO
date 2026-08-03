@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { AgentChat } from '@/components/AgentChat';
 import { ConductorChat } from '@/components/ConductorChat';
 import { AgentActivityFeed } from '@/components/AgentActivityFeed';
+import { AgentCostAnalysis } from '@/components/AgentCostAnalysis';
 import { AgentWorkPanel } from '@/components/AgentWorkPanel';
 import { recentActivity } from '@/lib/agents/activity';
 import { SparkIcon } from '@/components/SparkIcon';
@@ -113,7 +114,8 @@ export default function AgentsPage() {
   const agentsById = new Map(agents.map((a) => [a.id, a]));
   const agentNames = Object.fromEntries(agents.map((a) => [a.id, a.name]));
   const activity = recentActivity(db, 40);
-  const totalRuns = db.agentRuns.recent(1000).length;
+  const runs = db.agentRuns.recent(1000);
+  const totalRuns = runs.length;
   const allTasks = db.agentTasks.all();
   const allCrons = db.agentCrons.all();
   const openTasks = allTasks.filter((t) => t.status !== 'done').length;
@@ -146,6 +148,10 @@ export default function AgentsPage() {
 
       <div className="mb-8">
         <AgentActivityFeed initialEvents={activity} agentNames={agentNames} />
+      </div>
+
+      <div className="mb-8">
+        <AgentCostAnalysis runs={runs} agents={agents} />
       </div>
 
       <div className="space-y-8">

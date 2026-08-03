@@ -30,7 +30,12 @@ export type LlmChatRequest = {
   model?: string;
 };
 
-export type LlmChatResult = { text: string; toolCalls: LlmToolCall[] };
+export type LlmChatResult = {
+  text: string;
+  toolCalls: LlmToolCall[];
+  /** Token usage from the gateway, for run cost accounting. Absent on the stub. */
+  usage?: { inputTokens: number; outputTokens: number };
+};
 
 export interface LlmProvider {
   name: string;
@@ -110,7 +115,14 @@ export function createGatewayProvider(model: string = DEFAULT_MODEL): LlmProvide
           toolCalls.push({ name: c.toolName, args: c.input, result: hit?.output });
         }
       }
-      return { text: result.text, toolCalls };
+      return {
+        text: result.text,
+        toolCalls,
+        usage: {
+          inputTokens: result.usage?.inputTokens ?? 0,
+          outputTokens: result.usage?.outputTokens ?? 0,
+        },
+      };
     },
   };
 }
