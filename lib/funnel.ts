@@ -37,102 +37,33 @@ export const CHANNEL_GLYPHS: Record<string, string> = {
   crm: '◈',
 };
 
-/** Quiet for more than this many days before converting → the node runs red. */
-export const STALL_DAYS = 7;
-/** Quiet past this → the lead decays out of the space into the archive tab. */
-export const DECAY_DAYS = 90;
-/** Nodes stay their neutral segment color until here, then fade toward red.
- * Three quiet weeks = a lead visibly starting to die (Alex's live pipeline
- * clusters at 21–30d quiet, so the gradient actually shows). */
-export const DECAY_FADE_START = 21;
-
-/**
- * Continuous decay for the space's fade-to-red: 0 (neutral) through
- * DECAY_FADE_START, ramping linearly to 1 at DECAY_DAYS — the node visibly
- * dies before it archives. Converted never decays; advancing a stage resets
- * the quiet clock, so movement is what keeps a lead vivid.
+/* ---------------------------------------------------------------- decay ----
+ * The staleness math moved to lib/funnel-decay.ts — same functions, same
+ * numbers, no dependencies. It is re-exported from here so every existing
+ * '@/lib/funnel' import (page, API route, FunnelSpace, FunnelRadial,
+ * FunnelNodeCard, screen-context, funnel-radial) keeps working untouched.
+ *
+ * What stays in this file is everything that needs the schema: the stage
+ * table, the channel glyphs, and the two view models built on top of the
+ * decay numbers.
  */
-export function decayFactor(daysSinceLastTouch: number, status: FunnelStage): number {
-  if (status === 'converted') return 0;
-  return Math.min(1, Math.max(0, (daysSinceLastTouch - DECAY_FADE_START) / (DECAY_DAYS - DECAY_FADE_START)));
-}
+export {
+  ATTENTION_CAP,
+  DECAY_DAYS,
+  DECAY_FADE_START,
+  PUSH_LIKELIHOOD,
+  STALL_DAYS,
+  attentionQueue,
+  decayFactor,
+  decayView,
+  journeyMeta,
+  splitFunnelJourneys,
+  DEFAULT_DECAY_CONFIG,
+  type DecayConfig,
+  type JourneyState,
+} from '@/lib/funnel-decay';
 
-export type JourneyState = 'converted' | 'stalled' | 'active' | 'decayed';
-
-/**
- * Liveness of one journey at `now`: how long since Alex last touched them,
- * and the color-state the space renders — green once converted, red when a
- * pre-conversion lead has sat quiet past STALL_DAYS, blue otherwise, and
- * `decayed` (out of the space, into the archive) past DECAY_DAYS.
- * Incoming leads (still at first_touch) never stall: they render blue-ish
- * until they're engaged — but even they decay after 90 quiet days.
- */
-export function journeyMeta(j: FunnelJourney, now: Date): { daysSinceLastTouch: number; state: JourneyState } {
-  const lastAt = j.touches[j.touches.length - 1]?.at ?? j.createdAt;
-  const days = Math.max(0, Math.floor((now.getTime() - new Date(`${lastAt}T00:00:00Z`).getTime()) / 86_400_000));
-  const canStall = j.status !== 'converted' && j.status !== 'first_touch';
-  const state: JourneyState =
-    j.status === 'converted'
-      ? 'converted'
-      : days > DECAY_DAYS
-        ? 'decayed'
-        : canStall && days > STALL_DAYS
-          ? 'stalled'
-          : 'active';
-  return { daysSinceLastTouch: days, state };
-}
-
-/**
- * What Alex should act on today — the funnel answering a question instead
- * of glowing. Two queues, both capped so the rail reads at a glance:
- *   pushNow — hot leads (likelihood ≥ 70) still in active motion; freshest
- *             movement first, because momentum is when a push closes.
- *   saveNow — leads visibly fading toward the archive (past DECAY_FADE_START);
- *             highest likelihood first, because those are worth saving.
- */
-export const ATTENTION_CAP = 4;
-export const PUSH_LIKELIHOOD = 70;
-
-export function attentionQueue(
-  journeys: FunnelJourney[],
-  now: Date,
-): { pushNow: FunnelJourney[]; saveNow: FunnelJourney[] } {
-  const metas = journeys.map((j) => ({ j, meta: journeyMeta(j, now) }));
-  const pushNow = metas
-    .filter(
-      ({ j, meta }) =>
-        meta.state === 'active' &&
-        j.status !== 'converted' &&
-        j.likelihood >= PUSH_LIKELIHOOD &&
-        // a fading lead is a save, not a push — even where stalling can't apply
-        decayFactor(meta.daysSinceLastTouch, j.status) === 0,
-    )
-    .sort((a, b) => a.meta.daysSinceLastTouch - b.meta.daysSinceLastTouch || b.j.likelihood - a.j.likelihood)
-    .slice(0, ATTENTION_CAP)
-    .map(({ j }) => j);
-  const saveNow = metas
-    .filter(
-      ({ j, meta }) =>
-        meta.state !== 'decayed' &&
-        j.status !== 'converted' &&
-        decayFactor(meta.daysSinceLastTouch, j.status) > 0,
-    )
-    .sort((a, b) => b.j.likelihood - a.j.likelihood || b.meta.daysSinceLastTouch - a.meta.daysSinceLastTouch)
-    .slice(0, ATTENTION_CAP)
-    .map(({ j }) => j);
-  return { pushNow, saveNow };
-}
-
-/** The space renders actives; the archive tab lists what has decayed. */
-export function splitFunnelJourneys(
-  journeys: FunnelJourney[],
-  now: Date,
-): { active: FunnelJourney[]; archived: FunnelJourney[] } {
-  const active: FunnelJourney[] = [];
-  const archived: FunnelJourney[] = [];
-  for (const j of journeys) (journeyMeta(j, now).state === 'decayed' ? archived : active).push(j);
-  return { active, archived };
-}
+import { decayFactor, journeyMeta, type JourneyState } from '@/lib/funnel-decay';
 
 /** One client in the open funnel space — everything the canvas needs to move it. */
 export type FunnelSpaceNode = {
