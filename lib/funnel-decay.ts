@@ -61,18 +61,39 @@ export type DecayConfig = {
 };
 
 /**
- * The thresholds this module shipped with, unchanged.
+ * The thresholds in use before the fade start was aligned to the stall point.
+ * Pass this to any function here to get the previous gradient back exactly.
+ */
+export const LEGACY_DECAY_CONFIG: DecayConfig = {
+  stallDays: 7,
+  fadeStartDays: 21,
+  decayDays: 90,
+  pushLikelihood: 70,
+  attentionCap: 4,
+};
+
+/**
+ * Fading starts when lateness starts.
  *
- * `fadeStartDays: 21` is tuned to a particular book — leads clustering at
- * 21–30 days quiet, so 21 puts the gradient where it is visible. That is the
- * number to re-derive when the sales cycle differs: histogram quiet-days
- * across closed-won deals and put the fade start at the left edge of the
- * cluster. Nothing errors if it is wrong; the colors just quietly stop
+ * `fadeStartDays === stallDays` is the point of these defaults, not an
+ * accident to tidy up later. With the two split (7 and 21), a lead crossed
+ * into `stalled` and went red on the board a full fortnight before the
+ * gradient acknowledged it — the colour said "fine", the state said "late".
+ * Aligning them makes day 7 the last pushable day and day 8 the first
+ * rescuable one, and lets the gradient span the whole late period instead of
+ * sitting flat at zero through the first two weeks of it.
+ *
+ * `decayDays` is unchanged at 90: that one is archival policy, not cadence.
+ *
+ * `stallDays` is the number worth re-deriving per pipeline — histogram
+ * quiet-days across closed-won deals and put it where the odds visibly drop.
+ * A one-week cycle wants ~3, enterprise wants ~30. `fadeStartDays` should
+ * follow it. Nothing errors if these are wrong; the colours just quietly stop
  * meaning anything, which is worse.
  */
 export const DEFAULT_DECAY_CONFIG: DecayConfig = {
   stallDays: 7,
-  fadeStartDays: 21,
+  fadeStartDays: 7,
   decayDays: 90,
   pushLikelihood: 70,
   attentionCap: 4,
@@ -184,9 +205,9 @@ export function journeyMeta(
  *
  * `saveNow` takes `stalled` as well as `decay > 0`, which is what keeps the
  * two queues seamless. Testing only `decay > 0` dropped anything late but not
- * yet fading — with the shipped thresholds, every lead quiet 8–21 days. Those
- * render red on the board and appeared in neither rail: the UI flagged a
- * problem the triage did not answer.
+ * yet fading. The defaults below leave no such band, but the clause still
+ * matters: it holds for any config where `fadeStartDays` exceeds
+ * `stallDays` — LEGACY_DECAY_CONFIG among them.
  *
  * Still disjoint after the widening. `pushNow` requires `active` AND
  * `decay === 0`; `stalled` cannot hold alongside `active`, and `decay > 0`

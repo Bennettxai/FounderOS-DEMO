@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   DEFAULT_DECAY_CONFIG,
+  LEGACY_DECAY_CONFIG,
   attentionQueue,
   decayFactor,
   journeyMeta,
@@ -29,20 +30,29 @@ const lead = (status: string, quietDays: number, likelihood = 90): DecayInput & 
   touches: [{ at: daysAgo(quietDays) }],
 });
 
+/**
+ * Pinned to LEGACY_DECAY_CONFIG on purpose: that is the shape where
+ * fadeStartDays runs ahead of stallDays, so it is the shape that has a band
+ * at all. The current defaults align the two and leave none — but any
+ * pipeline is free to split them again, and the filter has to hold when it
+ * does.
+ */
 describe('leads that are late but not yet fading', () => {
+  const CFG = LEGACY_DECAY_CONFIG;
+
   test('a lead quiet 15 days is stalled, not fading, and still surfaces as a save', () => {
     const l = lead('engaged', 15);
-    // stalled on the board (quiet > STALL_DAYS) …
-    expect(journeyMeta(l, NOW).state).toBe('stalled');
-    // … but the gradient has not started (quiet < DECAY_FADE_START)
-    expect(decayFactor(15, 'engaged')).toBe(0);
+    // stalled on the board (quiet > stallDays) …
+    expect(journeyMeta(l, NOW, CFG).state).toBe('stalled');
+    // … but the gradient has not started (quiet < fadeStartDays)
+    expect(decayFactor(15, 'engaged', CFG)).toBe(0);
     // it belongs to a rail regardless
-    expect(attentionQueue([l], NOW).saveNow.map((x) => x.id)).toEqual(['engaged-15d']);
+    expect(attentionQueue([l], NOW, CFG).saveNow.map((x) => x.id)).toEqual(['engaged-15d']);
   });
 
   test('the whole 8-21 day band is rescuable, not silent', () => {
     for (let days = 8; days <= 21; days++) {
-      const q = attentionQueue([lead('engaged', days)], NOW);
+      const q = attentionQueue([lead('engaged', days)], NOW, CFG);
       expect(q.saveNow.length, `${days}d quiet should be a save`).toBe(1);
       expect(q.pushNow.length, `${days}d quiet is not a push`).toBe(0);
     }
@@ -50,14 +60,40 @@ describe('leads that are late but not yet fading', () => {
 
   test('a hot lead does not get pushed just because it is not fading yet', () => {
     // 10 days quiet at 95% — momentum is gone even though the colour has not moved
-    expect(attentionQueue([lead('engaged', 10, 95)], NOW).pushNow).toEqual([]);
+    expect(attentionQueue([lead('engaged', 10, 95)], NOW, CFG).pushNow).toEqual([]);
+  });
+});
+
+describe('defaults — the fade starts when lateness starts', () => {
+  test('fadeStartDays is aligned with stallDays', () => {
+    expect(DEFAULT_DECAY_CONFIG.fadeStartDays).toBe(DEFAULT_DECAY_CONFIG.stallDays);
+  });
+
+  test('day 7 is the last pushable day, day 8 the first rescuable one', () => {
+    expect(attentionQueue([lead('engaged', 7)], NOW).pushNow.map((l) => l.id)).toEqual(['engaged-7d']);
+    expect(attentionQueue([lead('engaged', 7)], NOW).saveNow).toEqual([]);
+    expect(attentionQueue([lead('engaged', 8)], NOW).pushNow).toEqual([]);
+    expect(attentionQueue([lead('engaged', 8)], NOW).saveNow.map((l) => l.id)).toEqual(['engaged-8d']);
+  });
+
+  test('the gradient covers the whole late period instead of the last ten weeks of it', () => {
+    // previously flat at zero right through here
+    expect(decayFactor(15, 'engaged', LEGACY_DECAY_CONFIG)).toBe(0);
+    expect(decayFactor(15, 'engaged')).toBeGreaterThan(0);
+    expect(decayFactor(48.5, 'engaged')).toBeCloseTo(0.5, 5);
+    expect(decayFactor(90, 'engaged')).toBe(1);
+  });
+
+  test('archival policy is unchanged', () => {
+    expect(DEFAULT_DECAY_CONFIG.decayDays).toBe(LEGACY_DECAY_CONFIG.decayDays);
+    expect(DEFAULT_DECAY_CONFIG.stallDays).toBe(LEGACY_DECAY_CONFIG.stallDays);
   });
 });
 
 describe('the queues partition the live pipeline', () => {
   const configs: [string, DecayConfig][] = [
-    ['shipped', DEFAULT_DECAY_CONFIG],
-    ['aligned', { stallDays: 7, fadeStartDays: 7, decayDays: 90, pushLikelihood: 70, attentionCap: 4 }],
+    ['default', DEFAULT_DECAY_CONFIG],
+    ['legacy', LEGACY_DECAY_CONFIG],
     ['tight', { stallDays: 2, fadeStartDays: 3, decayDays: 14, pushLikelihood: 70, attentionCap: 4 }],
     ['wide', { stallDays: 30, fadeStartDays: 45, decayDays: 180, pushLikelihood: 70, attentionCap: 4 }],
   ];

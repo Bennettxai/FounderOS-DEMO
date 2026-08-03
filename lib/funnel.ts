@@ -59,6 +59,7 @@ export {
   journeyMeta,
   splitFunnelJourneys,
   DEFAULT_DECAY_CONFIG,
+  LEGACY_DECAY_CONFIG,
   type DecayConfig,
   type JourneyState,
 } from '@/lib/funnel-decay';
