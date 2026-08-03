@@ -173,13 +173,25 @@ export function journeyMeta(
  *
  *   pushNow — hot and still in motion. Ordered freshest-movement first,
  *             because momentum is when a push closes, not likelihood.
- *   saveNow — visibly fading but not yet archived. Ordered by likelihood,
- *             because a rescue costs real effort and should buy the most.
+ *   saveNow — late or visibly fading, but not yet archived. Ordered by
+ *             likelihood, because a rescue costs real effort and should buy
+ *             the most.
  *
  * The two orderings differ on purpose, and the exclusive split is the
  * load-bearing part: a fading lead is a save, never a push, even when it is
  * the hottest thing on the board. Pushing someone who has gone quiet for a
  * month is the wrong move dressed up as an urgent one.
+ *
+ * `saveNow` takes `stalled` as well as `decay > 0`, which is what keeps the
+ * two queues seamless. Testing only `decay > 0` dropped anything late but not
+ * yet fading — with the shipped thresholds, every lead quiet 8–21 days. Those
+ * render red on the board and appeared in neither rail: the UI flagged a
+ * problem the triage did not answer.
+ *
+ * Still disjoint after the widening. `pushNow` requires `active` AND
+ * `decay === 0`; `stalled` cannot hold alongside `active`, and `decay > 0`
+ * cannot hold alongside `decay === 0`. A property test walks every config and
+ * quiet-day in tests/funnel-decay.test.ts to keep it that way.
  *
  * Generic in `T`, so your own row type comes back out — not a stripped copy.
  */
@@ -212,7 +224,8 @@ export function attentionQueue<T extends DecayInput>(
       ({ lead, meta }) =>
         meta.state !== 'decayed' &&
         lead.status !== 'converted' &&
-        decayFactor(meta.daysSinceLastTouch, lead.status, config) > 0,
+        (meta.state === 'stalled' ||
+          decayFactor(meta.daysSinceLastTouch, lead.status, config) > 0),
     )
     .sort(
       (a, b) =>
