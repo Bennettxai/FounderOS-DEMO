@@ -1,6 +1,6 @@
 # Founder OS
 
-**A personal operating system for a one-person business: a live web command
+**A personal operating system for single-operator business: a live web command
 center that runs your company as a set of AI-assisted "departments."**
 
 Founder OS turns the tabs, tools, and mental overhead of running a solo business
