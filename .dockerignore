@@ -1,0 +1,35 @@
+# dependencies & build artifacts
+node_modules/
+.next/
+.next-*/
+out/
+
+# secrets -- injected at runtime, never baked into layers
+.env
+.env.local
+.env.*.local
+
+# version control & editor
+.git/
+.gitignore
+.DS_Store
+
+# docs & agent config (not needed at runtime)
+AGENTS.md
+CLAUDE.md
+README.md
+docs/
+
+# tests
+tests/
+vitest.config.ts
+
+# dev tooling
+.playwright-mcp/
+.worktrees/
+.firecrawl/
+claude code images/
+
+# SQLite data files (mounted as volume at runtime)
+data/*.db
+data/*.db-*
