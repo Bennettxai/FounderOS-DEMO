@@ -20,7 +20,15 @@ export function windowDelta(points: GrowthPoint[], days: number): { current: num
   if (points.length < 2) return null;
   const latest = points[points.length - 1];
   const windowStart = dateMs(latest.capturedAt) - days * DAY_MS;
-  const baseline = [...points].reverse().find((p) => dateMs(p.capturedAt) <= windowStart);
+  // Points are sorted oldest -> newest, so walk backwards for the newest point
+  // at/before the window start. Avoids copying and reversing the whole series.
+  let baseline: GrowthPoint | undefined;
+  for (let i = points.length - 1; i >= 0; i--) {
+    if (dateMs(points[i].capturedAt) <= windowStart) {
+      baseline = points[i];
+      break;
+    }
+  }
   if (!baseline || baseline.value === 0) return null;
   return { current: latest.value, baseline: baseline.value };
 }
