@@ -1,0 +1,6 @@
+{
+  "description": "Research brief produced by the Researcher bot.",
+  "properties": {
+    "target_bot": { "description": "Bot the brief is prepared for." }
+  }
+}

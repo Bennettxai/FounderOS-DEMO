@@ -1,0 +1,10 @@
+{
+  "title": "Pick",
+  "description": "Canonical pick record produced by the pick bots.",
+  "properties": {
+    "pick_id": { "description": "Stable id across retries." },
+    "sport": { "description": "Sport the pick targets." },
+    "symbol": { "description": "Ticker when the pick is a trade." },
+    "status": { "type": "string" }
+  }
+}

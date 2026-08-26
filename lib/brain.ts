@@ -98,7 +98,7 @@ function kgNodes(): { name: string; summary: string; tags: string[] }[] {
 // ── Hermes skill docs + Brainz contracts ───────────────────────────────────
 
 /** Tolerant YAML-ish frontmatter: single-line values and `>|` block scalars. */
-function parseFrontmatter(content: string): Record<string, string> {
+export function parseFrontmatter(content: string): Record<string, string> {
   const out: Record<string, string> = {};
   if (!content.startsWith('---')) return out;
   const end = content.indexOf('\n---', 3);
@@ -129,9 +129,11 @@ function parseFrontmatter(content: string): Record<string, string> {
   return out;
 }
 
-/** Hermes skill entry points: root *.md files + <skill>/SKILL.md. */
-function hermesSkillDocs(): { name: string; description: string; body: string; file: string }[] {
-  const skillsDir = path.join(NIKOS_PATHS.hermes, 'skills');
+/** Hermes skill entry points: root *.md files + <skill>/SKILL.md.
+ *  Pass `skillsDir` to index a specific tree (used by tests against fixtures). */
+export function hermesSkillDocs(
+  skillsDir: string = path.join(NIKOS_PATHS.hermes, 'skills'),
+): { name: string; description: string; body: string; file: string }[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(skillsDir, { withFileTypes: true });
@@ -205,9 +207,11 @@ export function hermesRefDocs(): { path: string; content: string }[] {
   return refs;
 }
 
-/** Brainz versioned contracts (schemas/*.v1.json): title + description + field docs. */
-function brainzContracts(): { name: string; title: string; description: string; fields: string }[] {
-  const dir = path.join(NIKOS_PATHS.brainz, 'schemas');
+/** Brainz versioned contracts (schemas/*.v1.json): title + description + field docs.
+ *  Pass `dir` to index a specific directory (used by tests against a real tree). */
+export function brainzContracts(
+  dir: string = path.join(NIKOS_PATHS.brainz, 'schemas'),
+): { name: string; title: string; description: string; fields: string }[] {
   let files: string[];
   try {
     files = fs.readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
