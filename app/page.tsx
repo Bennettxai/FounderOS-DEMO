@@ -375,7 +375,7 @@ export default async function HomePage() {
               <Label>G-Brain · knowledge core</Label>
               <div className="mt-2 text-[13px] font-semibold">One memory across every agent</div>
               <div className="mt-1 font-mono text-[10.5px] leading-relaxed text-os-dim">
-                {overview.store.totalFiles} pages · health {health ?? '—'}/100 · hybrid search{' '}
+                {overview.store.totalFiles} sources · health {health ?? '—'}/100 · hybrid search{' '}
                 {overview.doctor.connected ? 'verified' : 'degraded'}
               </div>
             </div>
