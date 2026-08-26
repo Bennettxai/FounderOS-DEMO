@@ -136,9 +136,13 @@ offline search provider in `lib/brain.ts` over **six sources**:
 6. **Brainz contracts** — `~/Brainz/schemas/*.v1.json` (pick.v1,
    research-brief.v1, bot-status.v1, …) — *data contracts*
 
-Search is exposed via `GET /api/brain?q=…`; the Doctor overview
-(`/api/brain/overview`) reports corpus health checks for all five sources.
-`gbrain` (shells to the installed CLI) and `stub` (for tests) remain selectable.
+Search is exposed via `GET /api/brain?q=…` (with `?sources=` to narrow to
+specific sources); the Doctor overview (`/api/brain/overview`) reports corpus
+health checks for all six sources. The G-Brain search panel surfaces the
+sources as filter chips, and its **preview-as-agent** selector pins the query
+to any roster agent's `AGENT_BRAIN_SOURCES` scope — so the operator sees
+exactly what that agent's `searchGBrain` tool would return. `gbrain` (shells
+to the installed CLI) and `stub` (for tests) remain selectable.
 
 ---
 

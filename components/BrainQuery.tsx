@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AGENT_BRAIN_SOURCES } from '@/lib/brain-graph';
 
 type Hit = { title: string; snippet: string; source: string };
 type QueryState =
@@ -31,11 +32,56 @@ const SOURCE_BADGE: Record<string, string> = {
   'brainz-contracts': 'border-os-border-strong text-os-muted',
 };
 
-/** Live `gbrain ›` prompt — hits GET /api/brain?q= (hybrid search, local fallback). */
+/** Human scope label; '*' (or an empty list) means every source. */
+function scopeText(sources: string[]): string {
+  return sources.length === 0 || sources.includes('*')
+    ? 'all sources'
+    : sources.map((s) => SOURCE_LABEL[s] ?? s).join(' + ');
+}
+
+/**
+ * Live `gbrain ›` prompt — hits GET /api/brain?q= (hybrid search, local
+ * fallback). The source chips narrow the query; the "preview as" selector
+ * pins the query to a specific agent's AGENT_BRAIN_SOURCES so the operator
+ * sees exactly what that agent would see from its searchGBrain tool.
+ */
 export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [state, setState] = useState<QueryState>({ phase: 'idle' });
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [agentId, setAgentId] = useState('');
+
+  // Roster for the preview selector: ids with a scope, names from the seed
+  // (the selector is a nicety — if the fetch fails it just stays operator-only).
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/agents')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((body) => {
+        if (cancelled) return;
+        const byId = new Map(
+          ((body as { agents?: { id: string; name: string }[] }).agents ?? []).map((a) => [a.id, a.name]),
+        );
+        setAgents(
+          Object.keys(AGENT_BRAIN_SOURCES)
+            .map((id) => ({ id, name: byId.get(id) ?? id }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        );
+      })
+      .catch(() => {
+        /* ignore — fall back to operator-only */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Agent mode pins the query to that agent's exact scope; chips become a
+  // read-only display of it. Operator mode keeps the manual chip toggles.
+  const agentSources = agentId ? (AGENT_BRAIN_SOURCES[agentId] ?? null) : null;
+  const effectiveSources = agentSources ?? [...selected];
+  const agentName = agents.find((a) => a.id === agentId)?.name ?? agentId;
 
   function toggleSource(id: string) {
     setSelected((prev) => {
@@ -52,7 +98,7 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
     setState({ phase: 'busy', query });
     try {
       const params = new URLSearchParams({ q: query });
-      if (selected.size > 0) params.set('sources', [...selected].join(','));
+      if (effectiveSources.length > 0) params.set('sources', effectiveSources.join(','));
       const res = await fetch(`/api/brain?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = (await res.json()) as { results: Hit[] };
@@ -63,8 +109,7 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
     }
   }
 
-  const scopeLabel =
-    selected.size > 0 ? [...selected].map((s) => SOURCE_LABEL[s] ?? s).join(' + ') : 'all sources';
+  const scopeLabel = agentSources ? `as ${agentName} · ${scopeText(agentSources)}` : scopeText([...selected]);
 
   const statusLine =
     state.phase === 'busy'
@@ -93,13 +138,40 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
         </kbd>
       </div>
 
-      {/* Per-source filter — toggle one or more brain sources (none = all). */}
+      {/* Preview scope as a specific agent — pins the query to that agent's
+          AGENT_BRAIN_SOURCES so you see exactly what its searchGBrain sees. */}
+      <div className="flex items-center gap-2 border-b border-os-border px-3.5 py-2">
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.08em] text-os-dim">preview as</span>
+        <select
+          value={agentId}
+          onChange={(e) => {
+            const v = e.target.value;
+            setAgentId(v);
+            if (v) setSelected(new Set());
+          }}
+          aria-label="Preview brain search as an agent"
+          className="max-w-full flex-1 rounded-sm-t border border-os-border-strong bg-os-bg px-2 py-1 font-mono text-[10px] text-os-text outline-none"
+        >
+          <option value="">operator · all sources</option>
+          {agents.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name} · {scopeText(AGENT_BRAIN_SOURCES[a.id] ?? [])}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Per-source filter — toggle one or more brain sources (none = all).
+          In agent-preview mode the chips render the agent's pinned scope. */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-os-border px-3.5 py-2">
         <button
           type="button"
-          onClick={() => setSelected(new Set())}
+          onClick={() => {
+            setAgentId('');
+            setSelected(new Set());
+          }}
           className={`rounded-full border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] transition-colors ${
-            selected.size === 0
+            !agentSources && selected.size === 0
               ? 'border-os-accent/60 bg-os-accent/10 text-os-accent'
               : 'border-os-border-strong bg-os-surface text-os-muted hover:text-os-text'
           }`}
@@ -107,18 +179,20 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
           all
         </button>
         {SOURCES.map((s) => {
-          const active = selected.has(s.id);
+          const active = agentSources ? agentSources.includes(s.id) : selected.has(s.id);
           return (
             <button
               key={s.id}
               type="button"
-              onClick={() => toggleSource(s.id)}
+              onClick={() => !agentSources && toggleSource(s.id)}
               aria-pressed={active}
+              disabled={!!agentSources}
+              title={agentSources ? 'pinned by the previewed agent scope' : undefined}
               className={`rounded-full border px-2 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] transition-colors ${
                 active
                   ? 'border-os-accent/60 bg-os-accent/10 text-os-accent'
                   : 'border-os-border-strong bg-os-surface text-os-muted hover:text-os-text'
-              }`}
+              } ${agentSources ? 'cursor-default' : ''}`}
             >
               {s.label}
             </button>

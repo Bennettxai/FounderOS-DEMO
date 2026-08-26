@@ -28,6 +28,17 @@ describe('G-Brain query pop-out entrance', () => {
     const query = read('components/BrainQuery.tsx');
     expect(query).toContain('autoFocus');
   });
+
+  test('the query panel can preview a specific agent scope', () => {
+    const query = read('components/BrainQuery.tsx');
+    // Agent mode pins the query to the agent's exact AGENT_BRAIN_SOURCES scope
+    // (the same map the searchGBrain tool uses), so the operator sees exactly
+    // what e.g. SportsClaw or Cron Health would see.
+    expect(query).toContain("import { AGENT_BRAIN_SOURCES } from '@/lib/brain-graph'");
+    expect(query).toContain('aria-label="Preview brain search as an agent"');
+    expect(query).toContain('AGENT_BRAIN_SOURCES[agentId]');
+    expect(query).toContain('operator · all sources');
+  });
 });
 
 describe('theme token completeness', () => {
