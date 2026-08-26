@@ -44,6 +44,43 @@ describe('seedDatabase', () => {
     }
   });
 
+  test('every real agent with chatTools has an explicit AGENT_BRAIN_SOURCES entry', async () => {
+    const { realAgents } = await import('@/lib/agents/real');
+    const { AGENT_BRAIN_SOURCES } = await import('@/lib/brain-graph');
+    const withChatTools = realAgents.filter((a) => typeof a.chatTools === 'function');
+    expect(withChatTools.length).toBeGreaterThan(0);
+    for (const agent of withChatTools) {
+      const sources = AGENT_BRAIN_SOURCES[agent.id];
+      expect(
+        sources,
+        `${agent.id} has chatTools but no AGENT_BRAIN_SOURCES entry — an undefined scope silently searches every source`,
+      ).toBeDefined();
+      expect(sources!.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every AGENT_BRAIN_SOURCES entry maps to a real agent with known source ids', async () => {
+    const { realAgents } = await import('@/lib/agents/real');
+    const { AGENT_BRAIN_SOURCES } = await import('@/lib/brain-graph');
+    const runtimeIds = new Set(realAgents.map((a) => a.id));
+    const knownSources = new Set([
+      'canonical-maps',
+      'diagmap-docs',
+      'knowledge-graph',
+      'hermes-skills',
+      'hermes-refs',
+      'brainz-contracts',
+      '*',
+    ]);
+    for (const [id, sources] of Object.entries(AGENT_BRAIN_SOURCES)) {
+      expect(runtimeIds.has(id), `AGENT_BRAIN_SOURCES has an entry for unknown agent ${id}`).toBe(true);
+      expect(sources.length).toBeGreaterThan(0);
+      for (const s of sources) {
+        expect(knownSources.has(s), `unknown brain source "${s}" in AGENT_BRAIN_SOURCES[${id}]`).toBe(true);
+      }
+    }
+  });
+
   test('the seven operating pillars, in order', () => {
     db = openDb(':memory:');
     seedDatabase(db);
