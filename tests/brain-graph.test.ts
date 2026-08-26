@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   AGENT_BRAIN_SCOPES,
+  AGENT_BRAIN_SOURCES,
   buildBrainGraph,
   chunkText,
   embedNotes,
@@ -200,6 +201,18 @@ describe('buildBrainGraph', () => {
     expect(AGENT_BRAIN_SCOPES['brain-librarian']).toEqual(['*']);
     expect(AGENT_BRAIN_SCOPES['data-agent']).toEqual(['*']);
     expect(AGENT_BRAIN_SCOPES['map-builder']).toEqual(expect.arrayContaining(['canonical-maps']));
+  });
+
+  test('per-source scopes: diagmap agents stay on the canonical corpus, picks on contracts, ops on skills', () => {
+    expect(AGENT_BRAIN_SOURCES['map-builder']).toEqual(['canonical-maps', 'diagmap-docs', 'knowledge-graph']);
+    expect(AGENT_BRAIN_SOURCES['guided-qa']).toEqual(['canonical-maps', 'diagmap-docs', 'knowledge-graph']);
+    expect(AGENT_BRAIN_SOURCES['sportsclaw']).toEqual(['brainz-contracts']);
+    expect(AGENT_BRAIN_SOURCES['tradingdesk']).toEqual(['brainz-contracts']);
+    expect(AGENT_BRAIN_SOURCES['sysbot']).toEqual(['brainz-contracts']);
+    expect(AGENT_BRAIN_SOURCES['cron-health']).toEqual(['hermes-skills']);
+    expect(AGENT_BRAIN_SOURCES['drift-sentinel']).toEqual(['hermes-skills']);
+    expect(AGENT_BRAIN_SOURCES['data-agent']).toEqual(['*']);
+    expect(AGENT_BRAIN_SOURCES['conductor']).toEqual(['*']);
   });
 });
 

@@ -60,6 +60,50 @@ export const AGENT_BRAIN_SCOPES: Record<string, string[]> = {
 };
 
 /**
+ * Which brain *sources* each agent may search. Source ids are the `source`
+ * field returned by the nikos provider: canonical-maps, diagmap-docs,
+ * knowledge-graph, hermes-skills, brainz-contracts. '*' = every source.
+ *
+ * This drives per-agent SEARCH scoping (the searchGBrain tool);
+ * AGENT_BRAIN_SCOPES above drives the knowledge-graph FOLDER scoping
+ * instead. Agents not listed default to '*' in the search path.
+ */
+export const AGENT_BRAIN_SOURCES: Record<string, string[]> = {
+  // Diagnostic Maps — the canonical corpus only.
+  'map-builder': ['canonical-maps', 'diagmap-docs', 'knowledge-graph'],
+  'guided-qa': ['canonical-maps', 'diagmap-docs', 'knowledge-graph'],
+  'fleet-coverage': ['canonical-maps', 'diagmap-docs', 'knowledge-graph'],
+
+  // Picks — the Brainz data contracts.
+  'picks-agent': ['brainz-contracts'],
+  sportsclaw: ['brainz-contracts'],
+  tradingdesk: ['brainz-contracts'],
+  sysbot: ['brainz-contracts'],
+
+  // Operations — Hermes operating memory (skill docs).
+  'ops-agent': ['hermes-skills'],
+  'cron-health': ['hermes-skills'],
+  'github-agent': ['hermes-skills'],
+  'drift-sentinel': ['hermes-skills'],
+
+  // Everyone else sees the whole operating memory.
+  conductor: ['*'],
+  'data-agent': ['*'],
+  'fieldops-agent': ['*'],
+  'release-gate': ['*'],
+  'ops-data': ['*'],
+  'dev-agent': ['*'],
+  'code-worker': ['*'],
+  'test-worker': ['*'],
+  'research-agent': ['*'],
+  'bounty-radar': ['*'],
+  'surf-research': ['*'],
+  'models-agent': ['*'],
+  'eval-runner': ['*'],
+  'training-run': ['*'],
+};
+
+/**
  * Split a note body into chunks the way an embedding pipeline would:
  * paragraph-first, merged up to ~120 words per chunk.
  */

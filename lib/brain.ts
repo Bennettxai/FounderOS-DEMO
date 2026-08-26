@@ -29,10 +29,15 @@ export type BrainSearchResult = {
   source: string;
 };
 
+/** Restrict a search to specific brain sources (source ids as returned by
+ *  the nikos provider: canonical-maps, diagmap-docs, knowledge-graph,
+ *  hermes-skills, brainz-contracts). Omit to search everything. */
+export type BrainSearchOptions = { sources?: string[] };
+
 export interface BrainProvider {
   name: string;
   status(): Promise<BrainStatus>;
-  search(query: string): Promise<BrainSearchResult[]>;
+  search(query: string, opts?: BrainSearchOptions): Promise<BrainSearchResult[]>;
 }
 
 const stubProvider: BrainProvider = {
@@ -215,73 +220,85 @@ const nikosProvider: BrainProvider = {
       detail: `The-Diagnostic-Map corpus: ${fleet?.total ?? 0} canonical maps · ${mdCount} markdown pages · ${kg} knowledge-graph nodes · ${skills} hermes skills · ${contracts} brainz contracts`,
     };
   },
-  async search(query: string) {
+  async search(query: string, opts?: BrainSearchOptions) {
     const q = query.toLowerCase();
+    const allowed = opts?.sources?.length ? new Set(opts.sources) : null;
+    const inScope = (source: string) => !allowed || allowed.has(source) || allowed.has('*');
     const hits: BrainSearchResult[] = [];
 
     // 1) Canonical fleet index — model-number lookups, the most common ask.
-    const fleet = readFleetCoverage();
-    if (fleet) {
-      for (const m of fleet.maps) {
-        const hay = `${m.family} ${m.model} ${m.filename} ${m.version ?? ''}`.toLowerCase();
-        if (hay.includes(q)) {
-          hits.push({
-            title: `${m.family} ${m.model}`,
-            snippet: `${m.filename} · ${m.version ?? 'no version'}`,
-            source: 'canonical-maps',
-          });
+    if (inScope('canonical-maps')) {
+      const fleet = readFleetCoverage();
+      if (fleet) {
+        for (const m of fleet.maps) {
+          const hay = `${m.family} ${m.model} ${m.filename} ${m.version ?? ''}`.toLowerCase();
+          if (hay.includes(q)) {
+            hits.push({
+              title: `${m.family} ${m.model}`,
+              snippet: `${m.filename} · ${m.version ?? 'no version'}`,
+              source: 'canonical-maps',
+            });
+          }
         }
       }
     }
 
     // 2) Markdown docs (Reference theory docs, READMEs, docs/).
-    for (const file of walkMarkdown(NIKOS_PATHS.diagmap)) {
-      let content: string;
-      try {
-        content = fs.readFileSync(file, 'utf8');
-      } catch {
-        continue;
-      }
-      const line = content.split('\n').find((l) => l.toLowerCase().includes(q));
-      if (line) {
-        hits.push({
-          title: path.relative(NIKOS_PATHS.diagmap, file).replace(/\.md$/, ''),
-          snippet: line.trim().slice(0, 240),
-          source: 'diagmap-docs',
-        });
+    if (inScope('diagmap-docs')) {
+      for (const file of walkMarkdown(NIKOS_PATHS.diagmap)) {
+        let content: string;
+        try {
+          content = fs.readFileSync(file, 'utf8');
+        } catch {
+          continue;
+        }
+        const line = content.split('\n').find((l) => l.toLowerCase().includes(q));
+        if (line) {
+          hits.push({
+            title: path.relative(NIKOS_PATHS.diagmap, file).replace(/\.md$/, ''),
+            snippet: line.trim().slice(0, 240),
+            source: 'diagmap-docs',
+          });
+        }
       }
     }
 
     // 3) Understand-Anything knowledge graph nodes.
-    for (const n of kgNodes()) {
-      if ((`${n.name} ${n.summary} ${n.tags.join(' ')}`).toLowerCase().includes(q)) {
-        hits.push({
-          title: n.name,
-          snippet: (n.summary || n.tags.join(', ')).slice(0, 240),
-          source: 'knowledge-graph',
-        });
+    if (inScope('knowledge-graph')) {
+      for (const n of kgNodes()) {
+        if ((`${n.name} ${n.summary} ${n.tags.join(' ')}`).toLowerCase().includes(q)) {
+          hits.push({
+            title: n.name,
+            snippet: (n.summary || n.tags.join(', ')).slice(0, 240),
+            source: 'knowledge-graph',
+          });
+        }
       }
     }
 
     // 4) Hermes skill docs — how to operate the local tooling.
-    for (const skill of hermesSkillDocs()) {
-      if (!`${skill.name}\n${skill.description}\n${skill.body}`.toLowerCase().includes(q)) continue;
-      const line = skill.body.split('\n').find((l) => l.toLowerCase().includes(q));
-      hits.push({
-        title: skill.name,
-        snippet: (line ?? skill.description ?? path.relative(NIKOS_PATHS.hermes, skill.file)).trim().slice(0, 240),
-        source: 'hermes-skills',
-      });
+    if (inScope('hermes-skills')) {
+      for (const skill of hermesSkillDocs()) {
+        if (!`${skill.name}\n${skill.description}\n${skill.body}`.toLowerCase().includes(q)) continue;
+        const line = skill.body.split('\n').find((l) => l.toLowerCase().includes(q));
+        hits.push({
+          title: skill.name,
+          snippet: (line ?? skill.description ?? path.relative(NIKOS_PATHS.hermes, skill.file)).trim().slice(0, 240),
+          source: 'hermes-skills',
+        });
+      }
     }
 
     // 5) Brainz contracts — the versioned data schemas (pick.v1, …).
-    for (const c of brainzContracts()) {
-      if (!`${c.name} ${c.title} ${c.description} ${c.fields}`.toLowerCase().includes(q)) continue;
-      hits.push({
-        title: c.name,
-        snippet: (c.description || c.fields).slice(0, 240),
-        source: 'brainz-contracts',
-      });
+    if (inScope('brainz-contracts')) {
+      for (const c of brainzContracts()) {
+        if (!`${c.name} ${c.title} ${c.description} ${c.fields}`.toLowerCase().includes(q)) continue;
+        hits.push({
+          title: c.name,
+          snippet: (c.description || c.fields).slice(0, 240),
+          source: 'brainz-contracts',
+        });
+      }
     }
 
     return hits.slice(0, 10);

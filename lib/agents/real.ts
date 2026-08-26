@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { getBrainProvider } from '@/lib/brain';
+import { AGENT_BRAIN_SOURCES } from '@/lib/brain-graph';
 import { localStackStatus } from '@/lib/connectors/local-stack';
 import { brainzBotStatus, brainzBots } from '@/lib/connectors/brainz';
 import { readCronJobs } from '@/lib/connectors/hermes-cron';
@@ -282,8 +283,8 @@ async function knowledgeRun(): Promise<AgentRunResult> {
   };
 }
 
-async function knowledgeRespond(message: string): Promise<AgentRunResult> {
-  const results = await getBrainProvider().search(message);
+async function knowledgeRespond(message: string, agentId: string): Promise<AgentRunResult> {
+  const results = await getBrainProvider().search(message, { sources: AGENT_BRAIN_SOURCES[agentId] });
   if (results.length === 0) {
     return { ok: false, summary: `Nothing in the knowledge base matches "${message.slice(0, 80)}"` };
   }
@@ -294,18 +295,19 @@ async function knowledgeRespond(message: string): Promise<AgentRunResult> {
   };
 }
 
-function knowledgeTools(): LlmToolSpec[] {
+/** Read-only brain search tool scoped to the agent's AGENT_BRAIN_SOURCES. */
+function knowledgeTools(agentId: string): LlmToolSpec[] {
   return [
     {
       name: 'searchGBrain',
       description:
-        'Search the knowledge base (canonical diagnostic maps, docs, knowledge graph). Read-only.',
+        'Search the knowledge base, scoped to this agent\'s brain sources (canonical maps, docs, knowledge graph, skills, contracts). Read-only.',
       parameters: z.object({
         query: z.string().describe('Natural-language or model-number search query'),
       }),
       execute: async (args) => {
         const query = typeof args.query === 'string' ? args.query : '';
-        return getBrainProvider().search(query);
+        return getBrainProvider().search(query, { sources: AGENT_BRAIN_SOURCES[agentId] });
       },
     },
   ];
@@ -350,14 +352,14 @@ const modelsWorkers: RuntimeAgent[] = [
   { id: 'training-run', name: 'Training Run', description: 'OneTrainer training workspace status.', departmentId: 'dept-models', run: trainingRunRun },
 ];
 const picksWorkers: RuntimeAgent[] = [
-  { id: 'sportsclaw', name: 'SportsClaw', description: 'Sports pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('sportsclaw') },
-  { id: 'tradingdesk', name: 'TradingDesk', description: 'Trading pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('tradingdesk') },
-  { id: 'sysbot', name: 'SysBot', description: 'Brainz ecosystem health: tally of all bot run-records.', departmentId: 'dept-picks', run: sysbotRun },
+  { id: 'sportsclaw', name: 'SportsClaw', description: 'Sports pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('sportsclaw'), chatTools: () => knowledgeTools('sportsclaw') },
+  { id: 'tradingdesk', name: 'TradingDesk', description: 'Trading pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('tradingdesk'), chatTools: () => knowledgeTools('tradingdesk') },
+  { id: 'sysbot', name: 'SysBot', description: 'Brainz ecosystem health: tally of all bot run-records.', departmentId: 'dept-picks', run: sysbotRun, chatTools: () => knowledgeTools('sysbot') },
 ];
 const opsWorkers: RuntimeAgent[] = [
-  { id: 'cron-health', name: 'Cron Health', description: 'Hermes scheduled-job health from jobs.json.', departmentId: 'dept-ops', run: cronHealthRun },
-  { id: 'github-agent', name: 'GitHub Agent', description: 'GitHub CLI auth and the home repo remote.', departmentId: 'dept-ops', run: githubAgentRun },
-  { id: 'drift-sentinel', name: 'Drift Sentinel', description: 'Uncommitted drift on the home repo.', departmentId: 'dept-ops', run: driftSentinelRun },
+  { id: 'cron-health', name: 'Cron Health', description: 'Hermes scheduled-job health from jobs.json.', departmentId: 'dept-ops', run: cronHealthRun, chatTools: () => knowledgeTools('cron-health') },
+  { id: 'github-agent', name: 'GitHub Agent', description: 'GitHub CLI auth and the home repo remote.', departmentId: 'dept-ops', run: githubAgentRun, chatTools: () => knowledgeTools('github-agent') },
+  { id: 'drift-sentinel', name: 'Drift Sentinel', description: 'Uncommitted drift on the home repo.', departmentId: 'dept-ops', run: driftSentinelRun, chatTools: () => knowledgeTools('drift-sentinel') },
 ];
 
 export const realAgents: RuntimeAgent[] = [
@@ -384,6 +386,7 @@ export const realAgents: RuntimeAgent[] = [
     description: 'Owns the canonical fleet: counts maps per family and reports fleet-dashboard freshness.',
     departmentId: 'dept-diagmaps',
     run: mapBuilderRun,
+    chatTools: () => knowledgeTools('map-builder'),
   },
   {
     id: 'guided-qa',
@@ -391,6 +394,7 @@ export const realAgents: RuntimeAgent[] = [
     description: 'Runs the guided-walk audit across canonical maps: duplication, no-narrow, loops, dead-ends.',
     departmentId: 'dept-diagmaps',
     run: guidedQaRun,
+    chatTools: () => knowledgeTools('guided-qa'),
   },
   {
     id: 'fleet-coverage',
@@ -398,6 +402,7 @@ export const realAgents: RuntimeAgent[] = [
     description: 'Runs the deterministic fleet gate (generate-fleet-coverage --check).',
     departmentId: 'dept-diagmaps',
     run: fleetCoverageRun,
+    chatTools: () => knowledgeTools('fleet-coverage'),
   },
 
   // ── Field Ops ────────────────────────────────────────────────────────────
@@ -418,8 +423,8 @@ export const realAgents: RuntimeAgent[] = [
       'Answers questions from the knowledge base: canonical diagnostic maps, docs, and the knowledge graph.',
     departmentId: 'dept-research',
     run: knowledgeRun,
-    respond: knowledgeRespond,
-    chatTools: knowledgeTools,
+    respond: (message) => knowledgeRespond(message, 'data-agent'),
+    chatTools: () => knowledgeTools('data-agent'),
   },
 
   // ── Models ───────────────────────────────────────────────────────────────
@@ -427,10 +432,10 @@ export const realAgents: RuntimeAgent[] = [
   ...modelsWorkers,
 
   // ── Picks (Brainz) ───────────────────────────────────────────────────────
-  lead('picks-agent', 'Picks Agent', 'Aggregates the Brainz pick bots (sports, trading, sysbot).', 'dept-picks', picksWorkers)(),
+  { ...lead('picks-agent', 'Picks Agent', 'Aggregates the Brainz pick bots (sports, trading, sysbot).', 'dept-picks', picksWorkers)(), chatTools: () => knowledgeTools('picks-agent') },
   ...picksWorkers,
 
   // ── Operations ───────────────────────────────────────────────────────────
-  lead('ops-agent', 'Ops Agent', 'Aggregates cron health, GitHub auth, and drift sentinel.', 'dept-ops', opsWorkers)(),
+  { ...lead('ops-agent', 'Ops Agent', 'Aggregates cron health, GitHub auth, and drift sentinel.', 'dept-ops', opsWorkers)(), chatTools: () => knowledgeTools('ops-agent') },
   ...opsWorkers,
 ];
