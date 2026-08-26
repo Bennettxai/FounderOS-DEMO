@@ -5,6 +5,7 @@ import { ConductorChat } from '@/components/ConductorChat';
 import { AgentActivityFeed } from '@/components/AgentActivityFeed';
 import { AgentWorkPanel } from '@/components/AgentWorkPanel';
 import { recentActivity } from '@/lib/agents/activity';
+import { AGENT_BRAIN_SOURCES } from '@/lib/brain-graph';
 import { SparkIcon } from '@/components/SparkIcon';
 import { Badge, Dot, Label, SectionHead } from '@/components/terminal';
 import { lifeAreaForDepartment } from '@/lib/life-map';
@@ -49,6 +50,10 @@ function AgentRosterCard({
   messages: AgentMessage[];
 }) {
   const active = agent.status === 'active';
+  // Brain search scope — the same AGENT_BRAIN_SOURCES map the searchGBrain
+  // tool enforces. '*' (or an unlisted agent) means the whole operating memory.
+  const brainScope = AGENT_BRAIN_SOURCES[agent.id] ?? ['*'];
+  const brainScopeLabel = brainScope.includes('*') ? 'all sources' : brainScope.join(' + ');
   return (
     <article
       className="hoverable group flex min-h-48 flex-col rounded-lg-t border bg-os-surface p-4"
@@ -82,6 +87,14 @@ function AgentRosterCard({
             +{agent.tools.length - 5}
           </span>
         )}
+      </div>
+
+      {/* Brain search scope — visible so scoping is inspectable, not just enforced. */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 font-mono text-[9.5px]">
+        <span className="uppercase tracking-[0.08em] text-os-dim">searches:</span>
+        <span className="rounded-full border border-os-border bg-os-surface2 px-[7px] py-0.5 text-os-muted">
+          {brainScopeLabel}
+        </span>
       </div>
 
       <div className="mt-auto pt-4">
