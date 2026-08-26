@@ -31,7 +31,33 @@ describe('agent chat tools', () => {
     expect(rows.map((m) => m.role)).toEqual(['user', 'tool', 'assistant']);
     const toolRow = rows.find((m) => m.role === 'tool')!;
     expect(toolRow.toolCalls.map((c) => c.name)).toContain('searchGBrain');
-    expect(Array.isArray(toolRow.toolCalls[0].result)).toBe(true); // connector actually ran
+    const result = toolRow.toolCalls[0].result as { sources: string[]; results: unknown[] };
+    expect(Array.isArray(result.results)).toBe(true); // connector actually ran
+    expect(result.sources.length).toBeGreaterThan(0); // boundary reported back
     expect(res.reply.length).toBeGreaterThan(0);
+  });
+
+  test('a scoped agent reports the exact boundary it searched within', async () => {
+    const db = openDb(':memory:');
+    await chatWithAgent(db, realAgents, 'sportsclaw', 'use-tool:searchGBrain pick');
+    const toolRow = db.agentMessages.byAgent('sportsclaw').find((m) => m.role === 'tool')!;
+    const result = toolRow.toolCalls[0].result as { sources: string[]; results: unknown[] };
+    expect(result.sources).toEqual(['brainz-contracts']);
+    expect(Array.isArray(result.results)).toBe(true);
+  });
+
+  test('an all-sources agent reports the full corpus as its boundary', async () => {
+    const db = openDb(':memory:');
+    await chatWithAgent(db, realAgents, 'data-agent', 'use-tool:searchGBrain revenue');
+    const toolRow = db.agentMessages.byAgent('data-agent').find((m) => m.role === 'tool')!;
+    const result = toolRow.toolCalls[0].result as { sources: string[]; results: unknown[] };
+    expect(result.sources).toEqual([
+      'canonical-maps',
+      'diagmap-docs',
+      'knowledge-graph',
+      'hermes-skills',
+      'hermes-refs',
+      'brainz-contracts',
+    ]);
   });
 });

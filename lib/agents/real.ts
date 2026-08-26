@@ -14,7 +14,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
-import { getBrainProvider } from '@/lib/brain';
+import { BRAIN_SOURCES, getBrainProvider } from '@/lib/brain';
 import { AGENT_BRAIN_SOURCES } from '@/lib/brain-graph';
 import { localStackStatus } from '@/lib/connectors/local-stack';
 import { brainzBotStatus, brainzBots } from '@/lib/connectors/brainz';
@@ -283,31 +283,49 @@ async function knowledgeRun(): Promise<AgentRunResult> {
   };
 }
 
+/**
+ * Resolve an agent's AGENT_BRAIN_SOURCES scope to the concrete source list
+ * that will actually be searched: an explicit list, or the full corpus when
+ * the agent has no entry / a '*' scope. The boundary is reported back with
+ * every search so chat replies can name the exact sources they drew from.
+ */
+function brainSourcesFor(agentId: string): { sources: string[]; label: string } {
+  const scope = AGENT_BRAIN_SOURCES[agentId];
+  if (!scope || scope.includes('*')) return { sources: [...BRAIN_SOURCES], label: 'all sources' };
+  return { sources: [...scope], label: scope.join(', ') };
+}
+
 async function knowledgeRespond(message: string, agentId: string): Promise<AgentRunResult> {
-  const results = await getBrainProvider().search(message, { sources: AGENT_BRAIN_SOURCES[agentId] });
+  const { sources, label } = brainSourcesFor(agentId);
+  const results = await getBrainProvider().search(message, { sources });
   if (results.length === 0) {
-    return { ok: false, summary: `Nothing in the knowledge base matches "${message.slice(0, 80)}"` };
+    return {
+      ok: false,
+      summary: `Nothing in the knowledge base matches "${message.slice(0, 80)}" (searched ${label})`,
+    };
   }
   return {
     ok: true,
-    summary: results.map((r) => `· ${r.title} (${r.source})`).join('\n'),
-    data: results,
+    summary: `searched ${label} — ${results.map((r) => `· ${r.title} (${r.source})`).join('\n')}`,
+    data: { sources, results },
   };
 }
 
 /** Read-only brain search tool scoped to the agent's AGENT_BRAIN_SOURCES. */
 function knowledgeTools(agentId: string): LlmToolSpec[] {
+  const { sources, label } = brainSourcesFor(agentId);
   return [
     {
       name: 'searchGBrain',
-      description:
-        'Search the knowledge base, scoped to this agent\'s brain sources (canonical maps, docs, knowledge graph, skills, contracts). Read-only.',
+      description: `Search the knowledge base within this agent's brain sources: ${label}. Read-only.`,
       parameters: z.object({
         query: z.string().describe('Natural-language or model-number search query'),
       }),
       execute: async (args) => {
         const query = typeof args.query === 'string' ? args.query : '';
-        return getBrainProvider().search(query, { sources: AGENT_BRAIN_SOURCES[agentId] });
+        const results = await getBrainProvider().search(query, { sources });
+        // Report the boundary the agent worked within, alongside the hits.
+        return { sources, results };
       },
     },
   ];

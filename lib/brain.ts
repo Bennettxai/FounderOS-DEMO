@@ -34,6 +34,16 @@ export type BrainSearchResult = {
  *  hermes-skills, brainz-contracts). Omit to search everything. */
 export type BrainSearchOptions = { sources?: string[] };
 
+/** The nikos provider's brain source ids, in search order. */
+export const BRAIN_SOURCES = [
+  'canonical-maps',
+  'diagmap-docs',
+  'knowledge-graph',
+  'hermes-skills',
+  'hermes-refs',
+  'brainz-contracts',
+] as const;
+
 export interface BrainProvider {
   name: string;
   status(): Promise<BrainStatus>;
