@@ -275,6 +275,23 @@ describe('API route handlers', () => {
       else process.env.BRAIN_PROVIDER = previous;
     }
   });
+
+  test('GET /api/brain?q=&sources= narrows the search and echoes the sources', async () => {
+    const previous = process.env.BRAIN_PROVIDER;
+    process.env.BRAIN_PROVIDER = 'stub';
+    try {
+      const { GET } = await import('@/app/api/brain/route');
+      const res = await GET(
+        new Request('http://localhost/api/brain?q=pick&sources=hermes-skills,brainz-contracts'),
+      );
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.sources).toEqual(['hermes-skills', 'brainz-contracts']);
+    } finally {
+      if (previous === undefined) delete process.env.BRAIN_PROVIDER;
+      else process.env.BRAIN_PROVIDER = previous;
+    }
+  });
 });
 
 describe('GET /api/funnel/lead-message — last thread for the dossier (AC54)', () => {
