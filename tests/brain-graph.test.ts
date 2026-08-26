@@ -209,8 +209,8 @@ describe('buildBrainGraph', () => {
     expect(AGENT_BRAIN_SOURCES['sportsclaw']).toEqual(['brainz-contracts']);
     expect(AGENT_BRAIN_SOURCES['tradingdesk']).toEqual(['brainz-contracts']);
     expect(AGENT_BRAIN_SOURCES['sysbot']).toEqual(['brainz-contracts']);
-    expect(AGENT_BRAIN_SOURCES['cron-health']).toEqual(['hermes-skills']);
-    expect(AGENT_BRAIN_SOURCES['drift-sentinel']).toEqual(['hermes-skills']);
+    expect(AGENT_BRAIN_SOURCES['cron-health']).toEqual(['hermes-skills', 'hermes-refs']);
+    expect(AGENT_BRAIN_SOURCES['drift-sentinel']).toEqual(['hermes-skills', 'hermes-refs']);
     expect(AGENT_BRAIN_SOURCES['data-agent']).toEqual(['*']);
     expect(AGENT_BRAIN_SOURCES['conductor']).toEqual(['*']);
   });

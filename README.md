@@ -123,14 +123,17 @@ systems were reachable.
 ## Brain provider
 
 `BRAIN_PROVIDER=nikos` (default in `.env.example`) selects a deterministic,
-offline search provider in `lib/brain.ts` over **five sources**:
+offline search provider in `lib/brain.ts` over **six sources**:
 
 1. **Canonical fleet index** — `Fleet-Coverage.json` (model-number lookups)
 2. **Diagnostic-map markdown** — reference docs under `The-Diagnostic-Map`
 3. **Knowledge graph** — `.ua/knowledge-graph.json` (118 nodes)
 4. **Hermes skill docs** — entry points in `~/.hermes/skills` (root `*.md` +
    `<skill>/SKILL.md`, frontmatter-aware) — *operating memory*
-5. **Brainz contracts** — `~/Brainz/schemas/*.v1.json` (pick.v1,
+5. **Hermes skill references** — the deep per-skill API/authoring docs
+   (`references/*.md` under each skill, ~525 files; cached per process so the
+   entry-point search stays fast)
+6. **Brainz contracts** — `~/Brainz/schemas/*.v1.json` (pick.v1,
    research-brief.v1, bot-status.v1, …) — *data contracts*
 
 Search is exposed via `GET /api/brain?q=…`; the Doctor overview

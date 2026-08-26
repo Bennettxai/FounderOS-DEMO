@@ -164,6 +164,47 @@ function hermesSkillDocs(): { name: string; description: string; body: string; f
   return docs;
 }
 
+/**
+ * Deep Hermes skill reference docs — every markdown file under skills/
+ * that is NOT an entry point (root *.md / <skill>/SKILL.md), i.e. the full
+ * per-skill API and authoring docs (references/*.md, nested guides). Indexed
+ * as their own source (hermes-refs) so the entry-point search stays small
+ * and fast. Cached per process: ~500 files, rarely change mid-session.
+ */
+let hermesRefsCache: { path: string; content: string }[] | null = null;
+export function hermesRefDocs(): { path: string; content: string }[] {
+  if (hermesRefsCache) return hermesRefsCache;
+  const skillsDir = path.join(NIKOS_PATHS.hermes, 'skills');
+  const refs: { path: string; content: string }[] = [];
+  const walk = (dir: string, rel: string) => {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name.startsWith('.')) continue;
+      const full = path.join(dir, entry.name);
+      const relPath = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(full, relPath);
+      } else if (entry.name.endsWith('.md')) {
+        if (!rel || entry.name === 'SKILL.md') continue; // already indexed as hermes-skills
+        try {
+          refs.push({ path: relPath, content: fs.readFileSync(full, 'utf8') });
+        } catch {
+          /* skip unreadable */
+        }
+      }
+    }
+  };
+  walk(skillsDir, '');
+  refs.sort((a, b) => a.path.localeCompare(b.path));
+  hermesRefsCache = refs;
+  return refs;
+}
+
 /** Brainz versioned contracts (schemas/*.v1.json): title + description + field docs. */
 function brainzContracts(): { name: string; title: string; description: string; fields: string }[] {
   const dir = path.join(NIKOS_PATHS.brainz, 'schemas');
@@ -213,11 +254,12 @@ const nikosProvider: BrainProvider = {
     const mdCount = walkMarkdown(dm).length;
     const kg = kgNodes().length;
     const skills = hermesSkillDocs().length;
+    const refs = hermesRefDocs().length;
     const contracts = brainzContracts().length;
     return {
       connected: true,
       provider: 'nikos',
-      detail: `The-Diagnostic-Map corpus: ${fleet?.total ?? 0} canonical maps · ${mdCount} markdown pages · ${kg} knowledge-graph nodes · ${skills} hermes skills · ${contracts} brainz contracts`,
+      detail: `The-Diagnostic-Map corpus: ${fleet?.total ?? 0} canonical maps · ${mdCount} markdown pages · ${kg} knowledge-graph nodes · ${skills} hermes skills · ${refs} hermes skill refs · ${contracts} brainz contracts`,
     };
   },
   async search(query: string, opts?: BrainSearchOptions) {
@@ -289,6 +331,19 @@ const nikosProvider: BrainProvider = {
       }
     }
 
+    // 4b) Hermes skill reference docs — the deep per-skill API/authoring docs.
+    if (inScope('hermes-refs')) {
+      for (const ref of hermesRefDocs()) {
+        if (!`${ref.path}\n${ref.content}`.toLowerCase().includes(q)) continue;
+        const line = ref.content.split('\n').find((l) => l.toLowerCase().includes(q));
+        hits.push({
+          title: ref.path,
+          snippet: (line ?? '').trim().slice(0, 240),
+          source: 'hermes-refs',
+        });
+      }
+    }
+
     // 5) Brainz contracts — the versioned data schemas (pick.v1, …).
     if (inScope('brainz-contracts')) {
       for (const c of brainzContracts()) {
@@ -317,6 +372,7 @@ export async function nikosOverview() {
   const mdCount = walkMarkdown(dm).length;
   const kgCount = kgNodes().length;
   const skillsCount = hermesSkillDocs().length;
+  const refsCount = hermesRefDocs().length;
   const contractsCount = brainzContracts().length;
   const present = fs.existsSync(dm);
   const freshness = fleet ? (() => {
@@ -336,10 +392,11 @@ export async function nikosOverview() {
   return {
     store: {
       path: dm,
-      totalFiles: mdCount + skillsCount + contractsCount,
+      totalFiles: mdCount + skillsCount + refsCount + contractsCount,
       folders: [
         ...(fleet ? Object.entries(fleet.families).map(([name, files]) => ({ name, files })) : []),
         ...(skillsCount > 0 ? [{ name: 'hermes-skills', files: skillsCount }] : []),
+        ...(refsCount > 0 ? [{ name: 'hermes-refs', files: refsCount }] : []),
         ...(contractsCount > 0 ? [{ name: 'brainz-contracts', files: contractsCount }] : []),
       ],
     },
@@ -374,13 +431,18 @@ export async function nikosOverview() {
           message: `${skillsCount} Hermes skill docs in ~/.hermes/skills`,
         },
         {
+          name: 'hermes-refs',
+          status: refsCount > 0 ? 'ok' : 'warn',
+          message: `${refsCount} reference docs under ~/.hermes/skills`,
+        },
+        {
           name: 'brainz-contracts',
           status: contractsCount > 0 ? 'ok' : 'warn',
           message: `${contractsCount} versioned schemas in Brainz/schemas`,
         },
       ],
       detail: present
-        ? `The-Diagnostic-Map corpus (nikos): ${fleet?.total ?? 0} canonical maps · ${mdCount} markdown pages · ${kgCount} graph nodes · ${skillsCount} hermes skills · ${contractsCount} brainz contracts`
+        ? `The-Diagnostic-Map corpus (nikos): ${fleet?.total ?? 0} canonical maps · ${mdCount} markdown pages · ${kgCount} graph nodes · ${skillsCount} hermes skills · ${refsCount} hermes skill refs · ${contractsCount} brainz contracts`
         : `The-Diagnostic-Map repo not found at ${dm} — set NIKOS_DIAGMAP_PATH`,
     },
   };

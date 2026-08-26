@@ -80,11 +80,11 @@ export const AGENT_BRAIN_SOURCES: Record<string, string[]> = {
   tradingdesk: ['brainz-contracts'],
   sysbot: ['brainz-contracts'],
 
-  // Operations — Hermes operating memory (skill docs).
-  'ops-agent': ['hermes-skills'],
-  'cron-health': ['hermes-skills'],
-  'github-agent': ['hermes-skills'],
-  'drift-sentinel': ['hermes-skills'],
+  // Operations — Hermes operating memory (skill docs + deep reference docs).
+  'ops-agent': ['hermes-skills', 'hermes-refs'],
+  'cron-health': ['hermes-skills', 'hermes-refs'],
+  'github-agent': ['hermes-skills', 'hermes-refs'],
+  'drift-sentinel': ['hermes-skills', 'hermes-refs'],
 
   // Everyone else sees the whole operating memory.
   conductor: ['*'],
