@@ -22,6 +22,7 @@ import { brainzStatus } from '@/lib/connectors/brainz';
 import { hermesCronStatus } from '@/lib/connectors/hermes-cron';
 import { diagmapStatus } from '@/lib/connectors/diagmap';
 import { bountyStatus } from '@/lib/connectors/bounty';
+import { ollamaStatus } from '@/lib/connectors/ollama';
 import { getBrainProvider } from '@/lib/brain';
 import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
@@ -44,6 +45,7 @@ const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][
   ['hermes-cron', 'orchestration', hermesCronStatus],
   ['diagmap', 'knowledge', diagmapStatus],
   ['bounty-radar', 'local', bountyStatus],
+  ['ollama', 'orchestration', ollamaStatus],
   ['llm', 'orchestration', llmStatus],
   ['whatsapp', 'social', whatsappStatus],
   ['zernio', 'social', zernioStatus],
