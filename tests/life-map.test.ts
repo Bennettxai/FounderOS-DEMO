@@ -10,23 +10,25 @@ import { realAgents } from '@/lib/agents/real';
 import { AGENT_BRAIN_SCOPES } from '@/lib/brain-graph';
 
 describe('LIFE_AREAS', () => {
-  test("covers Alex's named areas with distinct colors", () => {
+  test("covers Nik's named areas with distinct colors", () => {
     const ids = LIFE_AREAS.map((a) => a.id);
-    expect(ids).toEqual(expect.arrayContaining(['sales', 'marketing', 'finances', 'communication']));
+    expect(ids).toEqual(
+      expect.arrayContaining(['diagmaps', 'fieldops', 'dev', 'research', 'models', 'picks', 'operations']),
+    );
     const colors = LIFE_AREAS.map((a) => a.color);
     expect(new Set(colors).size).toBe(colors.length);
   });
 
-  test('marketing breaks down into the five named modules', () => {
-    const marketing = LIFE_AREAS.find((a) => a.id === 'marketing')!;
-    expect(marketing.modules.map((m) => m.id)).toEqual(
-      expect.arrayContaining(['content', 'email', 'newsletter', 'sms', 'editing']),
+  test('diagnostic maps breaks down into the four named modules', () => {
+    const diagmaps = LIFE_AREAS.find((a) => a.id === 'diagmaps')!;
+    expect(diagmaps.modules.map((m) => m.id)).toEqual(
+      expect.arrayContaining(['canonicals', 'guided-walks', 'fleet', 'service-matters']),
     );
   });
 
-  test('client management lives under communication', () => {
-    const comms = LIFE_AREAS.find((a) => a.id === 'communication')!;
-    expect(comms.modules.some((m) => m.id === 'client-management')).toBe(true);
+  test('clients live under field ops', () => {
+    const fieldops = LIFE_AREAS.find((a) => a.id === 'fieldops')!;
+    expect(fieldops.modules.some((m) => m.id === 'clients')).toBe(true);
   });
 
   test('every agent referenced by an area exists in the real roster or scope map', () => {
@@ -64,10 +66,10 @@ describe('CONTACT_TIERS', () => {
 describe('buildLifeMap', () => {
   const map = buildLifeMap();
 
-  test('has a single center node labeled for Alex', () => {
+  test('has a single center node labeled for Nik', () => {
     const centers = map.nodes.filter((n) => n.type === 'center');
     expect(centers).toHaveLength(1);
-    expect(centers[0].label.toLowerCase()).toContain('alex');
+    expect(centers[0].label.toLowerCase()).toContain('nik');
   });
 
   test('one area node per life area, each linked to the center', () => {
@@ -79,17 +81,17 @@ describe('buildLifeMap', () => {
   });
 
   test('module nodes inherit their area color and parent', () => {
-    const content = map.nodes.find((n) => n.id === 'marketing/content');
-    expect(content?.type).toBe('module');
-    expect(content?.parent).toBe('marketing');
-    expect(content?.color).toBe(LIFE_AREAS.find((a) => a.id === 'marketing')!.color);
+    const canonicals = map.nodes.find((n) => n.id === 'diagmaps/canonicals');
+    expect(canonicals?.type).toBe('module');
+    expect(canonicals?.parent).toBe('diagmaps');
+    expect(canonicals?.color).toBe(LIFE_AREAS.find((a) => a.id === 'diagmaps')!.color);
   });
 
-  test('contact tier nodes hang off communication/client-management', () => {
+  test('contact tier nodes hang off fieldops/clients', () => {
     const tierNodes = map.nodes.filter((n) => n.type === 'tier');
     expect(tierNodes).toHaveLength(CONTACT_TIERS.length);
     for (const t of tierNodes) {
-      expect(t.parent).toBe('communication/client-management');
+      expect(t.parent).toBe('fieldops/clients');
     }
   });
 
@@ -100,18 +102,28 @@ describe('buildLifeMap', () => {
 
 describe('lifeAreaForDepartment', () => {
   test('maps every seeded department to a life area', () => {
-    for (const dept of ['dept-sales', 'dept-marketing-growth', 'dept-tech', 'dept-finance', 'dept-comms']) {
+    for (const dept of [
+      'dept-diagmaps',
+      'dept-fieldops',
+      'dept-dev',
+      'dept-research',
+      'dept-models',
+      'dept-picks',
+      'dept-ops',
+    ]) {
       const area = lifeAreaForDepartment(dept);
       expect(area, `no life area for ${dept}`).toBeTruthy();
       expect(LIFE_AREAS.some((a) => a.id === area!.id)).toBe(true);
     }
   });
 
-  test('sales is sales; marketing/growth is marketing; comms is communication; finance is finances; tech is knowledge', () => {
-    expect(lifeAreaForDepartment('dept-sales')?.id).toBe('sales');
-    expect(lifeAreaForDepartment('dept-marketing-growth')?.id).toBe('marketing');
-    expect(lifeAreaForDepartment('dept-comms')?.id).toBe('communication');
-    expect(lifeAreaForDepartment('dept-finance')?.id).toBe('finances');
-    expect(lifeAreaForDepartment('dept-tech')?.id).toBe('knowledge');
+  test('each pillar maps to its own area', () => {
+    expect(lifeAreaForDepartment('dept-diagmaps')?.id).toBe('diagmaps');
+    expect(lifeAreaForDepartment('dept-fieldops')?.id).toBe('fieldops');
+    expect(lifeAreaForDepartment('dept-dev')?.id).toBe('dev');
+    expect(lifeAreaForDepartment('dept-research')?.id).toBe('research');
+    expect(lifeAreaForDepartment('dept-models')?.id).toBe('models');
+    expect(lifeAreaForDepartment('dept-picks')?.id).toBe('picks');
+    expect(lifeAreaForDepartment('dept-ops')?.id).toBe('operations');
   });
 });

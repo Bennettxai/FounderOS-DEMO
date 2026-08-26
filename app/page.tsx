@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Zap } from 'lucide-react';
 import { getDb } from '@/lib/data';
 import { allConnectorStatuses } from '@/lib/connectors';
-import { createGBrainProvider } from '@/lib/connectors/gbrain';
+import { getBrainOverview } from '@/lib/brain';
 import { audienceSeries, PLATFORM_COLORS, PLATFORM_LABELS } from '@/lib/social';
 import { syncFromZernioLive } from '@/lib/social-live';
 import { zernioPostDays } from '@/lib/connectors/zernio';
@@ -128,7 +128,7 @@ export default async function HomePage() {
   // console past 20s.
   const [connections, overview, feed, postDays] = await Promise.all([
     allConnectorStatuses(),
-    createGBrainProvider().overview(),
+    getBrainOverview(),
     gatherCommsFeed(),
     zernioPostDays(),
     syncFromZernioLive(db),
@@ -192,7 +192,7 @@ export default async function HomePage() {
 
       <PageHeader
         eyebrow="operator console"
-        title={`${greeting()}, Alex`}
+        title={`${greeting()}, Nik`}
         caret
         right={<Kbd>⌘K</Kbd>}
       />

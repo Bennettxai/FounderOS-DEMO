@@ -1,8 +1,8 @@
 /**
- * Alex's life map: the radial taxonomy at the heart of the OS.
- * Center = Alex's life; ring 1 = color-coded life areas; ring 2 = the
- * modules inside each area. Communication additionally carries the contact
- * tier system — the numbered/colored response-priority ladder for people.
+ * Nik's life map: the radial taxonomy at the heart of the OS.
+ * Center = Nik's work; ring 1 = color-coded life areas; ring 2 = the
+ * modules inside each area. Field Ops additionally carries the contact
+ * tier system — the numbered/colored response-priority ladder.
  *
  * This is the one place colors enter the otherwise black & white OS:
  * each life area owns a hue, and everything underneath inherits it.
@@ -18,117 +18,96 @@ export type LifeArea = {
   detail: string;
   modules: LifeModule[];
   agents: string[]; // RuntimeAgent ids working this area
-  brainFolders: string[]; // brain-store folders feeding this area
+  brainFolders: string[]; // brain folders feeding this area
   departmentIds: string[]; // seeded departments that roll up to this area
 };
 
 export const LIFE_AREAS: LifeArea[] = [
   {
-    id: 'marketing',
-    label: 'Marketing',
-    color: '#f59e0b',
-    detail: 'Everything that earns attention.',
-    modules: [
-      { id: 'content', label: 'Content', detail: 'Posts, scripts, and creative across IG/TikTok/YT/X.' },
-      { id: 'email', label: 'Email', detail: 'Campaigns and sequences.' },
-      { id: 'newsletter', label: 'Newsletter', detail: 'The recurring owned-audience send.' },
-      { id: 'sms', label: 'SMS', detail: 'Text blasts and reminders.' },
-      { id: 'editing', label: 'Editing', detail: 'Cuts, captions, and post-production.' },
-    ],
-    agents: ['social-agent', 'postly-publisher', 'adsmith-creative', 'reelkit-editor', 'renderly-creative', 'dmflow-mcp', 'social-pulse'],
-    brainFolders: ['media', 'writing', 'ideas'],
-    departmentIds: ['dept-marketing-growth'],
-  },
-  {
-    id: 'sales',
-    label: 'Sales',
-    color: '#ef4444',
-    detail: 'Deals, pipeline, and revenue relationships.',
-    modules: [
-      { id: 'pipeline', label: 'Pipeline', detail: 'Active deals and stages.' },
-      { id: 'crm', label: 'CRM', detail: 'People, companies, and account history.' },
-      { id: 'follow-up', label: 'Follow-up', detail: 'Next actions and reminders.' },
-      { id: 'offers', label: 'Offers', detail: 'Proposals, pricing, and close paths.' },
-    ],
-    agents: [
-      'sales-agent',
-      'crm-pulse',
-      'launchpad-cohort-sales',
-      'vantage-sales',
-      'paykit-sales',
-      'vantage-paykit',
-      'stripe-sales',
-      'processor-confirmation',
-      'flexpay-financing',
-      'sales-calls-data',
-    ],
-    brainFolders: ['people', 'companies', 'hiring'],
-    departmentIds: ['dept-sales'],
-  },
-  {
-    id: 'finances',
-    label: 'Finances',
-    color: '#22c55e',
-    detail: 'Money in, money out, every processor.',
-    modules: [
-      { id: 'payments', label: 'Payments', detail: 'Stripe + the processor registry.' },
-      { id: 'invoicing', label: 'Invoicing', detail: 'What is owed and by whom.' },
-      { id: 'subscriptions', label: 'Subscriptions', detail: 'Recurring revenue and churn.' },
-      { id: 'bookkeeping', label: 'Bookkeeping', detail: 'Categorized, reconciled, tax-ready.' },
-    ],
-    agents: ['payments-pulse'],
-    brainFolders: ['companies'],
-    departmentIds: ['dept-finance'],
-  },
-  {
-    id: 'communication',
-    label: 'Communication',
+    id: 'diagmaps',
+    label: 'Diagnostic Maps',
     color: '#3b82f6',
-    detail: 'Every person, every channel, one priority ladder.',
+    detail: 'The canonical TL-DM fleet — every model, one map.',
     modules: [
-      {
-        id: 'client-management',
-        label: 'Client management',
-        detail: 'Tagged people with response tiers — who needs an answer ASAP.',
-      },
-      { id: 'inbox', label: 'Inbox', detail: '4 IMAP inboxes, unified.' },
-      { id: 'whatsapp', label: 'WhatsApp', detail: 'Conversations from local ChatStorage.' },
-      { id: 'slack', label: 'Slack', detail: 'Workspace messages and mentions.' },
-      { id: 'meetings', label: 'Meetings', detail: 'Notes and follow-ups.' },
+      { id: 'canonicals', label: 'Canonicals', detail: 'Final maps per family, mirrored and verified.' },
+      { id: 'guided-walks', label: 'Guided walks', detail: 'The step-by-step troubleshooting flows.' },
+      { id: 'fleet', label: 'Fleet gate', detail: 'Dashboard that never drifts from the canon.' },
+      { id: 'service-matters', label: 'ServiceMatters', detail: 'Job-aid corpus and reference extraction.' },
     ],
-    agents: ['comms-agent', 'gmail-worker', 'whatsapp-worker', 'slack-worker'],
-    brainFolders: ['inbox', 'meetings', 'people'],
-    departmentIds: ['dept-comms'],
+    agents: ['map-builder', 'guided-qa', 'fleet-coverage'],
+    brainFolders: ['canonical-maps', 'reference'],
+    departmentIds: ['dept-diagmaps'],
   },
   {
-    id: 'clients',
-    label: 'Clients',
-    color: '#14b8a6',
-    detail: 'Every client, onboarded and served.',
+    id: 'fieldops',
+    label: 'Field Ops',
+    color: '#ef4444',
+    detail: 'OpenFieldPro: the field-service platform.',
     modules: [
-      { id: 'roster', label: 'Roster', detail: 'Who is a client right now, by venture.' },
-      { id: 'onboarding', label: 'Onboarding', detail: 'Closed-won to kickoff without a dropped step.' },
-      { id: 'service', label: 'Service', detail: 'Check-in cadence and deliverable tracking.' },
-      { id: 'renewals', label: 'Renewals', detail: 'Expansion and renewal timing.' },
+      { id: 'work-orders', label: 'Work orders', detail: 'Job intake, dispatch, and execution.' },
+      { id: 'invoicing', label: 'Invoicing', detail: 'Estimates, invoices, and accounts receivable.' },
+      { id: 'release', label: 'Release', detail: 'The release checklist to production.' },
+      { id: 'clients', label: 'Clients', detail: 'Tagged contacts with response tiers.' },
     ],
-    agents: ['client-roster', 'client-onboarding', 'client-success'],
-    brainFolders: ['people', 'companies'],
-    departmentIds: ['dept-clients'],
+    agents: ['fieldops-agent', 'release-gate', 'ops-data'],
+    brainFolders: ['projects'],
+    departmentIds: ['dept-fieldops'],
   },
   {
-    id: 'knowledge',
-    label: 'Knowledge',
+    id: 'dev',
+    label: 'Development',
+    color: '#22c55e',
+    detail: 'Code, tests, and repo health.',
+    modules: [
+      { id: 'code', label: 'Code', detail: 'Features and fixes across the repos.' },
+      { id: 'tests', label: 'Tests', detail: 'The suite that has to stay green.' },
+      { id: 'repos', label: 'Repos', detail: 'Branch hygiene and commit cadence.' },
+    ],
+    agents: ['dev-agent', 'code-worker', 'test-worker'],
+    brainFolders: ['projects'],
+    departmentIds: ['dept-dev'],
+  },
+  {
+    id: 'research',
+    label: 'Research',
     color: '#a855f7',
-    detail: 'G-Brain: markdown, vectors, and recall.',
+    detail: 'Bounties, SurfSense, and the knowledge base.',
     modules: [
-      { id: 'brain-store', label: 'Brain store', detail: 'Markdown source of truth on disk.' },
-      { id: 'vector-db', label: 'Vector DB', detail: 'Chunks → embeddings → pgvector.' },
-      { id: 'prompts', label: 'Prompts', detail: 'Reusable prompt library.' },
-      { id: 'sources', label: 'Sources', detail: 'Reference material and citations.' },
+      { id: 'bounties', label: 'Bounties', detail: 'Real, payable GitHub bounties — scams quarantined.' },
+      { id: 'surfsense', label: 'SurfSense', detail: 'RAG research over personal sources.' },
+      { id: 'brain', label: 'Knowledge base', detail: 'Canonical maps, docs, knowledge graph.' },
     ],
-    agents: ['data-agent', 'markdown-auditor', 'vector-auditor', 'notion-sync', 'brain-librarian'],
-    brainFolders: ['concepts', 'prompts', 'sources', 'archive'],
-    departmentIds: ['dept-tech'],
+    agents: ['research-agent', 'bounty-radar', 'surf-research', 'data-agent'],
+    brainFolders: ['*'],
+    departmentIds: ['dept-research'],
+  },
+  {
+    id: 'models',
+    label: 'Models',
+    color: '#06b6d4',
+    detail: 'Local inference, eval, and training.',
+    modules: [
+      { id: 'inference', label: 'Inference', detail: 'llama.cpp and Ollama serving.' },
+      { id: 'evals', label: 'Evals', detail: 'Fixed-budget benchmarks on local models.' },
+      { id: 'training', label: 'Training', detail: 'OneTrainer workspaces and checkpoints.' },
+    ],
+    agents: ['models-agent', 'eval-runner', 'training-run'],
+    brainFolders: ['models'],
+    departmentIds: ['dept-models'],
+  },
+  {
+    id: 'picks',
+    label: 'Picks',
+    color: '#f59e0b',
+    detail: 'Brainz pick bots: sports, trading, health.',
+    modules: [
+      { id: 'sports', label: 'Sports', detail: 'SportsClaw picks with research briefs.' },
+      { id: 'trading', label: 'Trading', detail: 'TradingDesk picks with research briefs.' },
+      { id: 'health', label: 'Ecosystem', detail: 'SysBot run-record health.' },
+    ],
+    agents: ['picks-agent', 'sportsclaw', 'tradingdesk', 'sysbot'],
+    brainFolders: ['picks'],
+    departmentIds: ['dept-picks'],
   },
   {
     id: 'operations',
@@ -136,16 +115,14 @@ export const LIFE_AREAS: LifeArea[] = [
     color: '#fafafa',
     detail: 'The machine that runs the machine.',
     modules: [
-      { id: 'agents', label: 'Agents', detail: 'The roster and its hierarchy.' },
-      { id: 'automations', label: 'Automations', detail: 'Scheduled and self-healing jobs.' },
-      { id: 'infra', label: 'Infra', detail: 'Local stack, ports, dedicated host target.' },
-      { id: 'hiring', label: 'Hiring', detail: 'Candidates and roles.' },
+      { id: 'cron', label: 'Cron', detail: 'The Hermes scheduled-job grid.' },
+      { id: 'github', label: 'GitHub', detail: 'Auth and remotes for every repo.' },
+      { id: 'drift', label: 'Drift', detail: 'Uncommitted-change sentinel.' },
+      { id: 'orchestrator', label: 'Orchestrator', detail: 'Broadcast fan-out and instance hosts.' },
     ],
-    // dept-tech rolls up to knowledge first (lifeAreaForDepartment takes the
-    // first match); operations still owns the conductor + stack agents.
-    agents: ['conductor', 'stack-monitor'],
-    brainFolders: ['org', 'projects', 'hiring'],
-    departmentIds: ['dept-tech'],
+    agents: ['ops-agent', 'cron-health', 'github-agent', 'drift-sentinel', 'conductor'],
+    brainFolders: ['ops', 'org'],
+    departmentIds: ['dept-ops'],
   },
 ];
 
@@ -158,8 +135,8 @@ export type ContactTier = {
 };
 
 /**
- * The response-priority ladder for people Alex talks to.
- * 1 = red (clients & students), 2 = yellow (brand), 3 = green (personal).
+ * The response-priority ladder for the people in the loop.
+ * 1 = red (clients & field customers), 2 = yellow (partners), 3 = green (personal).
  * Specific people get overrides via the contact_tags table.
  */
 export const CONTACT_TIERS: ContactTier[] = [
@@ -177,7 +154,7 @@ export function buildLifeMap(): LifeMap {
     {
       id: 'center',
       type: 'center',
-      label: "Alex's Life",
+      label: "Nik's OS",
       color: '#fafafa',
       parent: null,
       detail: 'The core. Everything orbits this.',
@@ -216,7 +193,7 @@ export function buildLifeMap(): LifeMap {
     }
   }
 
-  // the contact priority ladder hangs off client management
+  // the contact priority ladder hangs off client management under Field Ops
   for (const t of CONTACT_TIERS) {
     const id = `tier-${t.tier}`;
     nodes.push({
@@ -224,12 +201,12 @@ export function buildLifeMap(): LifeMap {
       type: 'tier',
       label: `T${t.tier} ${t.label}`,
       color: t.color,
-      parent: 'communication/client-management',
+      parent: 'fieldops/clients',
       detail: `${t.tags.join(', ')} — respond ${t.respond}`,
       agents: [],
       brainFolders: [],
     });
-    edges.push({ source: 'communication/client-management', target: id });
+    edges.push({ source: 'fieldops/clients', target: id });
   }
 
   return { nodes, edges };

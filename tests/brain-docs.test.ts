@@ -38,11 +38,11 @@ describe('buildBrainDocs', () => {
     expect(docs.filter((x) => x.path.startsWith('tools/')).length).toBe(d.tools.all().length);
     expect(docs.filter((x) => x.path.startsWith('people/')).length).toBe(d.people.all().length);
     expect(docs.filter((x) => x.path.startsWith('org/pillar-')).length).toBe(d.departments.all().length);
-    expect(paths.has('agents/gmail-worker.md')).toBe(true);
-    expect(paths.has('sops/sop-gmail-worker.md')).toBe(true);
-    expect(paths.has('tools/imap.md')).toBe(true);
-    expect(paths.has('people/person-marco.md')).toBe(true);
-    expect(paths.has('org/pillar-clients.md')).toBe(true);
+    expect(paths.has('agents/cron-health.md')).toBe(true);
+    expect(paths.has('sops/sop-cron-health.md')).toBe(true);
+    expect(paths.has('tools/git.md')).toBe(true);
+    expect(paths.has('people/person-nik.md')).toBe(true);
+    expect(paths.has('org/pillar-diagnostic-maps.md')).toBe(true);
   });
 
   test('every doc carries the generated marker in frontmatter', () => {
@@ -52,38 +52,39 @@ describe('buildBrainDocs', () => {
 
   test('an agent doc holds its charter, SOP instructions and wikilinked tools', () => {
     const docs = docsFor(seeded());
-    const gmail = docs.find((x) => x.path === 'agents/gmail-worker.md')!.content;
-    expect(gmail).toContain('IMAP Inboxes');
-    expect(gmail).toContain('Triage the four Gmail inboxes');
-    expect(gmail).toContain('Classify each thread');
-    expect(gmail).toContain('[[imap]]');
-    expect(gmail).toContain('[[comms-agent]]'); // reports to
-    expect(gmail).toContain('[[pillar-communications]]');
+    const cron = docs.find((x) => x.path === 'agents/cron-health.md')!.content;
+    expect(cron).toContain('Scheduler Watch');
+    expect(cron).toContain('Watch the scheduler');
+    expect(cron).toContain('Open the cron-health workspace');
+    expect(cron).toContain('[[hermes]]');
+    expect(cron).toContain('[[ops-agent]]'); // reports to
+    expect(cron).toContain('[[pillar-operations]]');
   });
 
   test('a SOP doc is built out: purpose, owner, trigger, steps, done, escalation', () => {
     const docs = docsFor(seeded());
-    const sop = docs.find((x) => x.path === 'sops/sop-client-onboarding.md')!.content;
+    const sop = docs.find((x) => x.path === 'sops/sop-guided-qa.md')!.content;
     for (const section of ['## Purpose', '## Owner', '## Trigger', '## Steps', '## Definition of done', '## Escalation']) {
       expect(sop, `missing ${section}`).toContain(section);
     }
-    expect(sop).toContain('closed-won');
-    expect(sop).toContain('[[client-onboarding]]');
+    expect(sop).toContain('guided walks');
+    expect(sop).toContain('[[guided-qa]]');
   });
 
   test('a tool doc lists who uses it, wikilinked', () => {
     const docs = docsFor(seeded());
-    const ledger = docs.find((x) => x.path === 'tools/ledger.md')!.content;
-    expect(ledger).toContain('[[sales-agent]]');
-    expect(ledger).toContain('[[person-marco]]');
+    const git = docs.find((x) => x.path === 'tools/git.md')!.content;
+    expect(git).toContain('[[code-worker]]');
+    expect(git).toContain('[[drift-sentinel]]');
   });
 
   test('a pillar doc rosters its workers and SOPs', () => {
     const docs = docsFor(seeded());
-    const clients = docs.find((x) => x.path === 'org/pillar-clients.md')!.content;
-    expect(clients).toContain('[[client-roster]]');
-    expect(clients).toContain('[[person-rae]]');
-    expect(clients).toContain('[[sop-client-onboarding]]');
+    const diagmaps = docs.find((x) => x.path === 'org/pillar-diagnostic-maps.md')!.content;
+    expect(diagmaps).toContain('[[map-builder]]');
+    expect(diagmaps).toContain('[[guided-qa]]');
+    expect(diagmaps).toContain('[[sop-map-builder]]');
+    expect(diagmaps).toContain('[[person-nik]]');
   });
 
   test('deterministic output', () => {
@@ -99,10 +100,10 @@ describe('writeBrainDocs', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'brain-docs-'));
     const first = writeBrainDocs(docs, dir);
     expect(first.written).toBeGreaterThan(0);
-    expect(existsSync(path.join(dir, 'agents', 'gmail-worker.md'))).toBe(true);
+    expect(existsSync(path.join(dir, 'agents', 'cron-health.md'))).toBe(true);
 
     // hand-edited (non-generated) file must be left alone
-    const handmade = path.join(dir, 'agents', 'gmail-worker.md');
+    const handmade = path.join(dir, 'agents', 'cron-health.md');
     writeFileSync(handmade, '# my own notes, no marker');
     const second = writeBrainDocs(docs, dir);
     expect(readFileSync(handmade, 'utf8')).toBe('# my own notes, no marker');

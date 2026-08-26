@@ -12,8 +12,8 @@ import { realAgents } from '@/lib/agents/real';
 const KNOWN_AGENTS = new Set(realAgents.map((a) => a.id));
 
 describe('VENTURES', () => {
-  test("Alex's two active income sources, each with a distinct color and brain tag", () => {
-    expect(VENTURES.map((v) => v.id)).toEqual(['vantage', 'launchpad-cohort']);
+  test("Nik's two active ventures, each with a distinct color and brain tag", () => {
+    expect(VENTURES.map((v) => v.id)).toEqual(['diagnostic-maps', 'openfieldpro']);
     expect(new Set(VENTURES.map((v) => v.color)).size).toBe(2);
     expect(new Set(VENTURES.map((v) => v.brainTag)).size).toBe(2);
     for (const v of VENTURES) {
@@ -24,15 +24,10 @@ describe('VENTURES', () => {
 
   test('venture colors match each real brand source', () => {
     const byId = new Map(VENTURES.map((v) => [v.id, v]));
-    // Vantage — sampled from VANTAGE LOGO (spring green)
-    expect(byId.get('vantage')?.color).toBe('#00ffaa');
-    // Launchpad Cohort — hsl(355 70% 50%) from the live site theme + brand guide
-    expect(byId.get('launchpad-cohort')?.color).toBe('#d9263f');
-  });
-
-  test('Personal Brand (brand-deals) is retired from the venture lens', () => {
-    expect(getVenture('brand-deals')).toBeNull();
-    expect(VENTURES.some((v) => v.label === 'Personal Brand')).toBe(false);
+    // Diagnostic Maps — deep teal, distinct from the life areas
+    expect(byId.get('diagnostic-maps')?.color).toBe('#0d9488');
+    // OpenFieldPro — the platform's spring green
+    expect(byId.get('openfieldpro')?.color).toBe('#00ffaa');
   });
 
   test('venture colors do not collide with life-area colors', () => {
@@ -52,9 +47,9 @@ describe('VENTURES', () => {
     }
   });
 
-  test('every venture staffs marketing, communication, and finances at minimum', () => {
+  test('every venture staffs research and operations at minimum', () => {
     for (const v of VENTURES) {
-      for (const required of ['marketing', 'communication', 'finances']) {
+      for (const required of ['research', 'operations']) {
         expect(
           (v.areaAgents[required] ?? []).length,
           `${v.id} has no agents on ${required}`,
@@ -66,25 +61,27 @@ describe('VENTURES', () => {
 
 describe('lookups', () => {
   test('getVenture resolves by id and returns null for unknowns', () => {
-    expect(getVenture('vantage')?.label).toBe('Vantage');
+    expect(getVenture('diagnostic-maps')?.label).toBe('Diagnostic Maps');
     expect(getVenture('nope')).toBeNull();
   });
 
   test('ventureAgentSet unions all areas for a venture', () => {
-    const set = ventureAgentSet('vantage');
-    const vantage = getVenture('vantage')!;
-    for (const agents of Object.values(vantage.areaAgents)) {
+    const set = ventureAgentSet('diagnostic-maps');
+    const dm = getVenture('diagnostic-maps')!;
+    for (const agents of Object.values(dm.areaAgents)) {
       for (const id of agents) expect(set.has(id)).toBe(true);
     }
   });
 
   test('venturesForAgent reverse lookup: shared infra agents serve both ventures', () => {
     expect(venturesForAgent('conductor').map((v) => v.id)).toEqual([
-      'vantage', 'launchpad-cohort',
+      'diagnostic-maps', 'openfieldpro',
     ]);
   });
 
-  test('whatsapp-worker serves launchpad-cohort (students live on WhatsApp)', () => {
-    expect(venturesForAgent('whatsapp-worker').some((v) => v.id === 'launchpad-cohort')).toBe(true);
+  test('data-agent serves both ventures (shared knowledge base)', () => {
+    expect(venturesForAgent('data-agent').map((v) => v.id)).toEqual([
+      'diagnostic-maps', 'openfieldpro',
+    ]);
   });
 });

@@ -44,16 +44,17 @@ describe('seedDatabase', () => {
     }
   });
 
-  test('the six operating pillars, in order', () => {
+  test('the seven operating pillars, in order', () => {
     db = openDb(':memory:');
     seedDatabase(db);
     expect(db.departments.all().map((d) => d.name)).toEqual([
-      'Sales',
-      'Marketing/Growth',
-      'TECH',
-      'Finances',
-      'Communications',
-      'Clients',
+      'Diagnostic Maps',
+      'Field Ops',
+      'Development',
+      'Research',
+      'Models',
+      'Picks',
+      'Operations',
     ]);
   });
 
@@ -61,45 +62,33 @@ describe('seedDatabase', () => {
     db = openDb(':memory:');
     seedDatabase(db);
     const byId = new Map(db.agents.all().map((a) => [a.id, a.departmentId]));
-    // Sales: the deal / account / CRM lanes
-    for (const id of [
-      'sales-agent',
-      'crm-pulse',
-      'launchpad-cohort-sales',
-      'vantage-sales',
-      'vantage-paykit',
-      'sales-calls-data',
-    ]) {
-      expect(byId.get(id)).toBe('dept-sales');
+    // Diagnostic Maps: the fleet crew
+    for (const id of ['map-builder', 'guided-qa', 'fleet-coverage']) {
+      expect(byId.get(id)).toBe('dept-diagmaps');
     }
-    // Finances: the payment processors moved off Sales
-    for (const id of [
-      'payments-pulse',
-      'stripe-sales',
-      'processor-confirmation',
-      'paykit-sales',
-      'flexpay-financing',
-    ]) {
-      expect(byId.get(id)).toBe('dept-finance');
+    // Field Ops: the OpenFieldPro lanes
+    for (const id of ['fieldops-agent', 'release-gate', 'ops-data']) {
+      expect(byId.get(id)).toBe('dept-fieldops');
     }
-    expect(db.agents.all().filter((a) => a.departmentId === 'dept-finance').length).toBeGreaterThanOrEqual(5);
-    // Marketing/Growth: the social/content crew
-    for (const id of [
-      'social-agent',
-      'postly-publisher',
-      'adsmith-creative',
-      'reelkit-editor',
-      'renderly-creative',
-      'dmflow-mcp',
-    ]) {
-      expect(byId.get(id)).toBe('dept-marketing-growth');
+    // Development: code + test
+    for (const id of ['dev-agent', 'code-worker', 'test-worker']) {
+      expect(byId.get(id)).toBe('dept-dev');
     }
-    // TECH: AI head, the G-Brain data crew, and automations
-    for (const id of ['conductor', 'data-agent', 'markdown-auditor', 'vector-auditor', 'notion-sync', 'stack-monitor']) {
-      expect(byId.get(id)).toBe('dept-tech');
+    // Research: bounties, SurfSense, knowledge
+    for (const id of ['research-agent', 'bounty-radar', 'surf-research', 'data-agent']) {
+      expect(byId.get(id)).toBe('dept-research');
     }
-    for (const id of ['comms-agent', 'gmail-worker', 'whatsapp-worker', 'slack-worker']) {
-      expect(byId.get(id)).toBe('dept-comms');
+    // Models: eval + training
+    for (const id of ['models-agent', 'eval-runner', 'training-run']) {
+      expect(byId.get(id)).toBe('dept-models');
+    }
+    // Picks: the Brainz bots
+    for (const id of ['picks-agent', 'sportsclaw', 'tradingdesk', 'sysbot']) {
+      expect(byId.get(id)).toBe('dept-picks');
+    }
+    // Operations: cron, github, drift, orchestrator
+    for (const id of ['ops-agent', 'cron-health', 'github-agent', 'drift-sentinel', 'conductor']) {
+      expect(byId.get(id)).toBe('dept-ops');
     }
   });
 
@@ -116,46 +105,45 @@ describe('seedDatabase', () => {
     seedDatabase(db);
     const byId = new Map(db.agents.all().map((a) => [a.id, a]));
 
-    // Comms: the channel workers that feed /comms hang off the comms agent
-    for (const worker of ['gmail-worker', 'whatsapp-worker', 'slack-worker']) {
-      expect(byId.get(worker)?.parentId).toBe('comms-agent');
+    // DiagMaps: the QA + fleet workers hang off the map builder
+    for (const worker of ['guided-qa', 'fleet-coverage']) {
+      expect(byId.get(worker)?.parentId).toBe('map-builder');
       expect(byId.get(worker)?.tier).toBe('worker');
     }
-    // Studio: social media + content creation
-    for (const worker of ['postly-publisher', 'adsmith-creative', 'reelkit-editor', 'renderly-creative', 'dmflow-mcp']) {
-      expect(byId.get(worker)?.parentId).toBe('social-agent');
+    // Field Ops
+    for (const worker of ['release-gate', 'ops-data']) {
+      expect(byId.get(worker)?.parentId).toBe('fieldops-agent');
     }
-    // Sales: CRM / account lanes hang off the sales instance
-    for (const worker of [
-      'crm-pulse',
-      'launchpad-cohort-sales',
-      'vantage-sales',
-      'sales-calls-data',
-    ]) {
-      expect(byId.get(worker)?.parentId).toBe('sales-agent');
-      expect(byId.get(worker)?.tier).toBe('worker');
+    // Development
+    for (const worker of ['code-worker', 'test-worker']) {
+      expect(byId.get(worker)?.parentId).toBe('dev-agent');
     }
-    expect(byId.get('vantage-paykit')?.parentId).toBe('vantage-sales');
-    expect(byId.get('vantage-paykit')?.tier).toBe('worker');
-    // Finances: the payment processors now report to Payments Pulse
-    for (const worker of ['stripe-sales', 'processor-confirmation', 'paykit-sales', 'flexpay-financing']) {
-      expect(byId.get(worker)?.parentId).toBe('payments-pulse');
-      expect(byId.get(worker)?.tier).toBe('worker');
+    // Research
+    for (const worker of ['bounty-radar', 'surf-research']) {
+      expect(byId.get(worker)?.parentId).toBe('research-agent');
     }
-    // Knowledge: the G-Brain analyst and its auditors
-    for (const worker of ['markdown-auditor', 'vector-auditor']) {
-      expect(byId.get(worker)?.parentId).toBe('data-agent');
+    // Models
+    for (const worker of ['eval-runner', 'training-run']) {
+      expect(byId.get(worker)?.parentId).toBe('models-agent');
+    }
+    // Picks (Brainz)
+    for (const worker of ['sportsclaw', 'tradingdesk', 'sysbot']) {
+      expect(byId.get(worker)?.parentId).toBe('picks-agent');
+    }
+    // Operations
+    for (const worker of ['cron-health', 'github-agent', 'drift-sentinel']) {
+      expect(byId.get(worker)?.parentId).toBe('ops-agent');
     }
     // Top-level agents are instance slots awaiting Clawline/Claude Code bindings
-    expect(byId.get('comms-agent')?.parentId).toBeNull();
-    expect(byId.get('comms-agent')?.instance).not.toBe('');
+    expect(byId.get('map-builder')?.parentId).toBeNull();
+    expect(byId.get('map-builder')?.instance).not.toBe('');
   });
 
   test('re-seeding removes agents that left the roster', () => {
     db = openDb(':memory:');
     seedDatabase(db);
     db.agents.insert({
-      id: 'ghost', departmentId: 'dept-tech', name: 'Ghost', role: 'r', status: 'active',
+      id: 'ghost', departmentId: 'dept-dev', name: 'Ghost', role: 'r', status: 'active',
       tier: 'lead', description: '', model: 'm', tools: [], parentId: null, instance: 'builtin',
     });
     seedDatabase(db);

@@ -24,18 +24,18 @@ describe('graph lenses — Alex taxonomy (2026-07-12)', () => {
     ]);
     expect(FUNCTION_LENSES.map((l) => l.label)).toContain('Core');
     expect(FUNCTION_LENSES.map((l) => l.label)).toContain('Enabling');
-    expect(FUNCTION_LENSES.map((l) => l.label)).toContain('Vantage team');
-    expect(FUNCTION_LENSES.map((l) => l.label)).toContain('Launchpad Cohort team');
+    expect(FUNCTION_LENSES.map((l) => l.label)).toContain('Diagnostic Maps team');
+    expect(FUNCTION_LENSES.map((l) => l.label)).toContain('OpenFieldPro team');
     expect(ACTION_LENSES).toHaveLength(11);
     expect(new Set(ALL_LENSES.map((l) => l.id)).size).toBe(ALL_LENSES.length);
   });
 
   test('entity lenses match by node kind against the real seeded graph', () => {
-    expect(lensNodeSet('ent-people', ctx).size).toBe(5);
-    expect(lensNodeSet('ent-subagents', ctx).size).toBe(30);
-    expect(lensNodeSet('ent-departments', ctx).size).toBe(6);
-    expect(lensNodeSet('ent-sops', ctx).size).toBeGreaterThan(20);
-    expect(lensNodeSet('ent-tools', ctx).size).toBeGreaterThan(20);
+    expect(lensNodeSet('ent-people', ctx).size).toBe(1);
+    expect(lensNodeSet('ent-subagents', ctx).size).toBe(25);
+    expect(lensNodeSet('ent-departments', ctx).size).toBe(7);
+    expect(lensNodeSet('ent-sops', ctx).size).toBe(26);
+    expect(lensNodeSet('ent-tools', ctx).size).toBeGreaterThanOrEqual(8);
   });
 
   test('workflows and projects are honestly empty until modeled', () => {
@@ -46,20 +46,20 @@ describe('graph lenses — Alex taxonomy (2026-07-12)', () => {
   test('core and enabling split the pillars cleanly and light whole sectors', () => {
     const core = lensNodeSet('fn-core', ctx);
     const enabling = lensNodeSet('fn-enabling', ctx);
-    expect(core.has('team:dept-sales')).toBe(true);
-    expect(enabling.has('team:dept-tech')).toBe(true);
+    expect(core.has('team:dept-diagmaps')).toBe(true);
+    expect(enabling.has('team:dept-dev')).toBe(true);
     // a node is never both core and enabling
     for (const id of core) expect(enabling.has(id), id).toBe(false);
     // sectors include their workers, not just the gateways
-    expect(core.has('emp:sales-agent')).toBe(true);
+    expect(core.has('emp:map-builder')).toBe(true);
   });
 
   test('venture team lenses light their rosters', () => {
-    const mer = lensNodeSet('fn-vantage', ctx);
-    expect(mer.has('emp:vantage-sales')).toBe(true);
-    expect(mer.has('emp:vantage-paykit')).toBe(true);
-    const aa = lensNodeSet('fn-launchpad-cohort', ctx);
-    expect(aa.has('emp:launchpad-cohort-sales')).toBe(true);
+    const dm = lensNodeSet('fn-diagnostic-maps', ctx);
+    expect(dm.has('emp:map-builder')).toBe(true);
+    expect(dm.has('emp:guided-qa')).toBe(true);
+    const ofp = lensNodeSet('fn-openfieldpro', ctx);
+    expect(ofp.has('emp:release-gate')).toBe(true);
   });
 
   test('every action lens resolves to real seeded agents', () => {
@@ -71,10 +71,10 @@ describe('graph lenses — Alex taxonomy (2026-07-12)', () => {
   });
 
   test('specific action mappings hold', () => {
-    expect(lensNodeSet('act-ad-creation', ctx).has('emp:adsmith-creative')).toBe(true);
-    expect(lensNodeSet('act-lead-generation', ctx).has('emp:sales-agent')).toBe(true);
-    expect(lensNodeSet('act-social-scheduler', ctx).has('emp:postly-publisher')).toBe(true);
-    expect(lensNodeSet('act-ai-visuals', ctx).has('emp:renderly-creative')).toBe(true);
+    expect(lensNodeSet('act-ad-creation', ctx).has('emp:eval-runner')).toBe(true);
+    expect(lensNodeSet('act-lead-generation', ctx).has('emp:bounty-radar')).toBe(true);
+    expect(lensNodeSet('act-social-scheduler', ctx).has('emp:cron-health')).toBe(true);
+    expect(lensNodeSet('act-ai-visuals', ctx).has('emp:training-run')).toBe(true);
   });
 
   test('unknown lens returns an empty set, never throws', () => {

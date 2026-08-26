@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildKnowledgeGraph, graphDeptRank, graphDirectory, toolSlugOf, GRAPH_DEPT_ORDER } from '@/lib/knowledge-graph';
+import { openDb } from '@/lib/db';
+import { seedDatabase } from '@/lib/seed';
 import type { Agent, Department, Person, SopTask } from '@/lib/schemas';
 
 const dept = (id: string, name: string): Department => ({
@@ -76,11 +78,14 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
   });
 
   test('one team node per department on ring 1, tinted with its life-area color', () => {
-    const { nodes } = build();
+    const db = openDb(':memory:');
+    seedDatabase(db);
+    const { nodes } = buildKnowledgeGraph(db.agents.all(), db.departments.all(), db.people.all(), db.sopTasks.all());
+    db.close();
     const teams = nodes.filter((n) => n.kind === 'team');
-    expect(teams.map((t) => t.label).sort()).toEqual(['Sales', 'TECH']);
+    expect(teams).toHaveLength(7);
     expect(teams.every((t) => t.ring === 1)).toBe(true);
-    expect(teams.find((t) => t.label === 'Sales')?.color).toBe('#ef4444');
+    for (const t of teams) expect(t.color, t.label).toBeTruthy();
   });
 
   test('one task node per SOP task on ring 2, labeled with the job title', () => {
@@ -250,18 +255,26 @@ describe('graphDirectory — the scrollable everything-index', () => {
 });
 
 describe('graph department order (AC1)', () => {
-  test('Finances sits immediately next to Sales', () => {
-    expect(graphDeptRank('dept-finance')).toBe(graphDeptRank('dept-sales') + 1);
+  test('Dev sits immediately next to Field Ops', () => {
+    expect(graphDeptRank('dept-dev')).toBe(graphDeptRank('dept-fieldops') + 1);
   });
 
-  test('covers all six pillars exactly once', () => {
-    expect(new Set(GRAPH_DEPT_ORDER).size).toBe(6);
-    for (const id of ['dept-sales', 'dept-finance', 'dept-clients', 'dept-marketing-growth', 'dept-tech', 'dept-comms']) {
+  test('covers all seven pillars exactly once', () => {
+    expect(new Set(GRAPH_DEPT_ORDER).size).toBe(7);
+    for (const id of [
+      'dept-diagmaps',
+      'dept-fieldops',
+      'dept-dev',
+      'dept-research',
+      'dept-models',
+      'dept-picks',
+      'dept-ops',
+    ]) {
       expect(GRAPH_DEPT_ORDER).toContain(id);
     }
   });
 
   test('unknown departments rank after the known ones', () => {
-    expect(graphDeptRank('dept-mystery')).toBeGreaterThan(graphDeptRank('dept-comms'));
+    expect(graphDeptRank('dept-mystery')).toBeGreaterThan(graphDeptRank('dept-ops'));
   });
 });

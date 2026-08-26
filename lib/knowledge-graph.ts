@@ -16,12 +16,13 @@ export type KGNodeKind = 'self' | 'team' | 'task' | 'employee' | 'person' | 'too
 
 /** Executive title per department — the pillar node IS the department-head agent. */
 export const DEPT_EXEC_TITLES: Record<string, string> = {
-  'dept-sales': 'CRO',
-  'dept-marketing-growth': 'CMO',
-  'dept-tech': 'CTO',
-  'dept-finance': 'CFO',
-  'dept-comms': 'CCO',
-  'dept-clients': 'COO',
+  'dept-diagmaps': 'Head of Diagnostic Maps',
+  'dept-fieldops': 'Head of Field Ops',
+  'dept-dev': 'Head of Development',
+  'dept-research': 'Head of Research',
+  'dept-models': 'Head of Models',
+  'dept-picks': 'Head of Picks',
+  'dept-ops': 'Head of Operations',
 };
 
 export type KGNode = {
@@ -47,16 +48,17 @@ const RING: Record<KGNodeKind, number> = { self: 0, board: 1, team: 1, task: 2, 
 export const SELF_ID = 'self';
 
 /**
- * Display order for the graph only (not the sidebar/org/roadmap): Finances rides
- * immediately next to Sales so the revenue + payment-processor story sits together.
+ * Display order for the graph only (not the sidebar/org/roadmap): revenue-facing
+ * pillars first (diagnostic maps, field ops), then the builders and keepers.
  */
 export const GRAPH_DEPT_ORDER = [
-  'dept-sales',
-  'dept-finance',
-  'dept-clients',
-  'dept-marketing-growth',
-  'dept-tech',
-  'dept-comms',
+  'dept-diagmaps',
+  'dept-fieldops',
+  'dept-dev',
+  'dept-research',
+  'dept-models',
+  'dept-picks',
+  'dept-ops',
 ] as const;
 
 /** Rank a department id for graph layout; unknown ids sort after the known five. */

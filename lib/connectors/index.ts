@@ -18,6 +18,10 @@ import { webinarjamStatus } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
+import { brainzStatus } from '@/lib/connectors/brainz';
+import { hermesCronStatus } from '@/lib/connectors/hermes-cron';
+import { diagmapStatus } from '@/lib/connectors/diagmap';
+import { bountyStatus } from '@/lib/connectors/bounty';
 import { getBrainProvider } from '@/lib/brain';
 import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
@@ -36,6 +40,10 @@ async function brainConnectorStatus(): Promise<ConnectorStatus> {
 
 const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][] = [
   ['gbrain', 'brain', brainConnectorStatus],
+  ['brainz', 'local', brainzStatus],
+  ['hermes-cron', 'orchestration', hermesCronStatus],
+  ['diagmap', 'knowledge', diagmapStatus],
+  ['bounty-radar', 'local', bountyStatus],
   ['llm', 'orchestration', llmStatus],
   ['whatsapp', 'social', whatsappStatus],
   ['zernio', 'social', zernioStatus],

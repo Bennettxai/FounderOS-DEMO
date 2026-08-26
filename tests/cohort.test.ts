@@ -11,10 +11,10 @@ import {
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
 /**
- * Demo growth loop: a one-time welcome pop-up on the home screen the first
- * time someone runs the demo, plus a permanent footer CTA on every view. Both
- * point at the FounderOS cohort. The copy and the "once per browser" rule are
- * the load-bearing bits — lock them here.
+ * FounderOS ships with a cohort upsell (one-time welcome pop-up + footer CTA
+ * pointing at the FounderOS course). NikOS removes the upsell from the layout;
+ * the modal-decision logic in lib/cohort.ts is kept and tested so the wiring
+ * can be re-enabled without re-deriving it.
  */
 describe('cohort invite constants', () => {
   it('points at TheFounderOS.com over https', () => {
@@ -53,30 +53,10 @@ describe('shouldShowCohortModal', () => {
 });
 
 describe('wiring', () => {
-  test('the footer CTA renders inside the shared layout, under every page', () => {
+  test('NikOS removes the cohort upsell from the shared layout', () => {
     const layout = read('app/layout.tsx');
-    expect(layout).toContain('CohortBanner');
-    expect(layout).toContain('CohortModal');
-    // banner sits after {children} inside <main>, so it is the last thing on
-    // every view rather than a per-page opt-in
-    expect(layout.indexOf('{children}')).toBeLessThan(layout.indexOf('<CohortBanner'));
+    expect(layout).not.toContain('CohortBanner');
+    expect(layout).not.toContain('CohortModal');
   });
 
-  test('the banner is a server-rendered link to TheFounderOS.com carrying the CTA', () => {
-    const src = read('components/CohortBanner.tsx');
-    expect(src).toContain('COHORT_CTA');
-    expect(src).toContain('COHORT_URL');
-    expect(src).toContain('rel="noreferrer"');
-    expect(src).not.toContain("'use client'"); // static — no JS shipped for it
-  });
-
-  test('the modal is client-side, once per browser, and links to the cohort', () => {
-    const src = read('components/CohortModal.tsx');
-    expect(src).toContain("'use client'");
-    expect(src).toContain('shouldShowCohortModal');
-    expect(src).toContain('COHORT_STORAGE_KEY');
-    expect(src).toContain('COHORT_URL');
-    // dismissal persists, so it never nags twice
-    expect(src).toMatch(/localStorage\.setItem\(COHORT_STORAGE_KEY/);
-  });
 });

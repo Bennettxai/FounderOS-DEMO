@@ -127,6 +127,6 @@ describe('the knowledge graph is a blank canvas', () => {
     expect(offenders.map((n) => `${n.kind}:${n.label}`)).toEqual([]);
 
     // and it is still a full graph, not one emptied out by the scrub
-    expect(g.nodes.length).toBeGreaterThan(100);
+    expect(g.nodes.length).toBeGreaterThan(50);
   });
 });

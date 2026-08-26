@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createGBrainProvider } from '@/lib/connectors/gbrain';
+import { getBrainOverview } from '@/lib/brain';
 import { BrainOverviewSchema } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const overview = await createGBrainProvider().overview();
+  // Provider-aware: nikos reads the real local corpus (canonical fleet,
+  // markdown docs, knowledge graph); otherwise the gbrain CLI doctor.
+  const overview = await getBrainOverview();
   return NextResponse.json(BrainOverviewSchema.parse(overview));
 }

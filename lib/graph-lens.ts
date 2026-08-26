@@ -1,10 +1,9 @@
 /**
- * Lenses over the operating knowledge graph (Alex, 2026-07-12): slice the
- * same 114 nodes three ways — by ENTITY TYPE, by BUSINESS FUNCTION (core vs
- * enabling, plus his two venture teams), and by ACTION (what a thing is
- * actually used for). Picking a lens lights the matching nodes and dims the
- * rest. Pure data + matchers; the component supplies the node list and a
- * department resolver.
+ * Lenses over the operating knowledge graph (NikOS): slice the same nodes
+ * three ways — by ENTITY TYPE, by FUNCTION (core vs enabling, plus the two
+ * venture teams), and by ACTION (what a thing is actually used for). Picking
+ * a lens lights the matching nodes and dims the rest. Pure data + matchers;
+ * the component supplies the node list and a department resolver.
  */
 
 export type LensGroup = 'entity' | 'function' | 'action';
@@ -33,8 +32,8 @@ export const ENTITY_LENSES: Lens[] = [
 export const FUNCTION_LENSES: Lens[] = [
   { id: 'fn-core', group: 'function', label: 'Core' },
   { id: 'fn-enabling', group: 'function', label: 'Enabling' },
-  { id: 'fn-vantage', group: 'function', label: 'Vantage team' },
-  { id: 'fn-launchpad-cohort', group: 'function', label: 'Launchpad Cohort team' },
+  { id: 'fn-diagnostic-maps', group: 'function', label: 'Diagnostic Maps team' },
+  { id: 'fn-openfieldpro', group: 'function', label: 'OpenFieldPro team' },
 ];
 
 export const ACTION_LENSES: Lens[] = [
@@ -53,29 +52,29 @@ export const ACTION_LENSES: Lens[] = [
 
 export const ALL_LENSES: Lens[] = [...ENTITY_LENSES, ...FUNCTION_LENSES, ...ACTION_LENSES];
 
-/** Revenue-driving pillars vs the ones that keep the machine running. */
-const CORE_DEPTS = new Set(['team:dept-sales', 'team:dept-marketing-growth', 'team:dept-clients']);
-const ENABLING_DEPTS = new Set(['team:dept-tech', 'team:dept-finance', 'team:dept-comms']);
+/** Revenue-facing pillars vs the ones that keep the machine running. */
+const CORE_DEPTS = new Set(['team:dept-diagmaps', 'team:dept-fieldops', 'team:dept-research']);
+const ENABLING_DEPTS = new Set(['team:dept-dev', 'team:dept-models', 'team:dept-picks', 'team:dept-ops']);
 
 /** Venture team rosters — seeded agent ids (graph nodes are `emp:<id>`). */
 const VENTURE_TEAMS: Record<string, string[]> = {
-  'fn-vantage': ['vantage-sales', 'vantage-paykit', 'paykit-sales'],
-  'fn-launchpad-cohort': ['launchpad-cohort-sales'],
+  'fn-diagnostic-maps': ['map-builder', 'guided-qa', 'fleet-coverage'],
+  'fn-openfieldpro': ['fieldops-agent', 'release-gate', 'ops-data'],
 };
 
 /** What each action actually runs on — seeded agent ids, honest best-fit. */
 const ACTION_AGENTS: Record<string, string[]> = {
-  'act-ad-creation': ['adsmith-creative', 'renderly-creative', 'reelkit-editor'],
-  'act-lead-generation': ['sales-agent', 'launchpad-cohort-sales', 'dmflow-mcp', 'vantage-sales'],
-  'act-content-repurposing': ['reelkit-editor', 'postly-publisher'],
-  'act-content-ideation': ['social-agent', 'data-agent'],
-  'act-content-scripts': ['social-agent', 'adsmith-creative'],
-  'act-social-sentiment': ['social-agent', 'data-agent'],
-  'act-social-scheduler': ['postly-publisher', 'social-agent', 'dmflow-mcp'],
-  'act-ai-visuals': ['renderly-creative', 'adsmith-creative'],
-  'act-competitor-intel': ['data-agent', 'adsmith-creative'],
-  'act-icp-simulation': ['data-agent', 'sales-calls-data', 'crm-pulse'],
-  'act-channel-budget': ['data-agent', 'payments-pulse'],
+  'act-ad-creation': ['eval-runner', 'training-run'],
+  'act-lead-generation': ['bounty-radar', 'research-agent'],
+  'act-content-repurposing': ['data-agent', 'surf-research'],
+  'act-content-ideation': ['data-agent', 'surf-research'],
+  'act-content-scripts': ['data-agent'],
+  'act-social-sentiment': ['data-agent'],
+  'act-social-scheduler': ['cron-health'],
+  'act-ai-visuals': ['training-run', 'eval-runner'],
+  'act-competitor-intel': ['bounty-radar', 'surf-research'],
+  'act-icp-simulation': ['data-agent', 'surf-research'],
+  'act-channel-budget': ['data-agent', 'ops-data'],
 };
 
 const idSet = (ids: string[]) => new Set(ids.map((id) => `emp:${id}`));
@@ -107,7 +106,10 @@ export function lensNodeSet(lensId: string, ctx: LensContext): Set<string> {
       byKind('team');
       break;
     case 'ent-teams': {
-      const members = idSet([...VENTURE_TEAMS['fn-vantage'], ...VENTURE_TEAMS['fn-launchpad-cohort']]);
+      const members = idSet([
+        ...VENTURE_TEAMS['fn-diagnostic-maps'],
+        ...VENTURE_TEAMS['fn-openfieldpro'],
+      ]);
       for (const n of ctx.nodes) if (members.has(n.id)) out.add(n.id);
       break;
     }
@@ -123,8 +125,8 @@ export function lensNodeSet(lensId: string, ctx: LensContext): Set<string> {
       }
       break;
     }
-    case 'fn-vantage':
-    case 'fn-launchpad-cohort': {
+    case 'fn-diagnostic-maps':
+    case 'fn-openfieldpro': {
       const members = idSet(VENTURE_TEAMS[lensId]);
       for (const n of ctx.nodes) if (members.has(n.id)) out.add(n.id);
       break;

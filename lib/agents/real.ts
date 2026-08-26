@@ -1,531 +1,437 @@
+/**
+ * The NikOS agent roster. Every run() does real work against a local source
+ * on this machine — no seeded numbers, no fake green lights. Agents whose
+ * source is missing or offline fail honestly with setup instructions.
+ *
+ * Pillars map 1:1 to seeded departments in lib/seed.ts (enforced by
+ * tests/seed.test.ts). Top-level agents are leads; workers sit beneath them
+ * in the org chart via parentId (seed-side only).
+ *
+ * Rule of thumb: a run() must finish in well under a second when the source
+ * is present, and must never throw — every source is read defensively.
+ */
+import { execFile } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { z } from 'zod';
 import { getBrainProvider } from '@/lib/brain';
-import { createGBrainProvider } from '@/lib/connectors/gbrain';
-import { parseInboxConfigs, unreadCounts } from '@/lib/connectors/email';
-import { configuredProcessors, stripeSnapshot } from '@/lib/connectors/payments';
-import { recentMessages } from '@/lib/connectors/slack';
-import { recentPages } from '@/lib/connectors/notion';
-import { zernioStatus } from '@/lib/connectors/zernio';
-import { attioClients, attioStatus } from '@/lib/connectors/attio';
-import { webinarjamStatus, listRegistrants } from '@/lib/connectors/webinarjam';
-import { trakyoStatus } from '@/lib/connectors/trakyo';
-import { arcadsStatus } from '@/lib/connectors/arcads';
-import { whatsappStatus } from '@/lib/connectors/whatsapp';
-import { wisprStatus } from '@/lib/connectors/wispr';
 import { localStackStatus } from '@/lib/connectors/local-stack';
-import { getDb } from '@/lib/data';
+import { brainzBotStatus, brainzBots } from '@/lib/connectors/brainz';
+import { readCronJobs } from '@/lib/connectors/hermes-cron';
+import { readFleetCoverage, fleetFreshnessMs } from '@/lib/connectors/diagmap';
+import { NIKOS_PATHS } from '@/lib/nikos-paths';
 import type { LlmToolSpec } from '@/lib/connectors/llm';
 import type { AgentRunResult, RuntimeAgent } from '@/lib/agents/runtime';
 
-/**
- * The real agent roster. Every run() does actual work against a live system —
- * no seeded numbers. Agents whose connector lacks credentials fail honestly
- * with setup instructions instead of pretending.
- *
- * Top-level agents are instance slots: when the dedicated host is live each one
- * becomes its own Clawline / Claude Code process and respond() routes
- * to that instance instead of the builtin implementation.
- */
-
-async function gmailRun(): Promise<AgentRunResult> {
-  const inboxes = parseInboxConfigs(process.env);
-  if (inboxes.length === 0) {
-    return { ok: false, summary: 'No inboxes configured — set INBOX_1..4_HOST/_USER/_PASS in .env.local' };
-  }
-  const counts = await unreadCounts(process.env);
-  const failed = counts.filter((c) => c.error);
-  const total = counts.reduce((sum, c) => sum + c.unread, 0);
-  return {
-    ok: failed.length < counts.length,
-    summary: counts
-      .map((c) => `${c.inbox}: ${c.error ? `ERROR ${c.error.slice(0, 60)}` : `${c.unread} unread`}`)
-      .join(' · ')
-      .concat(` · total ${total} unread`),
-    data: counts,
-  };
-}
-
-async function whatsappRun(): Promise<AgentRunResult> {
-  const status = await whatsappStatus();
-  return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
-}
-
-async function slackRun(): Promise<AgentRunResult> {
-  if (!process.env.SLACK_BOT_TOKEN) {
-    return { ok: false, summary: 'Slack not configured — set SLACK_BOT_TOKEN in .env.local' };
-  }
-  const messages = await recentMessages(10);
-  return {
-    ok: true,
-    summary: `${messages.length} recent messages across ${new Set(messages.map((m) => m.channel)).size} channels`,
-    data: messages,
-  };
-}
-
-async function zernioRun(): Promise<AgentRunResult> {
-  const status = await zernioStatus();
-  return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
-}
-
-async function arcadsRun(): Promise<AgentRunResult> {
-  const status = await arcadsStatus();
-  return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
-}
-
 const label = (r: AgentRunResult) => (r.ok ? 'LIVE' : 'DOWN');
 
-const envIntegrationRun =
-  (name: string, envKey: string, purpose: string) =>
-  async (): Promise<AgentRunResult> => {
-    if (!process.env[envKey]) {
-      return { ok: false, summary: `${name} not configured — set ${envKey} · ${purpose}` };
+type ExecResult = { code: number; stdout: string; stderr: string };
+
+function exec(cmd: string, args: string[], timeoutMs = 10_000, cwd?: string): Promise<ExecResult> {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeoutMs, cwd, windowsHide: true, maxBuffer: 4 * 1024 * 1024 }, (err, stdout, stderr) => {
+      resolve({
+        code: err ? 1 : 0,
+        stdout: stdout?.toString() ?? '',
+        stderr: stderr?.toString() || (err ? err.message : ''),
+      });
+    });
+  });
+}
+
+// ── Diagnostic Maps ─────────────────────────────────────────────────────────
+
+async function mapBuilderRun(): Promise<AgentRunResult> {
+  const fleet = readFleetCoverage();
+  if (!fleet) {
+    return { ok: false, summary: 'Fleet-Coverage.json missing — run scripts/generate-fleet-coverage.cjs' };
+  }
+  const familyList = Object.entries(fleet.families)
+    .map(([f, n]) => `${f}×${n}`)
+    .join(' ');
+  const freshness = fleetFreshnessMs();
+  const stale = freshness !== null && freshness < 0;
+  return {
+    ok: true,
+    summary: `${fleet.total} canonical maps · ${familyList} · dashboard ${stale ? 'STALE' : 'current'}`,
+    data: { total: fleet.total, families: fleet.families, stale },
+  };
+}
+
+async function guidedQaRun(): Promise<AgentRunResult> {
+  const script = path.join(NIKOS_PATHS.diagmap, 'scripts', 'guided-walk-audit.cjs');
+  if (!fs.existsSync(script)) return { ok: false, summary: 'guided-walk-audit.cjs not found in the repo' };
+  const r = await exec('node', [script], 90_000, NIKOS_PATHS.diagmap);
+  if (r.code !== 0) return { ok: false, summary: `guided-walk audit failed: ${r.stderr.slice(0, 160)}` };
+  const summary = r.stdout
+    .split('\n')
+    .filter((l) => l.startsWith('SCANNED') || l.startsWith('Files with issues'))
+    .join(' · ');
+  const clean = /total issue-lines: 0/.test(r.stdout);
+  return {
+    ok: clean,
+    summary: summary || `audit ran (no summary line) — ${clean ? 'clean' : 'issues found'}`,
+    data: { clean, output: r.stdout.slice(0, 600) },
+  };
+}
+
+async function fleetCoverageRun(): Promise<AgentRunResult> {
+  const script = path.join(NIKOS_PATHS.diagmap, 'scripts', 'generate-fleet-coverage.cjs');
+  if (!fs.existsSync(script)) return { ok: false, summary: 'generate-fleet-coverage.cjs not found in the repo' };
+  const r = await exec('node', [script, '--check'], 60_000, NIKOS_PATHS.diagmap);
+  return {
+    ok: r.code === 0,
+    summary:
+      r.code === 0
+        ? 'Fleet gate clean — dashboard matches the canonical fleet'
+        : `Fleet gate FAILED: ${(r.stderr || r.stdout).slice(0, 220)}`,
+  };
+}
+
+// ── Field Ops (OpenFieldPro) ────────────────────────────────────────────────
+
+async function releaseGateRun(): Promise<AgentRunResult> {
+  const file = path.join(NIKOS_PATHS.openfieldpro, 'docs', 'release', 'RELEASE_CHECKLIST.md');
+  try {
+    const content = fs.readFileSync(file, 'utf8');
+    const open = (content.match(/- \[ \]/g) || []).length;
+    const done = (content.match(/- \[x\]/gi) || []).length;
+    return {
+      ok: open === 0,
+      summary: `OpenFieldPro release checklist: ${done} done · ${open} open — ${
+        open === 0 ? 'release-candidate clear' : 'hardening in progress'
+      }`,
+      data: { open, done },
+    };
+  } catch {
+    return { ok: false, summary: `No release checklist at ${file} — set NIKOS_OPENFIELDPRO_PATH` };
+  }
+}
+
+async function opsDataRun(): Promise<AgentRunResult> {
+  if (!fs.existsSync(NIKOS_PATHS.openfieldpro)) {
+    return { ok: false, summary: 'openfieldpro repo not found — set NIKOS_OPENFIELDPRO_PATH' };
+  }
+  return {
+    ok: false,
+    summary:
+      'OpenFieldPro repo present; live ops data needs the Postgres/Fastify stack running (docker compose up in openfieldpro/)',
+  };
+}
+
+// ── Development ─────────────────────────────────────────────────────────────
+
+async function codeWorkerRun(): Promise<AgentRunResult> {
+  const [status, branch, last] = await Promise.all([
+    exec('git', ['status', '--porcelain'], 10_000, NIKOS_PATHS.home),
+    exec('git', ['branch', '--show-current'], 10_000, NIKOS_PATHS.home),
+    exec('git', ['log', '-1', '--format=%cs'], 10_000, NIKOS_PATHS.home),
+  ]);
+  const uncommitted = status.stdout.split('\n').filter(Boolean).length;
+  return {
+    ok: uncommitted < 20,
+    summary: `home repo on ${branch.stdout.trim() || '?'} · ${uncommitted} uncommitted change(s) · last commit ${last.stdout.trim() || '?'}`,
+    data: { uncommitted, branch: branch.stdout.trim() },
+  };
+}
+
+async function testWorkerRun(): Promise<AgentRunResult> {
+  const testsDir = path.resolve(__dirname, '..', '..', 'tests');
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(testsDir).filter((f) => f.endsWith('.test.ts'));
+  } catch {
+    return { ok: false, summary: 'No tests/ dir in this repo — nothing to verify yet' };
+  }
+  let tests = 0;
+  for (const f of files) {
+    try {
+      tests += (fs.readFileSync(path.join(testsDir, f), 'utf8').match(/\btest\(|\bit\(/g) || []).length;
+    } catch {
+      /* skip unreadable */
     }
-    return { ok: true, summary: `${name} credential present · ${purpose}` };
-  };
-
-const plannedLaneRun =
-  (name: string, detail: string) =>
-  async (): Promise<AgentRunResult> => ({ ok: false, summary: `${name} lane planned — ${detail}` });
-
-async function stripeSalesRun(): Promise<AgentRunResult> {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return { ok: false, summary: 'Stripe sales checks not configured — set STRIPE_SECRET_KEY in .env.local' };
   }
-  const snapshot = await stripeSnapshot(process.env);
+  return { ok: true, summary: `${files.length} test files · ~${tests} tests — run npm test to verify` };
+}
+
+// ── Research ────────────────────────────────────────────────────────────────
+
+async function bountyRadarRun(): Promise<AgentRunResult> {
+  const script = path.join(NIKOS_PATHS.bounty, 'bounty_radar.py');
+  if (!fs.existsSync(script)) return { ok: false, summary: 'bounty_radar.py not found — set NIKOS_BOUNTY_PATH' };
+  const gh = await exec('gh', ['auth', 'status'], 5_000);
+  if (gh.code !== 0) {
+    return { ok: false, summary: `gh not authenticated: ${gh.stderr.split('\n')[0].slice(0, 140)}` };
+  }
+  return { ok: true, summary: 'Bounty Radar ready — gh authenticated; run a scan to pull fresh bounties' };
+}
+
+async function surfResearchRun(): Promise<AgentRunResult> {
+  if (!fs.existsSync(NIKOS_PATHS.surfsense)) {
+    return { ok: false, summary: 'SurfSense repo not found — set NIKOS_SURFSENSE_PATH' };
+  }
+  const probe = await fetch('http://localhost:8000', { signal: AbortSignal.timeout(1500) }).then(
+    (r) => r.status > 0,
+    () => false,
+  );
   return {
-    ok: true,
-    summary: `Stripe sales payments: ${snapshot.recentCharges.length} recent charges available for confirmation`,
-    data: snapshot,
+    ok: probe,
+    summary: probe
+      ? 'SurfSense backend responding on :8000'
+      : 'SurfSense repo present; backend not running (docker compose up in SurfSense/)',
   };
 }
 
-async function processorConfirmationRun(): Promise<AgentRunResult> {
-  const configured = configuredProcessors(process.env).filter((p) => p.configured);
-  if (configured.length === 0) {
-    return { ok: false, summary: 'No payment processor APIs configured yet — start with STRIPE_SECRET_KEY' };
+// ── Models ──────────────────────────────────────────────────────────────────
+
+async function evalRunnerRun(): Promise<AgentRunResult> {
+  const llamaBuild = fs.existsSync(path.join(NIKOS_PATHS.home, 'llama.cpp', 'build', 'bin'));
+  let modelCount = 0;
+  try {
+    modelCount = fs.readdirSync(NIKOS_PATHS.models).filter((f) => /\.(gguf|safetensors)$/i.test(f)).length;
+  } catch {
+    /* models/ missing */
   }
   return {
-    ok: true,
-    summary: `${configured.map((p) => p.name).join(', ')} configured for payment confirmation`,
-    data: configured,
+    ok: llamaBuild || modelCount > 0,
+    summary: `llama.cpp build ${llamaBuild ? 'present' : 'missing'} · ${modelCount} model file(s) in models/`,
   };
 }
 
-export const realAgents: RuntimeAgent[] = [
-  // ── Command ──────────────────────────────────────────────────────────
-  {
-    id: 'conductor',
-    name: 'Conductor',
-    description: 'Broadcast fan-out + instance host availability (Clawline gateway, Ollama, tmux) for future bindings.',
-    departmentId: 'dept-tech',
-    async run() {
-      const stack = await localStackStatus();
-      return {
-        ok: stack.state === 'connected',
-        summary: `Instance hosts on this machine: ${stack.detail} · all agents bound to builtin runtime until the dedicated host lands`,
-        data: stack.meta,
-      };
-    },
-  },
+async function trainingRunRun(): Promise<AgentRunResult> {
+  const ot = path.join(NIKOS_PATHS.home, 'OneTrainer');
+  if (!fs.existsSync(ot)) return { ok: false, summary: 'OneTrainer not found under home' };
+  let ws = 0;
+  try {
+    ws = fs.readdirSync(path.join(ot, 'workspace')).length;
+  } catch {
+    /* no workspace dir */
+  }
+  return { ok: true, summary: `OneTrainer present · ${ws} workspace entr${ws === 1 ? 'y' : 'ies'}` };
+}
 
-  // ── Comms instance + channel workers ─────────────────────────────────
-  {
-    id: 'comms-agent',
-    name: 'Comms Agent',
-    description: 'Aggregates the Gmail/WhatsApp/Slack workers that feed the unified /comms view.',
-    departmentId: 'dept-comms',
+// ── Picks (Brainz bots) ─────────────────────────────────────────────────────
+
+async function brainzBotRun(bot: string): Promise<AgentRunResult> {
+  const s = brainzBotStatus(bot);
+  if (!s) return { ok: false, summary: `No status.json for ${bot} — bot has not run yet` };
+  return {
+    ok: s.status === 'ok',
+    summary: `${bot}: ${s.status} · ${s.summary ?? ''}${s.finished_at ? ` · ${s.finished_at}` : ''}`,
+  };
+}
+
+async function sysbotRun(): Promise<AgentRunResult> {
+  const bots = brainzBots();
+  const ok = bots.filter((b) => brainzBotStatus(b.bot)?.status === 'ok').length;
+  return {
+    ok: bots.length > 0,
+    summary: `${bots.length} Brainz bots · ${ok} ok · ${bots.length - ok} other — see the Brainz connector for the full list`,
+  };
+}
+
+// ── Operations ──────────────────────────────────────────────────────────────
+
+async function cronHealthRun(): Promise<AgentRunResult> {
+  const snap = readCronJobs();
+  if (!snap) return { ok: false, summary: 'Hermes jobs.json missing or unreadable' };
+  const ok = snap.tally.ok ?? 0;
+  const degraded = snap.tally.degraded ?? 0;
+  const failed = snap.tally.failed ?? 0;
+  const skipped = snap.tally.skipped ?? 0;
+  const jobs = snap.jobs.length;
+  return {
+    ok: failed === 0,
+    summary: `Hermes cron: ${jobs} jobs · ${ok} ok · ${degraded} degraded · ${skipped} skipped · ${failed} failed · updated ${snap.updatedAt}`,
+    data: snap.tally,
+  };
+}
+
+async function githubAgentRun(): Promise<AgentRunResult> {
+  const [gh, remote] = await Promise.all([
+    exec('gh', ['auth', 'status'], 5_000),
+    exec('git', ['remote', 'get-url', 'origin'], 5_000, NIKOS_PATHS.home),
+  ]);
+  return {
+    ok: gh.code === 0,
+    summary:
+      gh.code === 0 ? `gh authenticated · origin ${remote.stdout.trim() || 'unknown'}` : 'gh not authenticated — run gh auth login',
+  };
+}
+
+async function driftSentinelRun(): Promise<AgentRunResult> {
+  const r = await exec('git', ['status', '--porcelain'], 10_000, NIKOS_PATHS.home);
+  const uncommitted = r.stdout.split('\n').filter(Boolean).length;
+  return {
+    ok: uncommitted < 25,
+    summary:
+      uncommitted === 0
+        ? 'home repo clean — no drift'
+        : `${uncommitted} uncommitted change(s) in home repo — ${uncommitted < 25 ? 'acceptable' : 'DRIFT — snapshot soon'}`,
+    data: { uncommitted },
+  };
+}
+
+// ── Knowledge (the brain) ───────────────────────────────────────────────────
+
+async function knowledgeRun(): Promise<AgentRunResult> {
+  const status = await getBrainProvider().status();
+  return {
+    ok: status.connected,
+    summary: `${status.provider} brain · ${status.detail}`,
+    data: status,
+  };
+}
+
+async function knowledgeRespond(message: string): Promise<AgentRunResult> {
+  const results = await getBrainProvider().search(message);
+  if (results.length === 0) {
+    return { ok: false, summary: `Nothing in the knowledge base matches "${message.slice(0, 80)}"` };
+  }
+  return {
+    ok: true,
+    summary: results.map((r) => `· ${r.title} (${r.source})`).join('\n'),
+    data: results,
+  };
+}
+
+function knowledgeTools(): LlmToolSpec[] {
+  return [
+    {
+      name: 'searchGBrain',
+      description:
+        'Search the knowledge base (canonical diagnostic maps, docs, knowledge graph). Read-only.',
+      parameters: z.object({
+        query: z.string().describe('Natural-language or model-number search query'),
+      }),
+      execute: async (args) => {
+        const query = typeof args.query === 'string' ? args.query : '';
+        return getBrainProvider().search(query);
+      },
+    },
+  ];
+}
+
+// ── Leads (aggregate their workers) ─────────────────────────────────────────
+
+const lead =
+  (id: string, name: string, description: string, departmentId: string, workers: RuntimeAgent[]) =>
+  (): RuntimeAgent => ({
+    id,
+    name,
+    description,
+    departmentId,
     async run() {
-      const [gmail, whatsapp, slack] = await Promise.all([gmailRun(), whatsappRun(), slackRun()]);
-      const live = [gmail, whatsapp, slack].filter((r) => r.ok).length;
+      const results = await Promise.all(workers.map((w) => w.run()));
+      const live = results.filter((r) => r.ok).length;
       return {
         ok: live > 0,
-        summary: `${live}/3 channels live → /comms · Gmail ${label(gmail)} · WhatsApp ${label(whatsapp)} · Slack ${label(slack)}`,
-        data: { gmail, whatsapp, slack },
-      };
-    },
-  },
-  { id: 'gmail-worker', name: 'Gmail Worker', description: 'Unread counts and recent mail from up to four IMAP inboxes.', departmentId: 'dept-comms', run: gmailRun },
-  { id: 'whatsapp-worker', name: 'WhatsApp Worker', description: 'Local WhatsApp ChatStorage, read-only.', departmentId: 'dept-comms', run: whatsappRun },
-  { id: 'slack-worker', name: 'Slack Worker', description: 'Latest messages across joined Slack channels.', departmentId: 'dept-comms', run: slackRun },
-
-  // ── Studio instance + content workers ────────────────────────────────
-  {
-    id: 'social-agent',
-    name: 'Social Agent',
-    description: 'Aggregates the Postly publishing and Adsmith ad-generation workers.',
-    departmentId: 'dept-marketing-growth',
-    async run() {
-      const [postly, adsmith] = await Promise.all([zernioRun(), arcadsRun()]);
-      const live = [postly, adsmith].filter((r) => r.ok).length;
-      const queued = getDb().socialPosts.queued().length;
-      const queueNote = queued > 0 ? `${queued} post${queued === 1 ? '' : 's'} queued for publish` : 'no posts queued';
-      return {
-        ok: live > 0,
-        summary: `${live}/2 core content APIs live · Postly ${label(postly)} · Adsmith ${label(adsmith)} · ${queueNote}`,
-        data: { postly, adsmith, queuedPosts: queued },
-      };
-    },
-  },
-  { id: 'postly-publisher', name: 'Postly Publisher', description: 'Six platforms under @founderos.ai via Postly.', departmentId: 'dept-marketing-growth', run: zernioRun },
-  { id: 'adsmith-creative', name: 'Adsmith Creative', description: 'UGC ads for Vantage via the Adsmith API.', departmentId: 'dept-marketing-growth', run: arcadsRun },
-  {
-    id: 'reelkit-editor',
-    name: 'Reelkit Editor',
-    description: 'Editing and rendering pipeline for social clips, captions, and promotional cuts.',
-    departmentId: 'dept-marketing-growth',
-    async run() {
-      const stack = await localStackStatus();
-      return {
-        ok: stack.state === 'connected',
-        summary: `Reelkit/social editing lane mapped · local stack: ${stack.detail}`,
-        data: stack.meta,
-      };
-    },
-  },
-  {
-    id: 'renderly-creative',
-    name: 'Renderly Creative',
-    description: 'Renderly creative generation for campaign visuals and product assets.',
-    departmentId: 'dept-marketing-growth',
-    async run() {
-      const stack = await localStackStatus();
-      return {
-        ok: stack.state === 'connected',
-        summary: `Renderly creative lane mapped · local stack: ${stack.detail}`,
-        data: stack.meta,
-      };
-    },
-  },
-  {
-    id: 'dmflow-mcp',
-    name: 'DMFlow MCP',
-    description: 'DMFlow MCP/API lane for social DM automations and lead capture.',
-    departmentId: 'dept-marketing-growth',
-    run: envIntegrationRun('DMFlow', 'MANYCHAT_API_KEY', 'DM automation and lead capture'),
-  },
-
-  // ── Sales instance + pipeline worker ─────────────────────────────────
-  {
-    id: 'sales-agent',
-    name: 'Sales Agent',
-    description: 'Aggregates the revenue pipeline workers for Sales.',
-    departmentId: 'dept-sales',
-    async run() {
-      const [crm, processors] = await Promise.all([attioStatus(), processorConfirmationRun()]);
-      return {
-        ok: crm.state === 'connected' || processors.ok,
-        summary: `Sales pipeline · Ledger ${crm.state === 'connected' ? 'LIVE' : 'DOWN'} · processors ${label(processors)} · PayKit/FlexPay/calls lanes mapped`,
-        data: { crm, processors },
-      };
-    },
-  },
-  {
-    id: 'launchpad-cohort-sales',
-    name: 'Launchpad Cohort',
-    description:
-      'Launchpad Cohort sales lane: WebinarJam funnel (registrants/attendees → leads), Trakyo revenue attribution, plus offer/call/payment context.',
-    departmentId: 'dept-sales',
-    async run() {
-      const [webinar, trakyo] = await Promise.all([webinarjamStatus(), trakyoStatus()]);
-      const live = [webinar, trakyo].filter((s) => s.state === 'connected').length;
-      return {
-        ok: live > 0,
-        summary: `Launchpad Cohort · WebinarJam ${webinar.state} · Trakyo ${trakyo.state}${
-          live === 0 ? ' — set WEBINARJAM_API_KEY to pull webinar leads' : ''
-        }`,
-        data: { webinar, trakyo },
-      };
-    },
-    chatTools(): LlmToolSpec[] {
-      return [
-        {
-          name: 'searchWebinarRegistrants',
-          description:
-            "List registrants/attendees for an Launchpad Cohort WebinarJam session (these are leads). Read-only. Needs the webinar's id and schedule id.",
-          parameters: z.object({
-            webinarId: z.string().describe('WebinarJam webinar_id'),
-            scheduleId: z.string().describe('WebinarJam schedule_id for the session'),
-          }),
-          execute: async (args) => {
-            const webinarId = typeof args.webinarId === 'string' ? args.webinarId : '';
-            const scheduleId = typeof args.scheduleId === 'string' ? args.scheduleId : '';
-            if (!webinarId || !scheduleId) return { error: 'webinarId and scheduleId are required' };
-            const registrants = await listRegistrants(webinarId, scheduleId);
-            return { count: registrants.length, registrants: registrants.slice(0, 25) };
-          },
-        },
-      ];
-    },
-  },
-  {
-    id: 'vantage-sales',
-    name: 'Vantage',
-    description: 'Vantage sales lane: pipeline, PayKit context, payments, and call data.',
-    departmentId: 'dept-sales',
-    run: plannedLaneRun('Vantage sales', 'connect Vantage-specific CRM/payment/call sources'),
-  },
-  {
-    id: 'paykit-sales',
-    name: 'PayKit',
-    description: 'PayKit offer/payment/customer context for Sales.',
-    departmentId: 'dept-sales',
-    run: envIntegrationRun('PayKit', 'FANBASIS_API_KEY', 'offers, customers, and payment context'),
-  },
-  {
-    id: 'vantage-paykit',
-    name: 'Vantage PayKit',
-    description: 'PayKit lane specifically under Vantage.',
-    departmentId: 'dept-sales',
-    run: envIntegrationRun('Vantage PayKit', 'FANBASIS_API_KEY', 'Vantage offer/payment context'),
-  },
-  { id: 'stripe-sales', name: 'Stripe', description: 'Stripe payment confirmation for sales workflows.', departmentId: 'dept-sales', run: stripeSalesRun },
-  {
-    id: 'processor-confirmation',
-    name: 'Processor Confirm',
-    description: 'Confirms payment states across configured processor APIs.',
-    departmentId: 'dept-sales',
-    run: processorConfirmationRun,
-  },
-  {
-    id: 'flexpay-financing',
-    name: 'FlexPay Financing',
-    description: 'FlexPay financing options for offers and payment plans.',
-    departmentId: 'dept-sales',
-    run: envIntegrationRun('FlexPay', 'FlexPay_API_KEY', 'financing options for sales offers'),
-  },
-  {
-    id: 'sales-calls-data',
-    name: 'Sales Calls Data',
-    description: 'Sales call recordings, notes, outcomes, and follow-up context.',
-    departmentId: 'dept-sales',
-    run: envIntegrationRun('Sales calls data', 'FATHOM_API_KEY', 'call recordings, summaries, and follow-up context'),
-  },
-
-  // ── Knowledge: the G-Brain analyst and its auditors ──────────────────
-  {
-    id: 'data-agent',
-    name: 'Data Agent',
-    description: 'Analyzes markdown + vector storage health and surfaces ideas; answers broadcasts by querying G-Brain.',
-    departmentId: 'dept-tech',
-    async run() {
-      const overview = await createGBrainProvider().overview();
-      const { store, doctor } = overview;
-      const warnings = doctor.checks.filter((c) => c.status !== 'ok');
-      const biggest = [...store.folders].sort((a, b) => b.files - a.files)[0];
-      const inbox = store.folders.find((f) => f.name === 'inbox');
-
-      const ideas: string[] = [];
-      if (!doctor.connected) ideas.push('gbrain CLI unreachable — check the binary before trusting vector queries');
-      if (doctor.connected && warnings.length > 0)
-        ideas.push(`${warnings.length} doctor check(s) need attention (${warnings.map((w) => w.name).join(', ')})`);
-      if (inbox && inbox.files > 3) ideas.push(`inbox/ holds ${inbox.files} unprocessed pages — file or archive them`);
-      if (store.totalFiles < 50)
-        ideas.push(`only ${store.totalFiles} pages on disk vs ~1240 in Supabase — run \`gbrain export\` to restore locally`);
-      if (ideas.length === 0) ideas.push('storage healthy — no action needed');
-
-      return {
-        ok: doctor.connected,
-        summary: `${doctor.detail} · ${store.totalFiles} md pages (largest: ${biggest?.name ?? 'n/a'} ${biggest?.files ?? 0}) · ideas: ${ideas.join(' | ')}`,
-        data: { overview, ideas },
-      };
-    },
-    async respond(message: string) {
-      const results = await getBrainProvider().search(message);
-      if (results.length === 0) {
-        return { ok: false, summary: `Nothing in G-Brain matches "${message.slice(0, 80)}"` };
-      }
-      return {
-        ok: true,
-        summary: results
-          .slice(0, 3)
-          .map((r) => `${r.title}: ${r.snippet.slice(0, 100)}`)
-          .join(' · '),
+        summary: `${live}/${workers.length} workers live — ${results
+          .map((r, i) => `${workers[i].id} ${label(r)}`)
+          .join(' · ')}`,
         data: results,
       };
     },
-    chatTools(): LlmToolSpec[] {
-      return [
-        {
-          name: 'searchGBrain',
-          description:
-            'Search the G-Brain knowledge base (brain-store markdown + vector store) and return the top matching notes. Read-only.',
-          parameters: z.object({ query: z.string().describe('what to look up in the knowledge base') }),
-          execute: async (args) => {
-            const query = typeof args.query === 'string' ? args.query : '';
-            const results = await getBrainProvider().search(query);
-            return results.slice(0, 5);
-          },
-        },
-      ];
-    },
-  },
-  {
-    id: 'markdown-auditor',
-    name: 'Markdown Auditor',
-    description: 'Page counts per brain-store folder, strays at the root.',
-    departmentId: 'dept-tech',
-    async run() {
-      const { store } = await createGBrainProvider().overview();
-      if (store.totalFiles === 0) {
-        return { ok: false, summary: `brain-store empty or unreadable at ${store.path}` };
-      }
-      const root = store.folders.find((f) => f.name === '(root)');
-      return {
-        ok: true,
-        summary: `${store.totalFiles} pages across ${store.folders.length} folders${root ? ` · ${root.files} stray at root` : ''} · ${store.folders.map((f) => `${f.name}:${f.files}`).join(' ')}`,
-        data: store,
-      };
-    },
-  },
-  {
-    id: 'vector-auditor',
-    name: 'Vector Auditor',
-    description: 'gbrain doctor: Supabase pgvector connection, embeddings, health score.',
-    departmentId: 'dept-tech',
-    async run() {
-      const { doctor } = await createGBrainProvider().overview();
-      const warn = doctor.checks.filter((c) => c.status !== 'ok');
-      return {
-        ok: doctor.connected,
-        summary: doctor.connected
-          ? `health ${doctor.healthScore ?? '?'}/100 · ${doctor.checks.length} checks, ${warn.length} warning(s)${warn.length ? `: ${warn.map((w) => w.name).join(', ')}` : ''}`
-          : `doctor offline — ${doctor.detail}`,
-        data: doctor,
-      };
-    },
-  },
-  {
-    id: 'notion-sync',
-    name: 'Notion Sync',
-    description: 'Lists the most recently edited Notion pages shared with the integration.',
-    departmentId: 'dept-tech',
-    async run() {
-      if (!process.env.NOTION_API_KEY) {
-        return { ok: false, summary: 'Notion not configured — set NOTION_API_KEY in .env.local' };
-      }
-      const pages = await recentPages(10);
-      return {
-        ok: true,
-        summary: `${pages.length} recently edited pages · latest: ${pages[0]?.title ?? 'none'}`,
-        data: pages,
-      };
-    },
-  },
+  });
 
-  // ── Finance ──────────────────────────────────────────────────────────
-  {
-    id: 'payments-pulse',
-    name: 'Payments Pulse',
-    description: 'Verifies payment processor connections and reports Stripe balance + recent charges.',
-    departmentId: 'dept-finance',
-    async run() {
-      const configured = configuredProcessors(process.env).filter((p) => p.configured);
-      if (configured.length === 0) {
-        return { ok: false, summary: 'No payment processors configured — start with STRIPE_SECRET_KEY in .env.local' };
-      }
-      if (configured.some((p) => p.id === 'stripe')) {
-        const snapshot = await stripeSnapshot(process.env);
-        const available = snapshot.available[0];
-        return {
-          ok: true,
-          summary: `Stripe: ${((available?.amount ?? 0) / 100).toFixed(2)} ${(available?.currency ?? 'usd').toUpperCase()} available · ${snapshot.recentCharges.length} recent charges`,
-          data: snapshot,
-        };
-      }
-      return { ok: true, summary: `${configured.map((p) => p.name).join(', ')} configured (no live client yet)` };
-    },
-  },
-  {
-    id: 'crm-pulse',
-    name: 'Ledger CRM',
-    description: 'Queries the Ledger deals pipeline (Vantage + Launchpad Cohort). Read-scoped.',
-    departmentId: 'dept-sales',
-    async run() {
-      const status = await attioStatus();
-      return { ok: status.state === 'connected', summary: status.detail, data: status.meta };
-    },
-  },
+const fieldopsWorkers: RuntimeAgent[] = [
+  { id: 'release-gate', name: 'Release Gate', description: 'Tracks open items on the OpenFieldPro release checklist.', departmentId: 'dept-fieldops', run: releaseGateRun },
+  { id: 'ops-data', name: 'Ops Data', description: 'Live field-ops data from the OpenFieldPro stack.', departmentId: 'dept-fieldops', run: opsDataRun },
+];
+const devWorkers: RuntimeAgent[] = [
+  { id: 'code-worker', name: 'Code Worker', description: 'Repo health: branch, uncommitted changes, last commit date.', departmentId: 'dept-dev', run: codeWorkerRun },
+  { id: 'test-worker', name: 'Test Worker', description: 'Test-suite inventory and the npm test entry point.', departmentId: 'dept-dev', run: testWorkerRun },
+];
+const researchWorkers: RuntimeAgent[] = [
+  { id: 'bounty-radar', name: 'Bounty Radar', description: 'GitHub bounty scanner readiness (script + gh auth).', departmentId: 'dept-research', run: bountyRadarRun },
+  { id: 'surf-research', name: 'Surf Research', description: 'SurfSense self-hosted research agent (RAG over personal sources).', departmentId: 'dept-research', run: surfResearchRun },
+];
+const modelsWorkers: RuntimeAgent[] = [
+  { id: 'eval-runner', name: 'Eval Runner', description: 'Local inference + eval toolchain (llama.cpp build, model files).', departmentId: 'dept-models', run: evalRunnerRun },
+  { id: 'training-run', name: 'Training Run', description: 'OneTrainer training workspace status.', departmentId: 'dept-models', run: trainingRunRun },
+];
+const picksWorkers: RuntimeAgent[] = [
+  { id: 'sportsclaw', name: 'SportsClaw', description: 'Sports pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('sportsclaw') },
+  { id: 'tradingdesk', name: 'TradingDesk', description: 'Trading pick bot — reads its Brainz run-record.', departmentId: 'dept-picks', run: () => brainzBotRun('tradingdesk') },
+  { id: 'sysbot', name: 'SysBot', description: 'Brainz ecosystem health: tally of all bot run-records.', departmentId: 'dept-picks', run: sysbotRun },
+];
+const opsWorkers: RuntimeAgent[] = [
+  { id: 'cron-health', name: 'Cron Health', description: 'Hermes scheduled-job health from jobs.json.', departmentId: 'dept-ops', run: cronHealthRun },
+  { id: 'github-agent', name: 'GitHub Agent', description: 'GitHub CLI auth and the home repo remote.', departmentId: 'dept-ops', run: githubAgentRun },
+  { id: 'drift-sentinel', name: 'Drift Sentinel', description: 'Uncommitted drift on the home repo.', departmentId: 'dept-ops', run: driftSentinelRun },
+];
 
-  // ── Clients ──────────────────────────────────────────────────────────
+export const realAgents: RuntimeAgent[] = [
+  // ── Orchestrator ─────────────────────────────────────────────────────────
   {
-    id: 'client-roster',
-    name: 'Client Roster',
-    description: 'The live client list: funnel journeys reconciled with Ledger, counted by venture and status.',
-    departmentId: 'dept-clients',
+    id: 'conductor',
+    name: 'Conductor',
+    description: 'Orchestrator: fans broadcasts out to every agent and reports which local instance hosts are up.',
+    departmentId: 'dept-ops',
     async run() {
-      const db = getDb();
-      const journeys = db.funnel.journeys();
-      const converted = journeys.filter((j) => j.status === 'converted');
-      const live = await attioClients();
-      const servingAttio = live.state === 'connected' && live.clients.length > 0;
-      const byVenture = new Map<string, number>();
-      for (const j of converted) byVenture.set(j.venture, (byVenture.get(j.venture) ?? 0) + 1);
-      const ventures = [...byVenture.entries()].map(([v, n]) => `${v} ${n}`).join(' · ') || 'none yet';
-      return {
-        ok: true,
-        summary: servingAttio
-          ? `Serving Ledger live: ${live.clients.length} deals on the roster · funnel backup holds ${converted.length} clients`
-          : `Serving seeded funnel: ${converted.length} clients (${ventures}) · ${journeys.length - converted.length} in pipeline · Ledger ${live.state}`,
-        data: {
-          source: servingAttio ? 'ledger' : 'funnel',
-          ledger: { state: live.state, deals: live.clients.length },
-          clients: converted.map((j) => ({ id: j.id, name: j.name, venture: j.venture, amountUsd: j.amountUsd })),
-        },
-      };
-    },
-  },
-  {
-    id: 'client-onboarding',
-    name: 'Onboarding Agent',
-    description: 'Readiness check for the onboarding SOP: the Ledger trigger plus the Slack and Notion workspaces it provisions.',
-    departmentId: 'dept-clients',
-    async run() {
-      const { slackStatus } = await import('@/lib/connectors/slack');
-      const { notionStatus } = await import('@/lib/connectors/notion');
-      const [ledger, slack, notion] = await Promise.all([attioStatus(), slackStatus(), notionStatus()]);
-      const live = [ledger, slack, notion].filter((s) => s.state === 'connected').length;
-      return {
-        ok: live > 0,
-        summary: `Onboarding rails: Ledger ${ledger.state} · Slack ${slack.state} · Notion ${notion.state}${
-          live < 3 ? ' — connect the missing rail to run onboarding end to end' : ''
-        }`,
-        data: { ledger: ledger.state, slack: slack.state, notion: notion.state },
-      };
-    },
-  },
-  {
-    id: 'client-success',
-    name: 'Client Success',
-    description: 'Servicing rails: Recall call notes for deliverable tracking plus Slack for the check-in cadence.',
-    departmentId: 'dept-clients',
-    async run() {
-      const { slackStatus } = await import('@/lib/connectors/slack');
-      const slack = await slackStatus();
-      const recall = process.env.FATHOM_API_KEY ? 'configured' : 'not_configured';
-      const live = (slack.state === 'connected' ? 1 : 0) + (recall === 'configured' ? 1 : 0);
-      return {
-        ok: live > 0,
-        summary: `Servicing rails: Recall ${recall} · Slack ${slack.state}${
-          live === 0 ? ' — set FATHOM_API_KEY and a Slack bot token to service clients' : ''
-        }`,
-        data: { recall, slack: slack.state },
-      };
-    },
-  },
-
-  // ── Automations ──────────────────────────────────────────────────────
-  {
-    id: 'stack-monitor',
-    name: 'Stack Monitor',
-    description: 'Live check of the local creative/infra stack: Reelkit, Ollama, command-center, Clawline, tmux, whisper, ffmpeg, renderly, gh.',
-    departmentId: 'dept-tech',
-    async run() {
-      const [stack, dictate] = await Promise.all([localStackStatus(), wisprStatus()]);
+      const stack = await localStackStatus();
       return {
         ok: stack.state === 'connected',
-        summary: `${stack.detail} · Dictate: ${dictate.state === 'connected' ? dictate.detail : dictate.state}`,
-        data: { stack: stack.meta, dictate: dictate.meta },
+        summary: `Instance hosts on this machine: ${stack.detail}`,
+        data: stack.meta,
       };
     },
   },
+
+  // ── Diagnostic Maps ──────────────────────────────────────────────────────
+  {
+    id: 'map-builder',
+    name: 'Map Builder',
+    description: 'Owns the canonical fleet: counts maps per family and reports fleet-dashboard freshness.',
+    departmentId: 'dept-diagmaps',
+    run: mapBuilderRun,
+  },
+  {
+    id: 'guided-qa',
+    name: 'Guided-Walk QA',
+    description: 'Runs the guided-walk audit across canonical maps: duplication, no-narrow, loops, dead-ends.',
+    departmentId: 'dept-diagmaps',
+    run: guidedQaRun,
+  },
+  {
+    id: 'fleet-coverage',
+    name: 'Fleet Coverage',
+    description: 'Runs the deterministic fleet gate (generate-fleet-coverage --check).',
+    departmentId: 'dept-diagmaps',
+    run: fleetCoverageRun,
+  },
+
+  // ── Field Ops ────────────────────────────────────────────────────────────
+  lead('fieldops-agent', 'Field Ops Agent', 'Aggregates the OpenFieldPro release gate and ops-data workers.', 'dept-fieldops', fieldopsWorkers)(),
+  ...fieldopsWorkers,
+
+  // ── Development ──────────────────────────────────────────────────────────
+  lead('dev-agent', 'Dev Agent', 'Aggregates the code and test workers.', 'dept-dev', devWorkers)(),
+  ...devWorkers,
+
+  // ── Research ─────────────────────────────────────────────────────────────
+  lead('research-agent', 'Research Agent', 'Aggregates bounty radar and SurfSense research workers.', 'dept-research', researchWorkers)(),
+  ...researchWorkers,
+  {
+    id: 'data-agent',
+    name: 'Data Agent',
+    description:
+      'Answers questions from the knowledge base: canonical diagnostic maps, docs, and the knowledge graph.',
+    departmentId: 'dept-research',
+    run: knowledgeRun,
+    respond: knowledgeRespond,
+    chatTools: knowledgeTools,
+  },
+
+  // ── Models ───────────────────────────────────────────────────────────────
+  lead('models-agent', 'Models Agent', 'Aggregates the eval and training workers for the local model stack.', 'dept-models', modelsWorkers)(),
+  ...modelsWorkers,
+
+  // ── Picks (Brainz) ───────────────────────────────────────────────────────
+  lead('picks-agent', 'Picks Agent', 'Aggregates the Brainz pick bots (sports, trading, sysbot).', 'dept-picks', picksWorkers)(),
+  ...picksWorkers,
+
+  // ── Operations ───────────────────────────────────────────────────────────
+  lead('ops-agent', 'Ops Agent', 'Aggregates cron health, GitHub auth, and drift sentinel.', 'dept-ops', opsWorkers)(),
+  ...opsWorkers,
 ];
