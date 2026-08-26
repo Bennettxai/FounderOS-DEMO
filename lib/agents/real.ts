@@ -18,7 +18,7 @@ import { getBrainProvider } from '@/lib/brain';
 import { localStackStatus } from '@/lib/connectors/local-stack';
 import { brainzBotStatus, brainzBots } from '@/lib/connectors/brainz';
 import { readCronJobs } from '@/lib/connectors/hermes-cron';
-import { readFleetCoverage, fleetFreshnessMs } from '@/lib/connectors/diagmap';
+import { readFleetCoverage, fleetIsStale } from '@/lib/connectors/diagmap';
 import { NIKOS_PATHS } from '@/lib/nikos-paths';
 import type { LlmToolSpec } from '@/lib/connectors/llm';
 import type { AgentRunResult, RuntimeAgent } from '@/lib/agents/runtime';
@@ -49,8 +49,7 @@ async function mapBuilderRun(): Promise<AgentRunResult> {
   const familyList = Object.entries(fleet.families)
     .map(([f, n]) => `${f}×${n}`)
     .join(' ');
-  const freshness = fleetFreshnessMs();
-  const stale = freshness !== null && freshness < 0;
+  const stale = fleetIsStale();
   return {
     ok: true,
     summary: `${fleet.total} canonical maps · ${familyList} · dashboard ${stale ? 'STALE' : 'current'}`,

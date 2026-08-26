@@ -5,11 +5,13 @@
  * the newest canonical map, else the fleet gate hasn't been re-run.
  */
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { NIKOS_PATHS } from '@/lib/nikos-paths';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export type FleetCoverage = {
+  sourceHash?: string;
   total: number;
   families: Record<string, number>;
   maps: { filename: string; family: string; model: string; version?: string }[];
@@ -19,9 +21,10 @@ export function readFleetCoverage(): FleetCoverage | null {
   try {
     const raw = JSON.parse(
       fs.readFileSync(path.join(NIKOS_PATHS.diagmap, 'Canonical', 'Fleet-Coverage.json'), 'utf8'),
-    ) as { total?: unknown; families?: Record<string, number>; maps?: unknown[] };
+    ) as { sourceHash?: unknown; total?: unknown; families?: Record<string, number>; maps?: unknown[] };
     const maps = Array.isArray(raw.maps) ? raw.maps : [];
     return {
+      sourceHash: typeof raw.sourceHash === 'string' ? raw.sourceHash : undefined,
       total: typeof raw.total === 'number' ? raw.total : maps.length,
       families: raw.families ?? {},
       maps: maps.map((m) => {
@@ -39,20 +42,50 @@ export function readFleetCoverage(): FleetCoverage | null {
   }
 }
 
-/** Newest canonical map mtime vs the generated dashboard mtime, in ms. */
-export function fleetFreshnessMs(): number | null {
+/** Canonical map files the dashboard was generated from (dashboard excluded). */
+function canonicalMapFiles(): string[] {
   const canonical = path.join(NIKOS_PATHS.diagmap, 'Canonical');
   try {
-    const maps = fs
+    return fs
       .readdirSync(canonical)
-      .filter((f) => f.endsWith('.html'))
-      .map((f) => fs.statSync(path.join(canonical, f)).mtimeMs);
-    if (maps.length === 0) return null;
-    const newestMap = Math.max(...maps);
-    const dashboard = fs.statSync(path.join(canonical, 'Fleet-Coverage.html')).mtimeMs;
-    return dashboard - newestMap;
+      .filter((f) => f.endsWith('.html') && f !== 'Fleet-Coverage.html')
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/** Content fingerprint over the canonical fleet — must match the generator's. */
+export function fleetSourceHash(): string | null {
+  const canonical = path.join(NIKOS_PATHS.diagmap, 'Canonical');
+  try {
+    const h = crypto.createHash('sha256');
+    for (const name of canonicalMapFiles()) {
+      h.update(name).update('\0');
+      h.update(fs.readFileSync(path.join(canonical, name)));
+    }
+    return h.digest('hex');
   } catch {
     return null;
+  }
+}
+
+/** True only when the generated dashboard genuinely differs from the canonical
+ *  fleet. Content-based: a checkout that touches file mtimes is not "stale". */
+export function fleetIsStale(): boolean {
+  const hash = fleetSourceHash();
+  if (hash == null) return false;
+  const snapshotHash = readFleetCoverage()?.sourceHash;
+  if (snapshotHash) return hash !== snapshotHash;
+  // Legacy snapshot predating sourceHash: fall back to mtime comparison.
+  const canonical = path.join(NIKOS_PATHS.diagmap, 'Canonical');
+  try {
+    const files = canonicalMapFiles();
+    if (!files.length) return false;
+    const newest = Math.max(...files.map((f) => fs.statSync(path.join(canonical, f)).mtimeMs));
+    return fs.statSync(path.join(canonical, 'Fleet-Coverage.html')).mtimeMs < newest;
+  } catch {
+    return false;
   }
 }
 
@@ -76,8 +109,7 @@ export async function diagmapStatus(): Promise<ConnectorStatus> {
       detail: 'Repo present but Canonical/Fleet-Coverage.json is missing or unreadable.',
     };
   }
-  const freshness = fleetFreshnessMs();
-  const stale = freshness !== null && freshness < 0;
+  const stale = fleetIsStale();
   const familyList = Object.entries(fleet.families)
     .map(([f, n]) => `${f}×${n}`)
     .join(' ');
@@ -85,7 +117,6 @@ export async function diagmapStatus(): Promise<ConnectorStatus> {
     total: fleet.total,
     families: Object.keys(fleet.families).length,
     stale: stale ? 1 : 0,
-    freshnessMs: freshness ?? -1,
   };
   return {
     id: 'diagmap',
