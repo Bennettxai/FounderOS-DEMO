@@ -2,11 +2,13 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/data';
 import { syncFromZernioLive } from '@/lib/social-live';
 import { zernioLiveAccounts } from '@/lib/connectors/zernio';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 /** Force a live follower-count sync from Zernio/Late and report what landed.
-    GET and POST both work so it's trivial to trigger from a browser or curl. */
+    POST only: this mutates state, so it must not be reachable via a top-level
+    GET (SameSite=Lax would attach the gate cookie to a cross-site GET). */
 async function runSync() {
   const db = getDb();
   const accounts = await zernioLiveAccounts();
@@ -20,10 +22,8 @@ async function runSync() {
   });
 }
 
-export async function POST() {
-  return runSync();
-}
-
-export async function GET() {
+export async function POST(req: Request) {
+  const gate = requireSession(req);
+  if (gate) return gate;
   return runSync();
 }

@@ -11,6 +11,7 @@ export function middleware(req: NextRequest) {
     token: process.env.FOUNDER_OS_ACCESS_TOKEN,
     cookie: req.cookies.get(GATE_COOKIE)?.value ?? null,
     queryToken: req.nextUrl.searchParams.get('token'),
+    isProduction: process.env.NODE_ENV === 'production',
   });
 
   switch (decision.kind) {

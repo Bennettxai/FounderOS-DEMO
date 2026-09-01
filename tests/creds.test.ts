@@ -94,9 +94,9 @@ describe('env.local as a live credential store (connect flow)', () => {
   test('resolveCred prefers a fresh env.local read over a stale process.env', () => {
     process.env.STALE_TEST_KEY = 'from-boot';
     upsertEnvLocal({ STALE_TEST_KEY: 'from-file' });
-    expect(resolveCred('STALE_TEST_KEY', [])).toBe('from-file');
+    expect(resolveCred('STALE_TEST_KEY')).toBe('from-file');
     delete process.env.STALE_TEST_KEY;
-    expect(resolveCred('STALE_TEST_KEY', [])).toBe('from-file');
+    expect(resolveCred('STALE_TEST_KEY')).toBe('from-file');
   });
 
   test('runtimeEnv overlays env.local onto process.env', () => {

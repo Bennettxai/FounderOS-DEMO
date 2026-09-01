@@ -4,14 +4,17 @@
  * Deployed FounderOS instances live on public URLs (Railway hands out
  * *.up.railway.app). Set FOUNDER_OS_ACCESS_TOKEN and every request must
  * present the token once (?token=… or the challenge form); a cookie remembers
- * the browser after that. Leave it unset and the gate stays open — local dev
- * and the read-only demo deployment are unaffected.
+ * the browser after that. Leave it unset OUTSIDE production and the gate stays
+ * open — local dev and the read-only demo deployment are unaffected. In
+ * production an unset token fails closed (challenge), and the server refuses to
+ * boot at all (assertProductionAccessToken) so a public deployment can never
+ * come up wide open.
  */
 
 export const GATE_COOKIE = 'founder_os_access';
 
 export type GateDecision =
-  | { kind: 'open' } // no token configured — gate disabled
+  | { kind: 'open' } // no token configured, non-production — gate disabled
   | { kind: 'pass' } // cookie already carries the token
   | { kind: 'set-cookie'; value: string } // correct ?token= — set cookie, clean the URL
   | { kind: 'challenge' }; // everything else — show the token form
@@ -20,13 +23,33 @@ export function gateDecision(input: {
   token: string | undefined;
   cookie: string | null;
   queryToken: string | null;
+  isProduction?: boolean;
 }): GateDecision {
   const token = input.token?.trim();
-  if (!token) return { kind: 'open' };
+  if (!token) {
+    // Fail CLOSED in production: an unset token must never leave a public
+    // deployment open. Outside production the gate is disabled as before.
+    return input.isProduction ? { kind: 'challenge' } : { kind: 'open' };
+  }
   // fresh correct query token wins even over a stale cookie
   if (input.queryToken === token) return { kind: 'set-cookie', value: token };
   if (input.cookie === token) return { kind: 'pass' };
   return { kind: 'challenge' };
+}
+
+/**
+ * Refuse to boot a production server without an access token. Called once at
+ * startup from instrumentation.ts. In production an unset token can only ever
+ * serve the challenge page (fail closed) — an unusable, misconfigured state —
+ * so we stop the process rather than ship a locked-out (or, on any regression,
+ * wide-open) OS.
+ */
+export function assertProductionAccessToken(env: NodeJS.ProcessEnv = process.env): void {
+  if (env.NODE_ENV === 'production' && !env.FOUNDER_OS_ACCESS_TOKEN?.trim()) {
+    throw new Error(
+      'FOUNDER_OS_ACCESS_TOKEN must be set in production — refusing to boot without the access gate.',
+    );
+  }
 }
 
 /** Self-contained challenge page: no app chrome, no data, just the form. */

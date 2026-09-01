@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getDb } from '@/lib/data';
 import { SocialPlatformSchema, type SocialPost } from '@/lib/schemas';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,9 @@ const CreateSchema = z.object({
  * up. Wiring an actual Zernio publish is a deliberate later step.
  */
 export async function POST(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = CreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 

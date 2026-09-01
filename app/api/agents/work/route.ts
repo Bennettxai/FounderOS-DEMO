@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getDb } from '@/lib/data';
 import { isValidCron } from '@/lib/cron';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,9 @@ const CreateSchema = z.discriminatedUnion('kind', [
 ]);
 
 export async function POST(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = CreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const db = getDb();
@@ -52,6 +56,9 @@ const PatchSchema = z.discriminatedUnion('kind', [
 ]);
 
 export async function PATCH(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = PatchSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const db = getDb();
@@ -63,6 +70,9 @@ export async function PATCH(request: Request) {
 const DeleteSchema = z.object({ kind: z.enum(['task', 'cron']), id: z.string().min(1) });
 
 export async function DELETE(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = DeleteSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   const db = getDb();
