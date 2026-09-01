@@ -18,7 +18,7 @@
     "@slack/web-api": "^7.16.0",
     "@types/d3-force": "^3.0.10",
     "ai": "^6.0.208",
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^12.11.1",
     "d3-force": "^3.0.0",
     "imapflow": "^1.4.0",
     "lucide-react": "^0.441.0",
