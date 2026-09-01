@@ -9,7 +9,7 @@
  *   POST /webinarjam/webinars     { api_key }                       → validate
  *   POST /webinarjam/registrants  { api_key, webinar_id, schedule_id } → leads
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 const KEY = 'WEBINARJAM_API_KEY';
@@ -18,7 +18,7 @@ const BASE = 'https://api.webinarjam.com/webinarjam';
 type Fetch = typeof fetch;
 
 function resolveKey(): string | undefined {
-  return resolveCred(KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  return resolveCred(KEY);
 }
 
 function form(params: Record<string, string>): URLSearchParams {

@@ -6,14 +6,14 @@
  * TRAKYO_API_KEY is set (live request shape lands when the API is published).
  * Never reports a fake "connected".
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 const KEY = 'TRAKYO_API_KEY';
 
 export async function trakyoStatus(): Promise<ConnectorStatus> {
   const base = { id: 'trakyo', name: 'Trakyo', kind: 'crm' } as const;
-  const key = resolveCred(KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  const key = resolveCred(KEY);
   if (!key) {
     return {
       ...base,

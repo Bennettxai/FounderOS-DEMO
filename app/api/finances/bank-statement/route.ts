@@ -2,9 +2,18 @@ import { NextResponse } from 'next/server';
 import { execFile } from 'node:child_process';
 import { parseBankStatementSummary } from '@/lib/bank-statements';
 import { openBankStore } from '@/lib/bank';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
+
+// Reject anything larger than this before spawning pdftotext on it.
+const MAX_PDF_BYTES = 15 * 1024 * 1024;
+// PDFs begin with "%PDF-" — content-sniff so we never hand a non-PDF (or a
+// disguised payload) to the external extractor.
+function looksLikePdf(buf: Buffer): boolean {
+  return buf.length >= 5 && buf.subarray(0, 5).toString('latin1') === '%PDF-';
+}
 
 // Extract text from a PDF via the system `pdftotext` (poppler). Tries PATH then
 // common Homebrew/usr-local locations; -layout keeps the summary columns aligned.
@@ -32,6 +41,9 @@ function pdfToText(buf: Buffer): Promise<string> {
 /** Accept a bank-statement PDF, extract its summary (income/outflow per business
     per month), and upsert it into the bank store. Idempotent by account+month. */
 export async function POST(req: Request) {
+  const gate = requireSession(req);
+  if (gate) return gate;
+
   const ctype = req.headers.get('content-type') ?? '';
   let buf: Buffer | null = null;
   try {
@@ -49,12 +61,20 @@ export async function POST(req: Request) {
   if (!buf || buf.length === 0) {
     return NextResponse.json({ error: 'expected a PDF upload (file field or PDF body)' }, { status: 400 });
   }
+  if (buf.length > MAX_PDF_BYTES) {
+    return NextResponse.json({ error: 'PDF too large (max 15 MB)' }, { status: 413 });
+  }
+  if (!looksLikePdf(buf)) {
+    return NextResponse.json({ error: 'not a PDF' }, { status: 400 });
+  }
 
   let text: string;
   try {
     text = await pdfToText(buf);
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    // Generic to the client; extractor detail (paths, stderr) stays server-side.
+    console.error('pdftotext failed', e);
+    return NextResponse.json({ error: 'failed to read the PDF' }, { status: 500 });
   }
 
   const summary = parseBankStatementSummary(text);

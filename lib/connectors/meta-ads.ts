@@ -4,14 +4,14 @@
  * arrives via the Meta Ads MCP; until a token shows up this is a status-only
  * connector, same pattern as trakyo.ts. Never reports a fake "connected".
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 const KEY = 'META_ADS_ACCESS_TOKEN';
 
 export async function metaAdsStatus(): Promise<ConnectorStatus> {
   const base = { id: 'meta-ads', name: 'Meta Ads', kind: 'ads' } as const;
-  const key = resolveCred(KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  const key = resolveCred(KEY);
   if (!key) {
     return {
       ...base,

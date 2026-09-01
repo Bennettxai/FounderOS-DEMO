@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ingestBrainDump } from '@/lib/brain-dump';
 import { createGBrainProvider, type CaptureInput } from '@/lib/connectors/gbrain';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,9 @@ const DumpSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = DumpSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
