@@ -5,7 +5,7 @@
  * plus a published endpoint exist; the merge logic below is real and tested,
  * so wiring the live pull is a one-function change on the day Trakyo ships.
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { FunnelJourney } from '@/lib/schemas';
 
 /** One attributed content event as Trakyo will report it. */
@@ -46,7 +46,7 @@ export function mergeTrakyoTouches(journeys: FunnelJourney[], events: TrakyoEven
  * then the fetch lands here and every funnel first-touch lights up organic.
  */
 export async function trakyoTouches(): Promise<TrakyoEvent[]> {
-  const key = resolveCred('TRAKYO_API_KEY', [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  const key = resolveCred('TRAKYO_API_KEY');
   if (!key) return [];
   return []; // endpoint TBD — Trakyo has no public API yet
 }

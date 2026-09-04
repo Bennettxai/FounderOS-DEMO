@@ -1,8 +1,8 @@
-import { CRED_FILES, resolveCred } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export async function arcadsStatus(): Promise<ConnectorStatus> {
-  const auth = resolveCred('ARCADS_BASIC_AUTH', [CRED_FILES.arcads]);
+  const auth = resolveCred('ARCADS_BASIC_AUTH');
   if (!auth) {
     return {
       id: 'arcads',

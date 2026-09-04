@@ -1,15 +1,15 @@
-import { CRED_FILES, resolveCred } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export async function miroStatus(): Promise<ConnectorStatus> {
-  const token = resolveCred('MIRO_ACCESS_TOKEN', [CRED_FILES.agentsEnv]);
+  const token = resolveCred('MIRO_ACCESS_TOKEN');
   if (!token) {
     return {
       id: 'miro',
       name: 'Miro',
       kind: 'creative',
       state: 'not_configured',
-      detail: 'MIRO_ACCESS_TOKEN not found in env or knowledge/.env.agents.',
+      detail: 'MIRO_ACCESS_TOKEN not set (add it to .env.local).',
     };
   }
   try {

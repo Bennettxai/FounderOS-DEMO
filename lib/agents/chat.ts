@@ -14,6 +14,9 @@ import type { AgentMessage } from '@/lib/schemas';
 export type ChatResult = { reply: string; messages: AgentMessage[] };
 
 const SCREEN_CONTEXT_CAP = 4000;
+// Cap how many prior turns are sent to the model per request. Unbounded history
+// grows the token bill (and latency) without limit on a long-lived agent thread.
+const HISTORY_TURN_CAP = Number(process.env.AGENT_CHAT_HISTORY_CAP ?? 20);
 
 export function systemPromptFor(agent: RuntimeAgent, screenContext?: string): string {
   const lines = [
@@ -49,7 +52,7 @@ export async function chatWithAgent(
   // (a bare {role:'tool'} string isn't a valid v6 tool-result part) — so on
   // follow-up turns the model sees the assistant's prose, not raw tool output.
   // Fine for v1 read-only chat; revisit if multi-turn tool reasoning is needed.
-  const history = db.agentMessages.byAgent(agentId);
+  const history = db.agentMessages.byAgent(agentId).slice(-HISTORY_TURN_CAP);
   const llmMessages: LlmMessage[] = history.map((m) => ({ role: m.role, content: m.content }));
   const tools = agent.chatTools?.();
 
