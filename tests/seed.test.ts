@@ -44,65 +44,63 @@ describe('seedDatabase', () => {
     }
   });
 
-  test('the six operating pillars, in order', () => {
-    db = openDb(':memory:');
-    seedDatabase(db);
-    expect(db.departments.all().map((d) => d.name)).toEqual([
-      'Sales',
-      'Marketing/Growth',
-      'TECH',
-      'Finances',
-      'Communications',
-      'Clients',
-    ]);
-  });
+  test('the three investment company departments, in order', () => {
+  db = openDb(':memory:');
+  seedDatabase(db);
 
-  test('agents are homed in the right department', () => {
-    db = openDb(':memory:');
-    seedDatabase(db);
-    const byId = new Map(db.agents.all().map((a) => [a.id, a.departmentId]));
-    // Sales: the deal / account / CRM lanes
-    for (const id of [
-      'sales-agent',
-      'crm-pulse',
-      'launchpad-cohort-sales',
-      'vantage-sales',
-      'vantage-paykit',
-      'sales-calls-data',
-    ]) {
-      expect(byId.get(id)).toBe('dept-sales');
-    }
-    // Finances: the payment processors moved off Sales
-    for (const id of [
-      'payments-pulse',
-      'stripe-sales',
-      'processor-confirmation',
-      'paykit-sales',
-      'flexpay-financing',
-    ]) {
-      expect(byId.get(id)).toBe('dept-finance');
-    }
-    expect(db.agents.all().filter((a) => a.departmentId === 'dept-finance').length).toBeGreaterThanOrEqual(5);
-    // Marketing/Growth: the social/content crew
-    for (const id of [
-      'social-agent',
-      'postly-publisher',
-      'adsmith-creative',
-      'reelkit-editor',
-      'renderly-creative',
-      'dmflow-mcp',
-    ]) {
-      expect(byId.get(id)).toBe('dept-marketing-growth');
-    }
-    // TECH: AI head, the G-Brain data crew, and automations
-    for (const id of ['conductor', 'data-agent', 'markdown-auditor', 'vector-auditor', 'notion-sync', 'stack-monitor']) {
-      expect(byId.get(id)).toBe('dept-tech');
-    }
-    for (const id of ['comms-agent', 'gmail-worker', 'whatsapp-worker', 'slack-worker']) {
-      expect(byId.get(id)).toBe('dept-comms');
-    }
-  });
+  expect(db.departments.all().map((d) => d.name)).toEqual([
+    'Research Investments',
+    'Risk Analysis',
+    'Portfolio Monitoring & Performance',
+  ]);
+});
 
+
+  test('agents are homed in the correct investment department', () => {
+  db = openDb(':memory:');
+  seedDatabase(db);
+
+  const byId = new Map(
+    db.agents.all().map((a) => [a.id, a.departmentId]),
+  );
+
+  for (const id of [
+    'djed',
+    'marcus',
+    'lauti',
+    'pepo',
+    'andy',
+    'yann',
+    'beppe',
+  ]) {
+    expect(byId.get(id)).toBe('dept-research');
+  }
+
+  for (const id of [
+    'manuel',
+    'dimash',
+    'bare',
+    'angelo',
+    'pio',
+    'christian',
+  ]) {
+    expect(byId.get(id)).toBe('dept-risk');
+  }
+
+  for (const id of [
+    'john',
+    'ale',
+    'carlos',
+    'hakan',
+    'zielu',
+    'javier',
+  ]) {
+    expect(byId.get(id)).toBe('dept-monitoring');
+  }
+
+  expect(db.agents.all()).toHaveLength(19);
+});
+  
   test('re-seeding removes departments that left the model', () => {
     db = openDb(':memory:');
     seedDatabase(db);
@@ -111,45 +109,48 @@ describe('seedDatabase', () => {
     expect(db.departments.all().some((d) => d.id === 'dept-ghost')).toBe(false);
   });
 
-  test('instance agents have task workers parented beneath them', () => {
-    db = openDb(':memory:');
-    seedDatabase(db);
-    const byId = new Map(db.agents.all().map((a) => [a.id, a]));
+  test('department employees report to their final supervisors', () => {
+  db = openDb(':memory:');
+  seedDatabase(db);
 
-    // Comms: the channel workers that feed /comms hang off the comms agent
-    for (const worker of ['gmail-worker', 'whatsapp-worker', 'slack-worker']) {
-      expect(byId.get(worker)?.parentId).toBe('comms-agent');
-      expect(byId.get(worker)?.tier).toBe('worker');
-    }
-    // Studio: social media + content creation
-    for (const worker of ['postly-publisher', 'adsmith-creative', 'reelkit-editor', 'renderly-creative', 'dmflow-mcp']) {
-      expect(byId.get(worker)?.parentId).toBe('social-agent');
-    }
-    // Sales: CRM / account lanes hang off the sales instance
-    for (const worker of [
-      'crm-pulse',
-      'launchpad-cohort-sales',
-      'vantage-sales',
-      'sales-calls-data',
-    ]) {
-      expect(byId.get(worker)?.parentId).toBe('sales-agent');
-      expect(byId.get(worker)?.tier).toBe('worker');
-    }
-    expect(byId.get('vantage-paykit')?.parentId).toBe('vantage-sales');
-    expect(byId.get('vantage-paykit')?.tier).toBe('worker');
-    // Finances: the payment processors now report to Payments Pulse
-    for (const worker of ['stripe-sales', 'processor-confirmation', 'paykit-sales', 'flexpay-financing']) {
-      expect(byId.get(worker)?.parentId).toBe('payments-pulse');
-      expect(byId.get(worker)?.tier).toBe('worker');
-    }
-    // Knowledge: the G-Brain analyst and its auditors
-    for (const worker of ['markdown-auditor', 'vector-auditor']) {
-      expect(byId.get(worker)?.parentId).toBe('data-agent');
-    }
-    // Top-level agents are instance slots awaiting Clawline/Claude Code bindings
-    expect(byId.get('comms-agent')?.parentId).toBeNull();
-    expect(byId.get('comms-agent')?.instance).not.toBe('');
-  });
+  const byId = new Map(db.agents.all().map((a) => [a.id, a]));
+
+  for (const id of [
+    'djed',
+    'marcus',
+    'lauti',
+    'pepo',
+    'andy',
+    'yann',
+  ]) {
+    expect(byId.get(id)?.parentId).toBe('beppe');
+  }
+
+  for (const id of [
+    'manuel',
+    'dimash',
+    'bare',
+    'angelo',
+    'pio',
+  ]) {
+    expect(byId.get(id)?.parentId).toBe('christian');
+  }
+
+  for (const id of [
+    'john',
+    'ale',
+    'carlos',
+    'hakan',
+    'zielu',
+  ]) {
+    expect(byId.get(id)?.parentId).toBe('javier');
+  }
+
+  for (const id of ['beppe', 'christian', 'javier']) {
+    expect(byId.get(id)?.parentId).toBeNull();
+    expect(byId.get(id)?.tier).toBe('lead');
+  }
+});
 
   test('re-seeding removes agents that left the roster', () => {
     db = openDb(':memory:');
