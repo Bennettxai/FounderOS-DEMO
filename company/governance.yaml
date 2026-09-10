@@ -1,0 +1,334 @@
+governance:
+  version: "1.0"
+
+  authority:
+    ultimate_authority: ceo
+
+    principle: >
+      AI employees propose, analyze, challenge, structure,
+      monitor and learn. The CEO retains final human authority.
+
+  control_plane:
+    type: deterministic
+    llm_based: false
+
+    exclusive_responsibilities:
+      - enforce_workflow_state
+      - enforce_permissions
+      - validate_state_transitions
+      - enforce_approval_gates
+      - schedule_jobs
+      - route_mandatory_handoffs
+      - prevent_duplicate_processing
+      - manage_retries
+      - manage_timeouts
+      - log_handoffs
+      - create_audit_events
+
+    rule: >
+      Agents may propose actions. The Control Plane decides whether
+      those actions are technically permitted.
+
+  separation_of_duties:
+    self_approval_allowed: false
+
+    rules:
+      - research_agents_cannot_approve_own_proposals
+      - red_desk_cannot_rewrite_original_proposals
+      - research_team_cannot_execute_trades
+      - risk_team_cannot_execute_trades
+      - monitoring_team_cannot_execute_trades
+      - kpi_evaluators_cannot_modify_evaluated_outputs
+      - process_improvement_cannot_self_deploy_changes
+      - independent_risk_controller_cannot_directly_modify_reviewed_plan
+
+  ceo_contact_policy:
+    research_team:
+      exclusive_interface: beppe
+
+    risk_team:
+      exclusive_interface: christian
+
+    monitoring_team:
+      exclusive_interface: javier
+
+  investment_workflow:
+
+    states:
+      - DRAFT
+      - RESEARCHING
+      - READY_FOR_RED_DESK
+      - UNDER_CRITICAL_REVIEW
+      - READY_FOR_FINAL_RESEARCH_SUPERVISOR
+      - WAITING_CEO_RESEARCH_DECISION
+      - CEO_RESEARCH_REJECTED
+      - CEO_RESEARCH_APPROVED
+      - RISK_ANALYSIS
+      - RISK_REVIEW
+      - RISK_REJECTED
+      - RISK_MODIFICATION_REQUIRED
+      - RISK_APPROVED
+      - WAITING_CEO_EXECUTION
+      - CEO_EXECUTION_CONFIRMED
+      - MONITORING
+      - CLOSED
+      - POST_MORTEM
+      - ARCHIVED
+
+    transitions:
+
+      DRAFT:
+        next:
+          - RESEARCHING
+
+      RESEARCHING:
+        next:
+          - READY_FOR_RED_DESK
+
+      READY_FOR_RED_DESK:
+        next:
+          - UNDER_CRITICAL_REVIEW
+
+      UNDER_CRITICAL_REVIEW:
+        next:
+          - READY_FOR_FINAL_RESEARCH_SUPERVISOR
+
+      READY_FOR_FINAL_RESEARCH_SUPERVISOR:
+        next:
+          - WAITING_CEO_RESEARCH_DECISION
+
+      WAITING_CEO_RESEARCH_DECISION:
+        authorized_actor: ceo
+        next:
+          - CEO_RESEARCH_REJECTED
+          - CEO_RESEARCH_APPROVED
+
+      CEO_RESEARCH_REJECTED:
+        next:
+          - ARCHIVED
+
+      CEO_RESEARCH_APPROVED:
+        next:
+          - RISK_ANALYSIS
+
+      RISK_ANALYSIS:
+        next:
+          - RISK_REVIEW
+
+      RISK_REVIEW:
+        next:
+          - RISK_REJECTED
+          - RISK_MODIFICATION_REQUIRED
+          - RISK_APPROVED
+
+      RISK_MODIFICATION_REQUIRED:
+        next:
+          - RISK_ANALYSIS
+
+      RISK_REJECTED:
+        next:
+          - ARCHIVED
+
+      RISK_APPROVED:
+        next:
+          - WAITING_CEO_EXECUTION
+
+      WAITING_CEO_EXECUTION:
+        authorized_actor: ceo
+        next:
+          - CEO_EXECUTION_CONFIRMED
+
+      CEO_EXECUTION_CONFIRMED:
+        next:
+          - MONITORING
+
+      MONITORING:
+        next:
+          - CLOSED
+
+      CLOSED:
+        next:
+          - POST_MORTEM
+
+      POST_MORTEM:
+        next:
+          - ARCHIVED
+
+    transition_authority:
+      official_state_changes: control_plane_only
+
+  approval_policy:
+
+    research_proposal:
+      preparation:
+        - lauti
+        - pepo
+        - andy
+
+      mandatory_review:
+        - yann
+        - beppe
+
+      final_decision:
+        actor: ceo
+
+    risk_plan:
+      mandatory_analysis:
+        - manuel
+        - dimash
+        - bare
+        - angelo
+
+      independent_review:
+        - pio
+
+      final_supervisor:
+        - christian
+
+    execution:
+      actor: ceo
+      agents_allowed: false
+
+  financial_execution_policy:
+
+    only_ceo_may:
+      - buy
+      - sell
+      - deposit
+      - withdraw
+      - modify_order
+      - cancel_order
+
+    prohibited_agent_credentials:
+      - broker_trading_credentials
+      - exchange_trading_credentials
+      - withdrawal_credentials
+
+  audit_policy:
+
+    immutable_historical_records:
+      - original_proposal
+      - original_thesis
+      - original_confidence
+      - original_invalidation
+      - red_desk_review
+      - ceo_decision
+      - risk_assessment
+      - independent_risk_verdict
+      - trade_execution_ticket
+      - execution_confirmation
+      - original_kpi_evaluation_inputs
+
+    retroactive_rewriting_allowed: false
+
+    corrections:
+      method: append_only
+      preserve_original: true
+      require:
+        - timestamp
+        - actor
+        - reason
+        - previous_value
+        - corrected_value
+
+  source_policy:
+
+    material_factual_claims:
+      source_required: true
+
+    preferred_source_order:
+      - primary_source
+      - official_regulator
+      - official_market_or_exchange
+      - high_quality_secondary_source
+
+    provenance_required:
+      - source
+      - retrieval_time
+      - relevant_event_time
+
+  decision_record_policy:
+
+    distinguish:
+      - fact
+      - interpretation
+      - assumption
+      - thesis
+      - decision
+      - outcome
+      - lesson
+
+    principle: >
+      These categories must remain distinguishable so post-mortem
+      analysis can determine whether a failure originated from data,
+      interpretation, process, forecasting, risk management or another
+      stage of the decision process.
+
+  error_taxonomy:
+
+    DATA_ERROR:
+      examples:
+        - incorrect_data
+        - stale_data
+        - missing_material_data
+
+    INTERPRETATION_ERROR:
+      examples:
+        - causal_error
+        - expectation_error
+        - regime_misclassification
+
+    PROCESS_ERROR:
+      examples:
+        - missing_required_source
+        - ignored_contradiction
+        - sop_violation
+
+    FORECAST_ERROR:
+      examples:
+        - wrong_direction
+        - wrong_timing
+        - wrong_magnitude
+
+    RISK_ERROR:
+      examples:
+        - incorrect_sizing
+        - ignored_correlation
+        - inappropriate_stop
+        - ignored_event_risk
+
+  performance_governance:
+
+    principle: >
+      Financial outcome and decision quality are not equivalent.
+
+    requirements:
+      - preserve_pre_outcome_forecast
+      - evaluate_against_predefined_criteria
+      - use_coherent_benchmark
+      - include_sample_size
+      - include_analysis_period
+      - include_reliability_assessment
+
+  process_change_policy:
+
+    agent_self_modification: false
+
+    production_change_requires:
+      - documented_change
+      - rationale
+      - historical_or_simulation_test
+      - responsible_review
+      - approval
+      - version_number
+
+    rollback_required: true
+
+  risk_policy:
+
+    numeric_limits_defined: false
+
+    rule: >
+      Numerical portfolio and trade risk limits must never be invented
+      by an agent. They will be defined separately and become active
+      only after explicit CEO approval.
