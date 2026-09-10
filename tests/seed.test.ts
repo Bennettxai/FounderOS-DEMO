@@ -12,7 +12,7 @@ describe('seedDatabase', () => {
   test('populates every entity', () => {
     db = openDb(':memory:');
     seedDatabase(db);
-    expect(db.departments.all().length).toBeGreaterThanOrEqual(5);
+    expect(db.departments.all().length).toBe(3);
     expect(db.agents.all().length).toBeGreaterThanOrEqual(5);
     expect(db.tools.all().length).toBeGreaterThanOrEqual(8);
     expect(db.roadmap.all().length).toBeGreaterThanOrEqual(10);
@@ -156,7 +156,7 @@ describe('seedDatabase', () => {
     db = openDb(':memory:');
     seedDatabase(db);
     db.agents.insert({
-      id: 'ghost', departmentId: 'dept-tech', name: 'Ghost', role: 'r', status: 'active',
+      id: 'ghost', departmentId: 'dept-research', name: 'Ghost', role: 'r', status: 'active',
       tier: 'lead', description: '', model: 'm', tools: [], parentId: null, instance: 'builtin',
     });
     seedDatabase(db);
