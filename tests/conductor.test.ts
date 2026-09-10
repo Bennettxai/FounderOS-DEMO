@@ -24,16 +24,16 @@ const routableIds = () => realAgents.filter((a) => a.id !== 'conductor').map((a)
 describe('routeConductorMessage (stub)', () => {
   test('@agent-id prefix routes straight to that agent and strips the prefix', async () => {
     const db = openDb(':memory:');
-    const res = await routeConductorMessage(db, realAgents, '@sales-agent what is pipeline?');
-    expect(res.routedTo).toBe('sales-agent');
+    const res = await routeConductorMessage(db, realAgents, '@lauti analyse equity opportunity');
+    expect(res.routedTo).toBe('lauti');
     expect(res.reply.length).toBeGreaterThan(0);
-    expect(db.agentMessages.byAgent('sales-agent')[0].content).toBe('what is pipeline?');
+    expect(db.agentMessages.byAgent('lauti')[0].content).toBe('analyse equity opportunity');
   });
 
   test('@Name matches by humanized name slug too', async () => {
     const db = openDb(':memory:');
-    const res = await routeConductorMessage(db, realAgents, '@Data-Agent ping');
-    expect(res.routedTo).toBe('data-agent');
+    const res = await routeConductorMessage(db, realAgents, '@Djed ping');
+    expect(res.routedTo).toBe('djed');
   });
 
   test('a bare message routes to a valid non-conductor agent and returns a reply', async () => {
@@ -62,13 +62,13 @@ describe('POST /api/agents/conductor/chat', () => {
     const res = await POST(
       new Request('http://localhost/api/agents/conductor/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: '@sales-agent how are deals?' }),
+        body: JSON.stringify({ message: '@lauti how are deals?' }),
       }),
       { params: { id: 'conductor' } },
     );
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.routedTo).toBe('sales-agent');
+    expect(body.routedTo).toBe('lauti');
     expect(typeof body.reply).toBe('string');
   });
 });

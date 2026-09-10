@@ -28,7 +28,7 @@ describe('API route handlers', () => {
     const { GET } = await import('@/app/api/departments/route');
     const res = await GET();
     const body = await res.json();
-    expect(body.departments.length).toBeGreaterThanOrEqual(4);
+    expect(body.departments.length).toBe(3);
     const orders = body.departments.map((d: { order: number }) => d.order);
     expect([...orders].sort((a: number, b: number) => a - b)).toEqual(orders);
   });
@@ -42,12 +42,12 @@ describe('API route handlers', () => {
 
   test('POST /api/agents/[id]/run executes a real agent and persists the run', async () => {
     const { POST } = await import('@/app/api/agents/[id]/run/route');
-    const res = await POST(new Request('http://localhost/api/agents/data-agent/run', { method: 'POST' }), {
-      params: { id: 'data-agent' },
+    const res = await POST(new Request('http://localhost/api/agents/djed/run', { method: 'POST' }), {
+      params: { id: 'djed' },
     });
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.run.agentId).toBe('data-agent');
+    expect(body.run.agentId).toBe('djed');
     expect(typeof body.run.ok).toBe('boolean');
     expect(body.run.summary.length).toBeGreaterThan(0);
   });
