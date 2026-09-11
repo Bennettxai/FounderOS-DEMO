@@ -1,75 +1,106 @@
-import { allConnectorStatuses } from '@/lib/connectors';
-import { readEnvLocal } from '@/lib/creds';
-import { connectionCatalog, integrationsByCategory, type CatalogEntry } from '@/lib/integrations-catalog';
+import { Globe2, Database, Brain, Plug } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-import { ApiKeys } from '@/components/ApiKeys';
-import { SectionHead } from '@/components/terminal';
-import { ConnectionCard } from '@/components/ConnectionCard';
-import { IntegrationCategory } from '@/components/IntegrationCategory';
 
 export const dynamic = 'force-dynamic';
 
-const GRID = 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
-
-export default async function ConnectionsPage() {
-  const statuses = await allConnectorStatuses();
-  const catalog = connectionCatalog(statuses, readEnvLocal());
-  const detailByConnector = new Map(statuses.map((s) => [s.id, s.detail]));
-  const guidanceFor = (entry: CatalogEntry) =>
-    entry.connectorId ? detailByConnector.get(entry.connectorId) : undefined;
-
-  const byId = new Map(catalog.map((c) => [c.slug, c]));
-  const connected = catalog.filter((c) => c.connected);
-  const popular = catalog.filter((c) => c.popular);
-  const categories = [...integrationsByCategory().entries()];
-
+export default function ConnectionsPage() {
   return (
     <div>
-      <PageHeader eyebrow="connections" title="Connections" />
+      <PageHeader
+        eyebrow="infrastructure"
+        title="Connections"
+      />
 
-      {/* Your connected tools — driven by real connector status */}
-      {connected.length > 0 && (
-        <section className="mb-8">
-          <SectionHead label="Your connected tools" count={connected.length} />
-          <div className={GRID}>
-            {connected.map((entry) => (
-              <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
-            ))}
+      <div className="mb-8 max-w-3xl">
+        <p className="text-sm leading-relaxed text-os-muted">
+          External data sources, research services, APIs and company systems
+          will be connected here progressively.
+        </p>
+
+        <p className="mt-2 text-sm leading-relaxed text-os-dim">
+          No legacy FounderOS integrations are considered part of the company.
+        </p>
+      </div>
+
+      <section className="grid grid-cols-2 gap-3 max-[900px]:grid-cols-1">
+        <div className="rounded-lg-t border border-os-border bg-os-surface p-5">
+          <Globe2 className="h-5 w-5 text-os-muted" />
+
+          <div className="mt-4 text-sm font-semibold">
+            Internet & Research
           </div>
-        </section>
-      )}
 
-      {/* Popular */}
-      <section className="mb-8">
-        <SectionHead label="Popular" count={popular.length} />
-        <div className={GRID}>
-          {popular.map((entry) => (
-            <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
-          ))}
+          <p className="mt-2 text-xs leading-relaxed text-os-dim">
+            Web search, public information, external research and third-party
+            perspectives.
+          </p>
+
+          <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+            Not connected
+          </div>
+        </div>
+
+        <div className="rounded-lg-t border border-os-border bg-os-surface p-5">
+          <Database className="h-5 w-5 text-os-muted" />
+
+          <div className="mt-4 text-sm font-semibold">
+            Market & Financial Data
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-os-dim">
+            Market prices, fundamentals, filings, macroeconomic data and other
+            financial information.
+          </p>
+
+          <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+            Not connected
+          </div>
+        </div>
+
+        <div className="rounded-lg-t border border-os-border bg-os-surface p-5">
+          <Brain className="h-5 w-5 text-os-muted" />
+
+          <div className="mt-4 text-sm font-semibold">
+            Startup Brain
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-os-dim">
+            Institutional memory, experience retrieval and company knowledge.
+          </p>
+
+          <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+            Cognee not connected
+          </div>
+        </div>
+
+        <div className="rounded-lg-t border border-os-border bg-os-surface p-5">
+          <Plug className="h-5 w-5 text-os-muted" />
+
+          <div className="mt-4 text-sm font-semibold">
+            Operational Systems
+          </div>
+
+          <p className="mt-2 text-xs leading-relaxed text-os-dim">
+            Brokers, monitoring services, storage, observability and other
+            company infrastructure.
+          </p>
+
+          <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+            Not connected
+          </div>
         </div>
       </section>
 
-      {/* Browse by category — collapsible */}
-      <section className="mb-8">
-        <SectionHead label="Browse by category" count={categories.length} />
-        <div className="flex flex-col gap-2.5">
-          {categories.map(([category, tools], idx) => (
-            <IntegrationCategory key={category} label={category} count={tools.length} defaultOpen={idx === 0}>
-              <div className={GRID}>
-                {tools.map((tool) => (
-                  <ConnectionCard
-                    key={tool.slug}
-                    entry={byId.get(tool.slug) as CatalogEntry}
-                    guidance={guidanceFor(byId.get(tool.slug) as CatalogEntry)}
-                  />
-                ))}
-              </div>
-            </IntegrationCategory>
-          ))}
+      <section className="mt-6 rounded-lg-t border border-dashed border-os-border p-5">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+          Connection state
         </div>
-      </section>
 
-      <ApiKeys />
+        <p className="mt-2 text-sm text-os-muted">
+          Clean setup. No external services are currently registered as
+          production company infrastructure.
+        </p>
+      </section>
     </div>
   );
 }
