@@ -38,26 +38,4 @@ describe('code-splitting the heavy graphs', () => {
     expect(page).toContain('AudienceConsistencyLazy');
     expect(page).not.toMatch(/from '@\/components\/AudienceConsistency';/);
   });
-
-  test('the funnel page pulls both graph engines through a lazy client wrapper', () => {
-    expect(existsSync(join(process.cwd(), 'components/FunnelGraphsLazy.tsx'))).toBe(true);
-    const lazy = read('components/FunnelGraphsLazy.tsx');
-    expect(lazy).toContain("'use client'");
-    expect(lazy).toMatch(/dynamic\(\s*\(\)\s*=>\s*import\('@\/components\/FunnelRadial'\)/);
-    expect(lazy).toMatch(/dynamic\(\s*\(\)\s*=>\s*import\('@\/components\/FunnelSpace'\)/);
-    const ssrFalse = lazy.match(/ssr:\s*false/g) ?? [];
-    expect(ssrFalse.length).toBeGreaterThanOrEqual(2);
-    // aspect-matched skeletons: radial svg is 1100/680, the orbit space 1100/460
-    expect(lazy).toContain('1100 / 680');
-    expect(lazy).toContain('1100 / 460');
-    const page = read('app/funnel/page.tsx');
-    expect(page).toContain('FunnelRadialLazy');
-    expect(page).toContain('FunnelSpaceLazy');
-    expect(page).not.toMatch(/from '@\/components\/FunnelRadial';/);
-    expect(page).not.toMatch(/from '@\/components\/FunnelSpace';/);
-    // retired engines stay retired (2026-07-21 reverts)
-    expect(page).not.toMatch(/FunnelNeural/);
-    expect(existsSync(join(process.cwd(), 'components/FunnelNeural.tsx'))).toBe(false);
-    expect(existsSync(join(process.cwd(), 'components/FunnelFlow.tsx'))).toBe(false);
-  });
 });

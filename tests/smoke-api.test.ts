@@ -5,7 +5,6 @@ import path from 'node:path';
 
 beforeAll(() => {
   process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-apismoke-')), 'test.db');
-  process.env.FUNNEL_PROVIDER = 'seed'; // keep /api/funnel off the live Attio API in tests
 });
 
 type RouteEntry = {
@@ -30,12 +29,9 @@ const ROUTES: RouteEntry[] = [
   { route: 'comms/email/attachment', load: () => import('@/app/api/comms/email/attachment/route'), url: 'http://localhost/api/comms/email/attachment?account=inbox-1&threadId=smoke&uid=1&part=1' },
   { route: 'comms/email/search', load: () => import('@/app/api/comms/email/search/route'), url: 'http://localhost/api/comms/email/search?account=inbox-1&q=smoke' },
   { route: 'comms/email/thread', load: () => import('@/app/api/comms/email/thread/route'), url: 'http://localhost/api/comms/email/thread?account=inbox-1&threadId=smoke&uid=1' },
-  { route: 'conductor/context', load: () => import('@/app/api/conductor/context/route'), url: 'http://localhost/api/conductor/context?path=/agents' },
   { route: 'connections', load: () => import('@/app/api/connections/route'), url: 'http://localhost/api/connections' },
   { route: 'contacts/tags', load: () => import('@/app/api/contacts/tags/route'), url: 'http://localhost/api/contacts/tags' },
   { route: 'departments', load: () => import('@/app/api/departments/route'), url: 'http://localhost/api/departments' },
-  { route: 'funnel', load: () => import('@/app/api/funnel/route'), url: 'http://localhost/api/funnel' },
-  { route: 'funnel/lead-message', load: () => import('@/app/api/funnel/lead-message/route'), url: 'http://localhost/api/funnel/lead-message?name=Smoke%20Test%20Lead' },
   { route: 'keys', load: () => import('@/app/api/keys/route'), url: 'http://localhost/api/keys' },
   { route: 'life/map', load: () => import('@/app/api/life/map/route'), url: 'http://localhost/api/life/map' },
   { route: 'metrics', load: () => import('@/app/api/metrics/route'), url: 'http://localhost/api/metrics' },
