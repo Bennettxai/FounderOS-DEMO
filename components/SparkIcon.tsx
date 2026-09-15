@@ -2,10 +2,6 @@
  * The agent emblem — the Vantage mark (public/vantage-emblem.png,
  * background keyed out and cropped).
  *
- * The PNG is used as a CSS mask over a solid color, so `shade` tints the exact
- * brand silhouette to any color — black for the Conductor, each department's
- * life-area color for its agents, etc. (The mint PNG was invisible on the
- * light theme's white; masking fixes that.)
  */
 export const EMBLEM_MINT = '#00ffab';
 

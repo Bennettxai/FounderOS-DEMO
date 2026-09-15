@@ -59,7 +59,7 @@ export function AgentActivityFeed({
 
       {events.length === 0 ? (
         <p className="font-mono text-[10.5px] text-os-dim">
-          No activity yet — chat with an agent or the Conductor to see it here.
+          No activity yet
         </p>
       ) : (
         <ul className="max-h-72 space-y-1 overflow-y-auto pr-1">
