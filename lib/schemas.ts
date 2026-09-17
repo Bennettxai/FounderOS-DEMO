@@ -257,6 +257,16 @@ export const AgentTaskSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const BrandDealOutcomeSchema = z.enum(['open', 'won', 'lost', 'skipped']);
+export const BrandDealOverrideSchema = z.object({
+  dealId: z.string().min(1),
+  outcome: BrandDealOutcomeSchema,
+  amountUsd: z.number().int().positive().nullable(),
+  updatedAt: z.string().min(1),
+});
+export type BrandDealOutcome = z.infer<typeof BrandDealOutcomeSchema>;
+export type BrandDealOverride = z.infer<typeof BrandDealOverrideSchema>;
+
 export const AgentCronSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),

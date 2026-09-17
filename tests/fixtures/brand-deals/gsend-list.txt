@@ -1,0 +1,10 @@
+r1001	Jane Doe <jane@brandone.example>	Re: Sponsorship — BrandOne x @yourhandle
+r1002	Sam Lee <sam@northwind.example>	Re: Northwind creator partnership
+r1003	Priya Nair <priya@lumen.example>	Re: Lumen app launch collab
+r1004	Omar Haddad <omar@fieldset.example>	Re: Fieldset Q4 campaign
+r1005	Mei Tanaka <mei@kobold.example>	Re: Kobold tools — paid Reel
+r1006	Luca Rossi <luca@verdant.example>	Re: Verdant event invite
+r1007	Ana Silva <ana@harbor.example>	Re: Harbor newsletter placement
+r1008	Tom Baker <tom@quill.example>	Re: Quill — usage rights ask
+
+8 draft(s).
