@@ -27,7 +27,6 @@ const ROUTES: RouteEntry[] = [
   { route: 'comms/email/search', load: () => import('@/app/api/comms/email/search/route'), url: 'http://localhost/api/comms/email/search?account=inbox-1&q=smoke' },
   { route: 'comms/email/thread', load: () => import('@/app/api/comms/email/thread/route'), url: 'http://localhost/api/comms/email/thread?account=inbox-1&threadId=smoke&uid=1' },
   { route: 'connections', load: () => import('@/app/api/connections/route'), url: 'http://localhost/api/connections' },
-  { route: 'contacts/tags', load: () => import('@/app/api/contacts/tags/route'), url: 'http://localhost/api/contacts/tags' },
   { route: 'departments', load: () => import('@/app/api/departments/route'), url: 'http://localhost/api/departments' },
   { route: 'keys', load: () => import('@/app/api/keys/route'), url: 'http://localhost/api/keys' },
   { route: 'metrics', load: () => import('@/app/api/metrics/route'), url: 'http://localhost/api/metrics' },
