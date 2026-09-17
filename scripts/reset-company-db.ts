@@ -71,14 +71,12 @@ try {
     roadmap: db.roadmap.all().length,
     metrics: db.metrics.all().length,
     domains: db.domains.all().length,
-    personas: db.personas.all().length,
     phases: db.phases.all().length,
     agentRuns: db.agentRuns.recent(1_000_000).length,
     agentMessages: db.agentMessages.recent(1_000_000).length,
     agentTasks: db.agentTasks.all().length,
     agentCrons: db.agentCrons.all().length,
     broadcasts: db.broadcasts.recent(1_000_000).length,
-    contactTags: db.contactTags.all().length,
     socialAccounts: db.social.accounts().length,
     socialSnapshots: db.social.latest().length,
     socialDms: db.social.dms().length,
@@ -86,7 +84,6 @@ try {
     socialDmMessages: db.social.dmMessages().length,
     emailListSnapshots: db.emailList.snapshots().length,
     socialPosts: db.socialPosts.all().length,
-    funnelJourneys: db.funnel.journeys().length,
   };
 
   if (departments.length !== 3) {

@@ -103,27 +103,7 @@ export const DomainSchema = z.object({
 // operator. Same skeleton as the creator-founder: pillars (departments) → the
 // agents that run them, the connectors they wire, the metrics they track, and
 // how they use the shared G-Brain.
-export const PersonaPillarSchema = z.object({
-  name: z.string().min(1),
-  focus: z.string().min(1),
-  agents: z.array(z.string()).min(1),
-});
 
-export const PersonaSchema = z.object({
-  id: z.string().min(1),
-  order: z.number().int(),
-  name: z.string().min(1),
-  archetype: z.string().min(1),
-  tagline: z.string().min(1),
-  summary: z.string().min(1),
-  accent: z.string().min(1),
-  northStar: z.string().min(1),
-  pillars: z.array(PersonaPillarSchema).min(1),
-  connectors: z.array(z.string()).min(1),
-  metrics: z.array(z.string()).min(1),
-  brainUse: z.string().min(1),
-  signaturePlay: z.string().min(1),
-});
 
 export const AgentRunSchema = z.object({
   id: z.string().min(1),
@@ -369,13 +349,6 @@ export const SocialPostSchema = z.object({
   createdAt: z.string().min(1),
 });
 
-export const ContactTagSchema = z.object({
-  person: z.string().min(1),
-  channel: z.string().min(1), // whatsapp · email · slack · imessage …
-  tag: z.string().min(1), // client · student · friend …
-  tier: z.number().int().min(1).max(3), // 1 red · 2 yellow · 3 green
-});
-
 // ── People + SOP tasks — the humans in the process and the written-out jobs ──
 // A person is a human employee on the org graph (distinct from agents). A SOP
 // task is one written-out job owned by exactly ONE worker — an agent or a
@@ -486,74 +459,7 @@ export const RosterClientSchema = z.object({
 
 // ── Funnel — client journeys from first touch to conversion ─────────────────
 // Canonical stages; `nurtured` is optional so a journey renders as 4–5 touches.
-export const FunnelStageSchema = z.enum(['first_touch', 'engaged', 'nurtured', 'opted_in', 'converted']);
-export const FunnelVentureSchema = z.enum(['vantage', 'launchpad-cohort']);
-export const FunnelChannelSchema = z.enum(['organic', 'ads', 'dm', 'email', 'webinar', 'call', 'checkout', 'crm']);
-// Where each touch comes from: Trakyo (organic attribution), Meta Ads MCP
-// (paid), Attio (live CRM pipeline), manual otherwise. Seeded rows carry the
-// intended source so the live swap is a repo-level change.
-export const FunnelSourceSchema = z.enum(['trakyo', 'meta-ads', 'attio', 'ghl', 'manual']);
 
-// Relationship temperature with Alex — with likelihood-to-buy (0–100) it
-// drives how a client node renders in the funnel space. Seeded dummy; later
-// computed from CRM (Attio) + Trakyo engagement.
-export const FunnelRelationshipSchema = z.enum(['cold', 'warm', 'hot']);
-
-export const FunnelContactSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  venture: FunnelVentureSchema,
-  status: FunnelStageSchema, // furthest stage reached
-  product: z.string().nullable(), // what they opted in to buy, once converted
-  amountUsd: z.number().nonnegative().nullable(),
-  relationship: FunnelRelationshipSchema,
-  likelihood: z.number().int().min(0).max(100),
-  /** Deep link to the source record (Attio web_url / GHL contact page). */
-  url: z.string().nullable().default(null),
-  /** Contact channels for outreach — GHL carries both; Attio joins them from
-   * the deal's associated person record (fetchAttioContacts). */
-  email: z.string().nullable().default(null),
-  phone: z.string().nullable().default(null),
-  /** The human behind the deal — joined from the CRM person/company records
-   * so the dossier says WHO this is, not just the deal title. */
-  person: z.string().nullable().default(null),
-  company: z.string().nullable().default(null),
-  role: z.string().nullable().default(null),
-  linkedin: z.string().nullable().default(null),
-  createdAt: z.string().min(1),
-});
-
-export const FunnelTouchSchema = z.object({
-  id: z.string().min(1),
-  contactId: z.string().min(1),
-  seq: z.number().int().positive(), // 1..n position in the journey
-  stage: FunnelStageSchema,
-  channel: FunnelChannelSchema,
-  label: z.string().min(1), // e.g. "IG reel: 3 offers that close themselves"
-  source: FunnelSourceSchema,
-  at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'at must look like 2026-06-13'),
-});
-
-export const FunnelJourneySchema = FunnelContactSchema.extend({
-  touches: z.array(FunnelTouchSchema),
-});
-
-// One bar of the funnel: journeys that progressed at least this far, split by
-// how they entered (first-touch organic vs ads).
-export const FunnelStageRowSchema = z.object({
-  stage: FunnelStageSchema,
-  total: z.number().int().nonnegative(),
-  organic: z.number().int().nonnegative(),
-  ads: z.number().int().nonnegative(),
-  conversionFromPrev: z.number().min(0).max(100).nullable(),
-});
-
-export const FunnelSummarySchema = z.object({
-  clients: z.number().int().nonnegative(),
-  converted: z.number().int().nonnegative(),
-  revenueUsd: z.number().nonnegative(),
-  stages: z.array(FunnelStageRowSchema),
-});
 
 export type Department = z.infer<typeof DepartmentSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
@@ -578,7 +484,6 @@ export type BrainGraphEdge = z.infer<typeof BrainGraphEdgeSchema>;
 export type BrainGraph = z.infer<typeof BrainGraphSchema>;
 export type LifeMapNode = z.infer<typeof LifeMapNodeSchema>;
 export type LifeMap = z.infer<typeof LifeMapSchema>;
-export type ContactTag = z.infer<typeof ContactTagSchema>;
 export type SocialPlatform = z.infer<typeof SocialPlatformSchema>;
 export type SocialAccount = z.infer<typeof SocialAccountSchema>;
 export type SocialSnapshot = z.infer<typeof SocialSnapshotSchema>;
@@ -595,22 +500,10 @@ export type SocialPostStatus = z.infer<typeof SocialPostStatusSchema>;
 export type SocialPost = z.infer<typeof SocialPostSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
-export type PersonaPillar = z.infer<typeof PersonaPillarSchema>;
-export type Persona = z.infer<typeof PersonaSchema>;
 export type Person = z.infer<typeof PersonSchema>;
 export type SopAssigneeKind = z.infer<typeof SopAssigneeKindSchema>;
 export type SopTask = z.infer<typeof SopTaskSchema>;
 export type RosterClient = z.infer<typeof RosterClientSchema>;
-export type FunnelStage = z.infer<typeof FunnelStageSchema>;
-export type FunnelRelationship = z.infer<typeof FunnelRelationshipSchema>;
-export type FunnelVenture = z.infer<typeof FunnelVentureSchema>;
-export type FunnelChannel = z.infer<typeof FunnelChannelSchema>;
-export type FunnelSource = z.infer<typeof FunnelSourceSchema>;
-export type FunnelContact = z.infer<typeof FunnelContactSchema>;
-export type FunnelTouch = z.infer<typeof FunnelTouchSchema>;
-export type FunnelJourney = z.infer<typeof FunnelJourneySchema>;
-export type FunnelStageRow = z.infer<typeof FunnelStageRowSchema>;
-export type FunnelSummary = z.infer<typeof FunnelSummarySchema>;
 export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
 export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
