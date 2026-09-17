@@ -25,7 +25,6 @@ export type AgentWiki = {
   servers: WikiServer[]; // tools / MCP servers the agent is wired to
 };
 
-/** 'comms-feed' → 'Comms Feed' */
 export function prettifySlug(slug: string): string {
   return slug
     .split(/[-_]/)
@@ -53,7 +52,6 @@ const TOOL_SUMMARY: Record<string, string> = {
   'brain-store': 'Local markdown knowledge base; the source of truth G-Brain syncs from.',
   supabase: 'Postgres + pgvector "second brain" holding chunked embeddings.',
   zeroentropy: 'Embedding provider behind G-Brain hybrid retrieval.',
-  'comms-feed': 'Unified inbox feed — WhatsApp, email, Slack, calendar in one stream.',
   zernio: 'Social posting + audience analytics across the five platforms.',
   manychat: 'DM automation across Instagram and Messenger.',
   notion: 'Docs + databases workspace.',

@@ -21,7 +21,6 @@ type PageEntry = {
 // Every app/**/page.tsx, with the props each needs to be invoked.
 const PAGES: PageEntry[] = [
   { file: 'page.tsx', load: () => import('@/app/page') },
-  { file: 'comms/page.tsx', load: () => import('@/app/comms/page') },
   { file: 'agents/page.tsx', load: () => import('@/app/agents/page') },
   { file: 'tasks/page.tsx', load: () => import('@/app/tasks/page') },
   { file: 'skills/page.tsx', load: () => import('@/app/skills/page') },
