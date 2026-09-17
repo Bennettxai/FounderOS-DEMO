@@ -43,8 +43,6 @@
   --funnel-hot: #5ec9f8;
   --funnel-warm: #3f7fd9;
   --funnel-cold: #2e527e;
-  /* Segment hues, one per stage cluster (knowledge-graph style); a node fades
-     from its segment hue toward --err as contact ages. Conversion stays green. */
   --funnel-s0: #5ec9f8;
   --funnel-s1: #8b7cff;
   --funnel-s2: #e3d872;
@@ -238,9 +236,6 @@
    read clearly on white. */
 :root[data-theme='mono-light'] {
   color-scheme: light;
-  /* G-Brain blue pass (2026-08-20): anchored to the inverted knowledge-graph
-     palette — the orange core inverts to steel azure (invert(#E07B39) ≈
-     #1F84C6), the ground to a cool blue-white. */
   --bg: #f2f6f9; /* cool blue-white canvas — the inverted graph's ground */
   --bg-2: #e9eff5;
   --surface: #ffffff; /* cards are white, lifted off the canvas */
@@ -278,9 +273,6 @@
   --funnel-s4: #17924e;
   --funnel-s5: #c04a8a;
   --funnel-s6: #7a828c;
-  /* Knowledge graph reads inverted: cyan tools, ink agents, royal-blue
-     humans, teal memory core, and every life-area hue swapped for its
-     optical inversion (see lib/kg-colors.ts). */
   --kg-tool: #4cc4d0;
   --kg-person: #2f5fd0;
   --kg-employee: #16222c;
