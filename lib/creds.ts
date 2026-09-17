@@ -140,15 +140,5 @@ export function resolveAttioKey(): string | undefined {
   }
 }
 
-/** ManyChat's key lives in ~/.config/mcp.json (the manychat MCP registration),
- *  same reuse pattern as Attio. .env.local / process.env still win. */
-export function resolveManychatKey(): string | undefined {
-  const direct = readEnvLocal().MANYCHAT_API_KEY ?? process.env.MANYCHAT_API_KEY;
-  if (direct) return direct;
-  try {
-    const claudeJson = JSON.parse(fs.readFileSync(CRED_FILES.claudeJson, 'utf8'));
-    return extractMcpEnvKey(claudeJson, 'manychat', 'MANYCHAT_API_KEY');
-  } catch {
-    return undefined;
-  }
-}
+
+

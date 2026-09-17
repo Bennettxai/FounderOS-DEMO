@@ -77,13 +77,6 @@ try {
     agentTasks: db.agentTasks.all().length,
     agentCrons: db.agentCrons.all().length,
     broadcasts: db.broadcasts.recent(1_000_000).length,
-    socialAccounts: db.social.accounts().length,
-    socialSnapshots: db.social.latest().length,
-    socialDms: db.social.dms().length,
-    socialDmSnapshots: db.social.dmSnapshots().length,
-    socialDmMessages: db.social.dmMessages().length,
-    emailListSnapshots: db.emailList.snapshots().length,
-    socialPosts: db.socialPosts.all().length,
   };
 
   if (departments.length !== 3) {

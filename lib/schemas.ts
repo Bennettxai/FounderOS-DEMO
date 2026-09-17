@@ -246,108 +246,7 @@ export const AgentCronSchema = z.object({
   createdAt: z.string().min(1),
 });
 
-export const SocialPlatformSchema = z.enum(['instagram', 'tiktok', 'twitter', 'youtube', 'linkedin']);
 
-export const SocialAccountSchema = z.object({
-  platform: SocialPlatformSchema,
-  handle: z.string().min(1),
-  url: z.string().nullable(),
-  order: z.number().int(),
-});
-
-// One row per platform per day. History accrues from the Zernio config on
-// every dashboard read; Alex's own scrapes can insert richer rows later.
-export const SocialSnapshotSchema = z.object({
-  platform: SocialPlatformSchema,
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  followers: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// null = not enough history yet (honest, never a fake zero)
-export const SocialGrowthSchema = z.object({
-  d7: z.number().nullable(),
-  d30: z.number().nullable(),
-  d60: z.number().nullable(),
-  allTime: z.number().nullable(),
-});
-
-export const SocialPlatformStatsSchema = z.object({
-  platform: SocialPlatformSchema,
-  handle: z.string().min(1),
-  url: z.string().nullable(),
-  followers: z.number().int().nonnegative().nullable(),
-  growth: SocialGrowthSchema,
-  series: z.array(z.object({ date: z.string().min(1), followers: z.number().int().nonnegative() })),
-});
-
-export const SocialDashboardSchema = z.object({
-  totalFollowers: z.number().int().nonnegative(),
-  asOf: z.string().nullable(),
-  platforms: z.array(SocialPlatformStatsSchema),
-});
-
-export const SocialPlatformDetailSchema = z.object({
-  account: SocialAccountSchema,
-  followers: z.number().int().nonnegative().nullable(),
-  growth: SocialGrowthSchema,
-  snapshots: z.array(SocialSnapshotSchema),
-});
-
-// Email-list audience tracked alongside the social platforms. One row per day.
-// Seeded from the real Beehiiv account; syncBeehiivEmail appends live snapshots
-// once BEEHIIV_API_KEY is set (same shape).
-export const EmailListSnapshotSchema = z.object({
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  subscribers: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// Per-platform DM counts. Seeded dummy until a ManyChat/Zernio source lands.
-export const SocialDmSchema = z.object({
-  platform: SocialPlatformSchema,
-  count: z.number().int().nonnegative(),
-  updatedAt: z.string().min(1),
-});
-
-// Per-platform DM count history — one row per platform per day, so DM growth
-// can be charted over 7/30/60/all windows. Seeded dummy until a real source.
-export const SocialDmSnapshotSchema = z.object({
-  platform: SocialPlatformSchema,
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  count: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// A single DM message in the /social inbox (Instagram-first). Seeded dummy
-// until the ManyChat webhook (POST /api/webhooks/manychat) feeds it live —
-// ManyChat's API cannot list DMs, so the inbound stream is push, not poll.
-export const DmDirectionSchema = z.enum(['in', 'out']); // in = from the subscriber, out = from us
-export const SocialDmMessageSchema = z.object({
-  id: z.string().min(1),
-  platform: SocialPlatformSchema,
-  subscriberId: z.string().min(1),
-  name: z.string().min(1),
-  handle: z.string().nullable(),
-  text: z.string(),
-  direction: DmDirectionSchema,
-  tag: z.string().nullable(),
-  ts: z.string().min(1),
-  source: z.string().min(1),
-});
-
-export const SocialPostStatusSchema = z.enum(['queued', 'published', 'failed']);
-
-// A post composed on the Social tab and queued for the Zernio-publishing agent.
-export const SocialPostSchema = z.object({
-  id: z.string().min(1),
-  caption: z.string().min(1),
-  mediaUrl: z.string().nullable(),
-  platforms: z.array(SocialPlatformSchema).min(1, 'pick at least one platform'),
-  status: SocialPostStatusSchema,
-  scheduledFor: z.string().nullable(),
-  createdAt: z.string().min(1),
-});
 
 // ── People + SOP tasks — the humans in the process and the written-out jobs ──
 // A person is a human employee on the org graph (distinct from agents). A SOP
@@ -484,20 +383,6 @@ export type BrainGraphEdge = z.infer<typeof BrainGraphEdgeSchema>;
 export type BrainGraph = z.infer<typeof BrainGraphSchema>;
 export type LifeMapNode = z.infer<typeof LifeMapNodeSchema>;
 export type LifeMap = z.infer<typeof LifeMapSchema>;
-export type SocialPlatform = z.infer<typeof SocialPlatformSchema>;
-export type SocialAccount = z.infer<typeof SocialAccountSchema>;
-export type SocialSnapshot = z.infer<typeof SocialSnapshotSchema>;
-export type SocialGrowth = z.infer<typeof SocialGrowthSchema>;
-export type SocialPlatformStats = z.infer<typeof SocialPlatformStatsSchema>;
-export type SocialDashboard = z.infer<typeof SocialDashboardSchema>;
-export type SocialPlatformDetail = z.infer<typeof SocialPlatformDetailSchema>;
-export type EmailListSnapshot = z.infer<typeof EmailListSnapshotSchema>;
-export type SocialDm = z.infer<typeof SocialDmSchema>;
-export type SocialDmSnapshot = z.infer<typeof SocialDmSnapshotSchema>;
-export type SocialDmMessage = z.infer<typeof SocialDmMessageSchema>;
-export type DmDirection = z.infer<typeof DmDirectionSchema>;
-export type SocialPostStatus = z.infer<typeof SocialPostStatusSchema>;
-export type SocialPost = z.infer<typeof SocialPostSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
 export type Person = z.infer<typeof PersonSchema>;

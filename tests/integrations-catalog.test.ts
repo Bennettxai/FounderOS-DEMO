@@ -91,11 +91,9 @@ describe('connect flow (paste a key on the board)', () => {
 
   test("Alex's real stack is listed and tied to its connectors", () => {
     const bySlug = new Map(INTEGRATIONS.map((i) => [i.slug, i]));
-    expect(bySlug.get('manychat')?.connectorId).toBe('manychat');
     expect(bySlug.get('gohighlevel')?.connectorId).toBe('ghl');
     expect(bySlug.get('webinarjam')?.connectorId).toBe('webinarjam');
     expect(bySlug.get('trakyo')?.connectorId).toBe('trakyo');
-    expect(bySlug.get('zernio')?.connectorId).toBe('zernio');
     expect(bySlug.get('arcads')?.connectorId).toBe('arcads');
   });
 

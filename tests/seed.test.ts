@@ -177,35 +177,6 @@ describe('seedDatabase', () => {
     expect(db.tools.all().length).toBe(counts.tools);
   });
 
-  test('email list reflects the real Beehiiv account, not the retired ~30k larp', () => {
-    db = openDb(':memory:');
-    seedDatabase(db);
-    const snaps = db.emailList.snapshots();
-    expect(snaps.length).toBeGreaterThan(0);
-    // Latest count is the seeded "Alex Rivera" subscriber count
-    // Bumped deliberately as the list grows.
-    expect(db.emailList.latest()?.subscribers).toBe(1850);
-    // Honest shape: the list only exists from its seeded bulk import — no
-    // pre-import history, and nowhere near the old dummy ~30k ramp.
-    expect(snaps[0].capturedAt >= '2026-05-28').toBe(true);
-    for (const s of snaps) expect(s.subscribers).toBeLessThan(6000);
-  });
-
-  test('re-seeding reconciles email history: stale dummy dropped, live snapshots kept', () => {
-    db = openDb(':memory:');
-    seedDatabase(db);
-    // an older DB still holding retired ~30k dummy history + a live Beehiiv snapshot
-    db.emailList.insertSnapshot({ capturedAt: '2026-03-14', subscribers: 25800, source: 'seed-dummy' });
-    db.emailList.insertSnapshot({ capturedAt: '2026-07-07', subscribers: 4830, source: 'beehiiv' });
-    seedDatabase(db);
-    const snaps = db.emailList.snapshots();
-    // retired dummy history is reconciled away on re-seed...
-    expect(snaps.some((s) => s.source === 'seed-dummy')).toBe(false);
-    expect(snaps.some((s) => s.subscribers > 6000)).toBe(false);
-    // ...but a real live-synced snapshot survives
-    expect(snaps.find((s) => s.capturedAt === '2026-07-07')?.source).toBe('beehiiv');
-  });
-
   test('seeded data passes schema validation end to end', () => {
     db = openDb(':memory:');
     seedDatabase(db);

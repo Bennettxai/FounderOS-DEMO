@@ -3,9 +3,6 @@ import { calendarStatus } from '@/lib/connectors/gcal';
 import { slackStatus } from '@/lib/connectors/slack';
 import { paymentsStatus } from '@/lib/connectors/payments';
 import { notionStatus } from '@/lib/connectors/notion';
-import { zernioStatus } from '@/lib/connectors/zernio';
-import { beehiivStatus } from '@/lib/connectors/beehiiv';
-import { manychatStatus } from '@/lib/connectors/manychat';
 import { attioStatus } from '@/lib/connectors/attio';
 import { arcadsStatus } from '@/lib/connectors/arcads';
 import { miroStatus } from '@/lib/connectors/miro';
@@ -18,25 +15,12 @@ import { webinarjamStatus } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
-import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
+import { runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][] = [
   ['llm', 'orchestration', llmStatus],
   ['whatsapp', 'social', whatsappStatus],
-  ['zernio', 'social', zernioStatus],
-  ['beehiiv', 'social', () => beehiivStatus(runtimeEnv())],
-  [
-    'manychat',
-    'social',
-    () => {
-      // Alex's real key rides in ~/.config/mcp.json (the manychat MCP
-      // registration), same reuse pattern as Attio — .env.local still wins.
-      const env = runtimeEnv();
-      if (!env.MANYCHAT_API_KEY) env.MANYCHAT_API_KEY = resolveManychatKey();
-      return manychatStatus(env);
-    },
-  ],
   ['attio', 'crm', attioStatus],
   ['webinarjam', 'crm', webinarjamStatus],
   ['trakyo', 'crm', trakyoStatus],
