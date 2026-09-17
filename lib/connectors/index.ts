@@ -18,24 +18,10 @@ import { webinarjamStatus } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
-import { getBrainProvider } from '@/lib/brain';
 import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
-async function brainConnectorStatus(): Promise<ConnectorStatus> {
-  const status = await getBrainProvider().status();
-  return {
-    id: 'gbrain',
-    name: 'G-Brain',
-    kind: 'brain',
-    state: status.connected ? 'connected' : 'error',
-    detail: status.detail,
-    meta: { provider: status.provider },
-  };
-}
-
 const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][] = [
-  ['gbrain', 'brain', brainConnectorStatus],
   ['llm', 'orchestration', llmStatus],
   ['whatsapp', 'social', whatsappStatus],
   ['zernio', 'social', zernioStatus],

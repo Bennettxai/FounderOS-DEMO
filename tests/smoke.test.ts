@@ -8,7 +8,6 @@ import path from 'node:path';
 // live Attio API in tests.
 beforeAll(() => {
   process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-smoke-')), 'test.db');
-  process.env.GBRAIN_BIN = path.join(tmpdir(), 'founder-os-no-gbrain-cli');
 });
 
 type PageEntry = {
@@ -28,7 +27,6 @@ const PAGES: PageEntry[] = [
   { file: 'skills/page.tsx', load: () => import('@/app/skills/page') },
   { file: 'org/page.tsx', load: () => import('@/app/org/page'), props: { searchParams: {} } },
   { file: 'brain/page.tsx', load: () => import('@/app/brain/page') },
-  { file: 'doctor/page.tsx', load: () => import('@/app/doctor/page') },
   { file: 'finances/page.tsx', load: () => import('@/app/finances/page') },
   { file: 'integrations/page.tsx', load: () => import('@/app/integrations/page') },
   { file: 'roadmap/page.tsx', load: () => import('@/app/roadmap/page') },
