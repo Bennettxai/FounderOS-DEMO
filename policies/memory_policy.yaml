@@ -1,0 +1,533 @@
+startup_brain:
+  version: "1.0"
+
+  name: Startup Brain
+  provider: cognee
+
+  definition: >
+    Cognee is the institutional memory of the company's reasoning,
+    decisions, experiences and organizational knowledge, preserved
+    together with the context required to reuse that experience
+    correctly in the future.
+
+  primary_goal: >
+    Increase the accumulated experience of the organization so that
+    agents can learn from previous reasoning, decisions, successes,
+    failures, reviews, interactions and processes and improve their
+    future work over time.
+
+  philosophy:
+    memory_is_not_data_warehouse: true
+    experience_over_raw_information: true
+    contextual_learning: true
+
+    core_rule: >
+      If information can be reliably retrieved again from an external
+      source and is not required to reconstruct a company decision or
+      experience, it should normally not consume institutional memory.
+
+  memory_scope:
+
+    store:
+      - reasoning_summaries
+      - decision_rationales
+      - evidence_considered
+      - assumptions
+      - interpretations
+      - alternative_hypotheses
+      - objections
+      - decisions
+      - reviews
+      - disagreements
+      - outcomes
+      - errors
+      - corrections
+      - lessons
+      - success_patterns
+      - failure_patterns
+      - employee_evaluations
+      - kpi_interpretations
+      - collaboration_experiences
+      - source_reliability_experiences
+      - tool_reliability_experiences
+      - model_reliability_experiences
+      - workflow_experiences
+      - process_improvement_experiences
+      - sop_knowledge
+      - organizational_knowledge
+      - company_policies
+      - contextualized_material_events_used_in_decisions
+
+    do_not_store_by_default:
+      - historical_price_series
+      - ohlcv_history
+      - raw_intraday_candles
+      - raw_market_volume_history
+      - complete_order_books
+      - raw_macro_time_series
+      - bulk_news_feeds
+      - reproducible_external_market_data
+      - unnecessary_external_document_duplicates
+
+  market_data_policy:
+
+    startup_brain_is_market_database: false
+
+    fetch_on_demand:
+      - current_prices
+      - historical_prices
+      - charts
+      - ohlcv
+      - market_volume
+      - volatility_data
+      - financial_market_time_series
+
+    external_source_preferred: true
+
+    audit_exception: >
+      A point-in-time observed market value may be stored in an
+      operational proposal, decision or Trade Execution Ticket when
+      necessary to reconstruct what information was available at the
+      moment of the decision. This does not convert market time-series
+      data into institutional memory.
+
+  reasoning_policy:
+
+    objective: >
+      Preserve reusable business reasoning and decision rationale
+      without attempting to store private hidden chain-of-thought.
+
+    store_as_structured_artifact:
+      - question_or_problem
+      - context
+      - evidence
+      - relevant_facts
+      - interpretations
+      - assumptions
+      - alternatives_considered
+      - objections
+      - conclusion
+      - confidence
+      - decision
+      - later_outcome
+      - lesson_if_any
+
+  experience_model:
+
+    central_entity: Experience
+
+    experience_types:
+      - market_analysis
+      - news_interpretation
+      - investment_decision
+      - risk_review
+      - red_team_review
+      - performance_evaluation
+      - employee_kpi_review
+      - collaboration
+      - tool_usage
+      - source_evaluation
+      - model_evaluation
+      - workflow_execution
+      - process_failure
+      - process_success
+      - post_mortem
+      - procedure_change
+
+    standard_structure:
+      - experience_id
+      - experience_type
+      - subject
+      - participants
+      - context
+      - inputs
+      - reasoning_summary
+      - decision
+      - action_or_output
+      - review
+      - outcome
+      - feedback
+      - lesson
+      - confidence
+      - sample_size
+      - created_at
+      - event_time
+      - created_by
+      - reviewed_by
+      - provenance
+      - status
+
+  context_envelope:
+
+    purpose: >
+      Allow experiences to be retrieved because the current situation
+      is conceptually similar, not only because the same asset,
+      employee or keyword is involved.
+
+    extensible: true
+
+    possible_dimensions:
+      - asset_class
+      - asset
+      - company
+      - sector
+      - geography
+      - market_regime
+      - volatility_regime
+      - macro_regime
+      - valuation_regime
+      - liquidity_regime
+      - company_phase
+      - event_type
+      - investment_horizon
+      - relevant_catalysts
+      - relevant_risks
+      - assumptions
+      - employee_role
+      - workflow_stage
+      - task_type
+
+    rule: >
+      Context fields are applied only when relevant and may evolve
+      without changing the fundamental memory philosophy.
+
+  knowledge_categories:
+
+    working_memory:
+      purpose: current_task_context
+      persistent_by_default: false
+
+    episodic_memory:
+      purpose: >
+        Contextualized record of meaningful company experiences.
+
+    semantic_memory:
+      purpose: >
+        Consolidated organizational knowledge derived from validated
+        information and experience.
+
+    procedural_memory:
+      purpose: >
+        Approved knowledge about how company work should be performed.
+
+  lifecycle:
+
+    stages:
+      - RAW_EXPERIENCE
+      - INTERPRETED_EXPERIENCE
+      - LESSON_CANDIDATE
+      - VALIDATED_LESSON
+
+    raw_experience:
+      trusted_as_general_rule: false
+
+    interpreted_experience:
+      trusted_as_general_rule: false
+
+    lesson_candidate:
+      production_rule: false
+      review_required: true
+
+    validated_lesson:
+      reusable: true
+      approved: true
+      versioned: true
+
+    principle: >
+      A single experience must not automatically become a general
+      production rule.
+
+  fact_reasoning_separation:
+
+    required: true
+
+    categories:
+
+      FACT:
+        description: >
+          Information supported by an identifiable source.
+
+      INTERPRETATION:
+        description: >
+          Meaning assigned to facts by an agent.
+
+      ASSUMPTION:
+        description: >
+          Proposition accepted temporarily for the analysis.
+
+      THESIS:
+        description: >
+          Structured analytical conclusion or forecast.
+
+      DECISION:
+        description: >
+          Action or judgment selected on the basis of the available
+          reasoning.
+
+      OUTCOME:
+        description: >
+          What subsequently happened.
+
+      LESSON:
+        description: >
+          Reusable knowledge inferred through retrospective analysis.
+
+  learning_policy:
+
+    learn_from:
+      - failures
+      - successes
+      - neutral_outcomes
+      - disagreements
+      - employee_performance
+      - kpi_evaluations
+      - source_quality
+      - tool_performance
+      - workflow_performance
+
+    success_analysis:
+      require_context: true
+      distinguish_skill_from_luck: true
+      require_repeatability_assessment: true
+
+    failure_analysis:
+      classify_error_type: true
+      preserve_original_reasoning: true
+
+    generalization:
+      sample_size_required: true
+      context_similarity_required: true
+      confidence_required: true
+
+  graph_model:
+
+    important_nodes:
+      - Agent
+      - Department
+      - Task
+      - Experience
+      - Proposal
+      - Asset
+      - Company
+      - Sector
+      - Country
+      - Currency
+      - Event
+      - Source
+      - Claim
+      - Fact
+      - Interpretation
+      - Assumption
+      - Thesis
+      - Catalyst
+      - Risk
+      - Decision
+      - Objection
+      - TradeExecutionTicket
+      - Position
+      - Outcome
+      - Benchmark
+      - KPI
+      - Error
+      - SuccessPattern
+      - Lesson
+      - SOP
+      - SOPVersion
+      - PromptVersion
+      - Tool
+      - ModelVersion
+      - Report
+      - Context
+
+    example_relationships:
+      - Agent_BELONGS_TO_Department
+      - Agent_CREATED_Proposal
+      - Proposal_ABOUT_Asset
+      - Proposal_SUPPORTED_BY_Source
+      - Proposal_CONTAINS_Thesis
+      - Proposal_HAS_CONTEXT_Context
+      - Thesis_BASED_ON_Fact
+      - Interpretation_INTERPRETS_Fact
+      - Decision_BASED_ON_Interpretation
+      - Proposal_CHALLENGED_BY_Objection
+      - Proposal_GENERATED_TradeExecutionTicket
+      - Position_ORIGINATED_FROM_TradeExecutionTicket
+      - Position_RESULTED_IN_Outcome
+      - Outcome_EVALUATED_AGAINST_Benchmark
+      - Error_DISCOVERED_IN_Experience
+      - Error_GENERATED_Lesson
+      - SuccessPattern_OBSERVED_IN_Experience
+      - Lesson_PROPOSES_CHANGE_TO_SOP
+      - Agent_MEASURED_BY_KPI
+
+    prohibited_default_pattern:
+      - Asset_CONNECTED_TO_THOUSANDS_OF_PRICE_POINTS
+
+  retrieval:
+
+    principle: >
+      No agent receives the entire Startup Brain.
+
+    full_brain_dump_to_agent: false
+
+    architecture:
+      path:
+        - agent
+        - brain_gateway
+        - cognee
+        - relevant_context_only
+
+    brain_gateway_responsibilities:
+      - identify_requesting_agent
+      - enforce_role_permissions
+      - identify_query_intent
+      - select_memory_scope
+      - apply_filters
+      - limit_graph_expansion
+      - enforce_context_budget
+      - return_provenance
+      - log_retrieval
+
+    retrieval_signals:
+      - semantic_similarity
+      - keyword_similarity
+      - structured_filters
+      - graph_relationships
+      - temporal_relevance
+      - contextual_similarity
+
+    retrieval_modes:
+
+      FAST:
+        target_result_count: "5-10"
+        intended_use: simple_context
+
+      STANDARD:
+        target_result_count: "20-30"
+        intended_use: normal_agent_work
+
+      DEEP:
+        target_result_count: "50+"
+        intended_use: complex_investigation
+        graph_expansion: limited
+
+  intent_routing:
+
+    principle: >
+      Questions must be routed to the appropriate source before
+      retrieval.
+
+    examples:
+
+      historical_price_question:
+        destination: market_data_provider
+
+      current_price_question:
+        destination: market_data_provider
+
+      previous_company_reasoning_question:
+        destination: cognee
+
+      latest_company_filing_question:
+        destination: external_document_source
+
+      previous_failure_plus_current_conditions:
+        destinations:
+          - cognee
+          - external_information_sources
+
+  permissions:
+
+    direct_agent_database_access: false
+    direct_agent_unrestricted_brain_access: false
+
+    brain_access:
+      role_based: true
+      query_based: true
+      logged: true
+
+    permanent_memory_write:
+      unrestricted_agent_write: false
+      review_required_for_validated_lessons: true
+
+  provenance:
+
+    required_when_relevant:
+      - source
+      - source_quality
+      - creator
+      - creation_time
+      - event_time
+      - verification_status
+      - confidence
+      - version
+
+  time_model:
+
+    changing_facts_must_not_be_timeless: true
+
+    optional_fields:
+      - valid_from
+      - valid_to
+      - event_time
+      - observed_at
+
+  observability_separation:
+
+    cognee:
+      stores: >
+        What the company learned, reasoned, decided and how knowledge
+        relates.
+
+    operational_database:
+      preferred_provider: postgresql
+      stores: >
+        What officially happened operationally.
+
+    object_storage:
+      preferred_type: s3_compatible
+      stores: >
+        Large files and artifacts intentionally retained by the
+        company.
+
+    observability:
+      preferred:
+        - langfuse
+        - opentelemetry
+
+      stores: >
+        How agents performed their computation, including model calls,
+        tool calls, latency, cost, errors and technical traces.
+
+  learning_loop:
+
+    sequence:
+      - task
+      - agent_output
+      - review
+      - decision
+      - real_outcome
+      - process_evaluation
+      - experience_creation
+      - lesson_candidate
+      - evidence_analysis
+      - historical_or_simulation_testing
+      - approval
+      - validated_lesson
+      - sop_or_prompt_change
+      - versioning
+      - monitoring
+      - confirmation_or_rollback
+
+  non_negotiable_rules:
+
+    - startup_brain_is_not_market_data_warehouse
+    - raw_retrievable_market_data_does_not_enter_brain_by_default
+    - preserve_contextualized_reasoning_experience
+    - preserve_successes_and_failures
+    - distinguish_fact_interpretation_decision_outcome
+    - no_single_event_automatic_generalization
+    - no_agent_reads_entire_brain
+    - no_unreviewed_lesson_becomes_production_rule
+    - provenance_must_be_preserved
+    - company_experience_should_accumulate_over_time

@@ -8,23 +8,11 @@ import {
   AgentTaskSchema,
   BroadcastReplySchema,
   BroadcastSchema,
-  ContactTagSchema,
   DepartmentSchema,
   DomainSchema,
   MetricSchema,
-  PersonaSchema,
   PhaseSchema,
   RoadmapItemSchema,
-  SocialAccountSchema,
-  SocialSnapshotSchema,
-  EmailListSnapshotSchema,
-  SocialDmSchema,
-  SocialDmSnapshotSchema,
-  SocialDmMessageSchema,
-  SocialPostSchema,
-  FunnelContactSchema,
-  FunnelTouchSchema,
-  FunnelJourneySchema,
   PersonSchema,
   LeadMagnetSchema,
   type LeadMagnet,
@@ -39,25 +27,11 @@ import {
   type AgentTask,
   type Broadcast,
   type BroadcastReply,
-  type ContactTag,
   type Department,
   type Domain,
   type Metric,
-  type Persona,
   type Phase,
   type RoadmapItem,
-  type SocialAccount,
-  type SocialPlatform,
-  type SocialSnapshot,
-  type EmailListSnapshot,
-  type SocialDm,
-  type SocialDmSnapshot,
-  type SocialDmMessage,
-  type SocialPost,
-  type FunnelContact,
-  type FunnelTouch,
-  type FunnelJourney,
-  type FunnelVenture,
   type Person,
   type SopTask,
   type Workflow,
@@ -117,21 +91,7 @@ CREATE TABLE IF NOT EXISTS domains (
   color TEXT NOT NULL,
   items TEXT NOT NULL DEFAULT '[]'
 );
-CREATE TABLE IF NOT EXISTS personas (
-  id TEXT PRIMARY KEY,
-  ord INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  archetype TEXT NOT NULL,
-  tagline TEXT NOT NULL,
-  summary TEXT NOT NULL,
-  accent TEXT NOT NULL,
-  north_star TEXT NOT NULL,
-  pillars TEXT NOT NULL DEFAULT '[]',
-  connectors TEXT NOT NULL DEFAULT '[]',
-  metrics TEXT NOT NULL DEFAULT '[]',
-  brain_use TEXT NOT NULL,
-  signature_play TEXT NOT NULL
-);
+
 CREATE TABLE IF NOT EXISTS phases (
   id TEXT PRIMARY KEY,
   number INTEGER NOT NULL,
@@ -175,25 +135,7 @@ CREATE TABLE IF NOT EXISTS agent_crons (
   enabled INTEGER NOT NULL,
   created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS contact_tags (
-  person TEXT NOT NULL,
-  channel TEXT NOT NULL,
-  tag TEXT NOT NULL,
-  tier INTEGER NOT NULL,
-  PRIMARY KEY (person, channel)
-);
-CREATE TABLE IF NOT EXISTS social_accounts (
-  platform TEXT PRIMARY KEY,
-  handle TEXT NOT NULL,
-  url TEXT,
-  "order" INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS social_snapshots (
-  platform TEXT NOT NULL,
-  captured_at TEXT NOT NULL,
-  followers INTEGER NOT NULL,
-  source TEXT NOT NULL,
-  PRIMARY KEY (platform, captured_at)
+
 );
 CREATE TABLE IF NOT EXISTS broadcast_replies (
   id TEXT PRIMARY KEY,
@@ -203,45 +145,7 @@ CREATE TABLE IF NOT EXISTS broadcast_replies (
   reply TEXT NOT NULL DEFAULT '',
   finished_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS email_list_snapshots (
-  captured_at TEXT PRIMARY KEY,
-  subscribers INTEGER NOT NULL,
-  source TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS social_dms (
-  platform TEXT PRIMARY KEY,
-  count INTEGER NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS social_dm_snapshots (
-  platform TEXT NOT NULL,
-  captured_at TEXT NOT NULL,
-  count INTEGER NOT NULL,
-  source TEXT NOT NULL,
-  PRIMARY KEY (platform, captured_at)
-);
-CREATE TABLE IF NOT EXISTS social_dm_messages (
-  id TEXT PRIMARY KEY,
-  platform TEXT NOT NULL,
-  subscriber_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  handle TEXT,
-  text TEXT NOT NULL,
-  direction TEXT NOT NULL,
-  tag TEXT,
-  ts TEXT NOT NULL,
-  source TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_social_dm_messages_ts ON social_dm_messages (ts);
-CREATE TABLE IF NOT EXISTS social_posts (
-  id TEXT PRIMARY KEY,
-  caption TEXT NOT NULL,
-  media_url TEXT,
-  platforms TEXT NOT NULL,
-  status TEXT NOT NULL,
-  scheduled_for TEXT,
-  created_at TEXT NOT NULL
-);
+
 CREATE TABLE IF NOT EXISTS people (
   id TEXT PRIMARY KEY,
   department_id TEXT NOT NULL REFERENCES departments(id),
@@ -271,33 +175,7 @@ CREATE TABLE IF NOT EXISTS sop_tasks (
   assignee_kind TEXT NOT NULL,
   assignee_id TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS funnel_contacts (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  venture TEXT NOT NULL,
-  status TEXT NOT NULL,
-  product TEXT,
-  amount_usd REAL,
-  relationship TEXT NOT NULL DEFAULT 'warm',
-  likelihood INTEGER NOT NULL DEFAULT 50,
-  email TEXT,
-  phone TEXT,
-  person TEXT,
-  company TEXT,
-  role TEXT,
-  linkedin TEXT,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS funnel_touches (
-  id TEXT PRIMARY KEY,
-  contact_id TEXT NOT NULL REFERENCES funnel_contacts(id),
-  seq INTEGER NOT NULL,
-  stage TEXT NOT NULL,
-  channel TEXT NOT NULL,
-  label TEXT NOT NULL,
-  source TEXT NOT NULL,
-  at TEXT NOT NULL
-);
+
 CREATE TABLE IF NOT EXISTS workflows (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -328,20 +206,6 @@ function migrateAgentsTable(db: InstanceType<typeof Database>): void {
   if (!columns.has('instance')) db.exec("ALTER TABLE agents ADD COLUMN instance TEXT NOT NULL DEFAULT 'builtin'");
 }
 
-/** Databases created before the funnel-space build lack these columns. */
-function migrateFunnelContactsTable(db: InstanceType<typeof Database>): void {
-  const columns = new Set(
-    (db.pragma('table_info(funnel_contacts)') as { name: string }[]).map((c) => c.name),
-  );
-  if (!columns.has('relationship')) db.exec("ALTER TABLE funnel_contacts ADD COLUMN relationship TEXT NOT NULL DEFAULT 'warm'");
-  if (!columns.has('likelihood')) db.exec('ALTER TABLE funnel_contacts ADD COLUMN likelihood INTEGER NOT NULL DEFAULT 50');
-  if (!columns.has('email')) db.exec('ALTER TABLE funnel_contacts ADD COLUMN email TEXT');
-  if (!columns.has('phone')) db.exec('ALTER TABLE funnel_contacts ADD COLUMN phone TEXT');
-  // dossier identity (Round 15) — the human behind the deal
-  for (const col of ['person', 'company', 'role', 'linkedin']) {
-    if (!columns.has(col)) db.exec(`ALTER TABLE funnel_contacts ADD COLUMN ${col} TEXT`);
-  }
-}
 
 // Skills gained a `markdown` (SKILL.md) column after first ship. Add it, and
 // clear the stale rows so the re-seed backfills each skill's doc.
@@ -398,7 +262,6 @@ export function openDb(path: string) {
   db.exec(DDL);
   migrateAgentsTable(db);
   migrateLeadMagnetsTable(db);
-  migrateFunnelContactsTable(db);
   migrateSkillsTable(db);
 
   const departments = {
@@ -513,52 +376,7 @@ export function openDb(path: string) {
     },
   };
 
-  const personas = {
-    all(): Persona[] {
-      return db
-        .prepare('SELECT * FROM personas ORDER BY ord')
-        .all()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((r: any) =>
-          PersonaSchema.parse({
-            id: r.id,
-            order: r.ord,
-            name: r.name,
-            archetype: r.archetype,
-            tagline: r.tagline,
-            summary: r.summary,
-            accent: r.accent,
-            northStar: r.north_star,
-            pillars: JSON.parse(r.pillars),
-            connectors: JSON.parse(r.connectors),
-            metrics: JSON.parse(r.metrics),
-            brainUse: r.brain_use,
-            signaturePlay: r.signature_play,
-          }),
-        );
-    },
-    insert(p: Persona): void {
-      db.prepare(
-        `INSERT OR REPLACE INTO personas
-          (id, ord, name, archetype, tagline, summary, accent, north_star, pillars, connectors, metrics, brain_use, signature_play)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(
-        p.id,
-        p.order,
-        p.name,
-        p.archetype,
-        p.tagline,
-        p.summary,
-        p.accent,
-        p.northStar,
-        JSON.stringify(p.pillars),
-        JSON.stringify(p.connectors),
-        JSON.stringify(p.metrics),
-        p.brainUse,
-        p.signaturePlay,
-      );
-    },
-  };
+  
 
   const phases = {
     all(): Phase[] {
@@ -738,191 +556,6 @@ export function openDb(path: string) {
     },
   };
 
-  const contactTags = {
-    upsert(t: ContactTag): void {
-      ContactTagSchema.parse(t);
-      db.prepare(
-        'INSERT INTO contact_tags (person, channel, tag, tier) VALUES (?, ?, ?, ?) ON CONFLICT(person, channel) DO UPDATE SET tag = excluded.tag, tier = excluded.tier',
-      ).run(t.person, t.channel, t.tag, t.tier);
-    },
-    all(): ContactTag[] {
-      return (db.prepare('SELECT * FROM contact_tags ORDER BY tier, person').all() as ContactTag[]).map(
-        (r) => ContactTagSchema.parse(r),
-      );
-    },
-    byTier(tier: number): ContactTag[] {
-      return (
-        db.prepare('SELECT * FROM contact_tags WHERE tier = ? ORDER BY person').all(tier) as ContactTag[]
-      ).map((r) => ContactTagSchema.parse(r));
-    },
-    remove(person: string, channel: string): void {
-      db.prepare('DELETE FROM contact_tags WHERE person = ? AND channel = ?').run(person, channel);
-    },
-  };
-
-  const rowToSnapshot = (r: any): SocialSnapshot =>
-    SocialSnapshotSchema.parse({
-      platform: r.platform,
-      capturedAt: r.captured_at,
-      followers: r.followers,
-      source: r.source,
-    });
-
-  const social = {
-    upsertAccount(a: SocialAccount): void {
-      SocialAccountSchema.parse(a);
-      db.prepare(
-        'INSERT OR REPLACE INTO social_accounts (platform, handle, url, "order") VALUES (?, ?, ?, ?)',
-      ).run(a.platform, a.handle, a.url, a.order);
-    },
-    accounts(): SocialAccount[] {
-      return db
-        .prepare('SELECT * FROM social_accounts ORDER BY "order"')
-        .all()
-        .map((r) => SocialAccountSchema.parse(r));
-    },
-    insertSnapshot(s: SocialSnapshot): void {
-      SocialSnapshotSchema.parse(s);
-      db.prepare(
-        'INSERT OR REPLACE INTO social_snapshots (platform, captured_at, followers, source) VALUES (?, ?, ?, ?)',
-      ).run(s.platform, s.capturedAt, s.followers, s.source);
-    },
-    snapshots(platform: SocialPlatform): SocialSnapshot[] {
-      return db
-        .prepare('SELECT * FROM social_snapshots WHERE platform = ? ORDER BY captured_at')
-        .all(platform)
-        .map(rowToSnapshot);
-    },
-    latest(): SocialSnapshot[] {
-      return db
-        .prepare(
-          `SELECT * FROM social_snapshots s
-           WHERE captured_at = (SELECT MAX(captured_at) FROM social_snapshots WHERE platform = s.platform)
-           ORDER BY platform`,
-        )
-        .all()
-        .map(rowToSnapshot);
-    },
-    upsertDm(d: SocialDm): void {
-      SocialDmSchema.parse(d);
-      db.prepare(
-        'INSERT OR REPLACE INTO social_dms (platform, count, updated_at) VALUES (?, ?, ?)',
-      ).run(d.platform, d.count, d.updatedAt);
-    },
-    dms(): SocialDm[] {
-      return db
-        .prepare(
-          `SELECT d.platform, d.count, d.updated_at AS updatedAt FROM social_dms d
-           LEFT JOIN social_accounts a ON a.platform = d.platform
-           ORDER BY a."order"`,
-        )
-        .all()
-        .map((r) => SocialDmSchema.parse(r));
-    },
-    insertDmSnapshot(s: SocialDmSnapshot): void {
-      SocialDmSnapshotSchema.parse(s);
-      db.prepare(
-        'INSERT OR REPLACE INTO social_dm_snapshots (platform, captured_at, count, source) VALUES (?, ?, ?, ?)',
-      ).run(s.platform, s.capturedAt, s.count, s.source);
-    },
-    dmSnapshots(platform?: SocialPlatform): SocialDmSnapshot[] {
-      const rows = platform
-        ? db
-            .prepare('SELECT platform, captured_at AS capturedAt, count, source FROM social_dm_snapshots WHERE platform = ? ORDER BY captured_at')
-            .all(platform)
-        : db
-            .prepare('SELECT platform, captured_at AS capturedAt, count, source FROM social_dm_snapshots ORDER BY platform, captured_at')
-            .all();
-      return rows.map((r) => SocialDmSnapshotSchema.parse(r));
-    },
-    // Individual DM messages (the inbox). Fed live by POST /api/webhooks/manychat;
-    // seeded until then. Upsert by id so replayed webhooks don't duplicate.
-    upsertDmMessage(m: SocialDmMessage): void {
-      SocialDmMessageSchema.parse(m);
-      db.prepare(
-        `INSERT OR REPLACE INTO social_dm_messages
-           (id, platform, subscriber_id, name, handle, text, direction, tag, ts, source)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(m.id, m.platform, m.subscriberId, m.name, m.handle, m.text, m.direction, m.tag, m.ts, m.source);
-    },
-    dmMessages(platform?: SocialPlatform): SocialDmMessage[] {
-      const cols =
-        'id, platform, subscriber_id AS subscriberId, name, handle, text, direction, tag, ts, source';
-      const rows = platform
-        ? db.prepare(`SELECT ${cols} FROM social_dm_messages WHERE platform = ? ORDER BY ts DESC`).all(platform)
-        : db.prepare(`SELECT ${cols} FROM social_dm_messages ORDER BY ts DESC`).all();
-      return rows.map((r) => SocialDmMessageSchema.parse(r));
-    },
-  };
-
-  const emailList = {
-    insertSnapshot(s: EmailListSnapshot): void {
-      EmailListSnapshotSchema.parse(s);
-      db.prepare(
-        'INSERT OR REPLACE INTO email_list_snapshots (captured_at, subscribers, source) VALUES (?, ?, ?)',
-      ).run(s.capturedAt, s.subscribers, s.source);
-    },
-    // Drop seed-sourced rows so a re-seed is authoritative — the real Beehiiv
-    // baseline replaces any retired dummy history. Live-synced snapshots
-    // (source 'beehiiv') are preserved.
-    deleteSeeded(): void {
-      db.prepare("DELETE FROM email_list_snapshots WHERE source LIKE 'seed%'").run();
-    },
-    snapshots(): EmailListSnapshot[] {
-      return db
-        .prepare('SELECT captured_at AS capturedAt, subscribers, source FROM email_list_snapshots ORDER BY captured_at')
-        .all()
-        .map((r) => EmailListSnapshotSchema.parse(r));
-    },
-    latest(): EmailListSnapshot | null {
-      const row = db
-        .prepare('SELECT captured_at AS capturedAt, subscribers, source FROM email_list_snapshots ORDER BY captured_at DESC LIMIT 1')
-        .get();
-      return row ? EmailListSnapshotSchema.parse(row) : null;
-    },
-  };
-
-  const rowToPost = (r: {
-    id: string;
-    caption: string;
-    media_url: string | null;
-    platforms: string;
-    status: string;
-    scheduled_for: string | null;
-    created_at: string;
-  }): SocialPost =>
-    SocialPostSchema.parse({
-      id: r.id,
-      caption: r.caption,
-      mediaUrl: r.media_url,
-      platforms: JSON.parse(r.platforms),
-      status: r.status,
-      scheduledFor: r.scheduled_for,
-      createdAt: r.created_at,
-    });
-
-  const socialPosts = {
-    enqueue(p: SocialPost): void {
-      SocialPostSchema.parse(p);
-      db.prepare(
-        `INSERT OR REPLACE INTO social_posts (id, caption, media_url, platforms, status, scheduled_for, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ).run(p.id, p.caption, p.mediaUrl, JSON.stringify(p.platforms), p.status, p.scheduledFor, p.createdAt);
-    },
-    all(): SocialPost[] {
-      return db
-        .prepare('SELECT * FROM social_posts ORDER BY created_at DESC')
-        .all()
-        .map((r) => rowToPost(r as Parameters<typeof rowToPost>[0]));
-    },
-    queued(): SocialPost[] {
-      return db
-        .prepare("SELECT * FROM social_posts WHERE status = 'queued' ORDER BY created_at DESC")
-        .all()
-        .map((r) => rowToPost(r as Parameters<typeof rowToPost>[0]));
-    },
-  };
-
   const people = {
     all(): Person[] {
       return db
@@ -1089,61 +722,7 @@ export function openDb(path: string) {
     },
   };
 
-  const rowToFunnelTouch = (r: any): FunnelTouch =>
-    FunnelTouchSchema.parse({
-      id: r.id,
-      contactId: r.contact_id,
-      seq: r.seq,
-      stage: r.stage,
-      channel: r.channel,
-      label: r.label,
-      source: r.source,
-      at: r.at,
-    });
-
-  const funnel = {
-    insertContact(c: FunnelContact): void {
-      FunnelContactSchema.parse(c);
-      db.prepare(
-        'INSERT OR REPLACE INTO funnel_contacts (id, name, venture, status, product, amount_usd, relationship, likelihood, email, phone, person, company, role, linkedin, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(c.id, c.name, c.venture, c.status, c.product, c.amountUsd, c.relationship, c.likelihood, c.email, c.phone, c.person, c.company, c.role, c.linkedin, c.createdAt);
-    },
-    insertTouch(t: FunnelTouch): void {
-      FunnelTouchSchema.parse(t);
-      db.prepare(
-        'INSERT OR REPLACE INTO funnel_touches (id, contact_id, seq, stage, channel, label, source, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(t.id, t.contactId, t.seq, t.stage, t.channel, t.label, t.source, t.at);
-    },
-    /** Contacts with their touches in journey order, newest contact first. */
-    journeys(venture?: FunnelVenture): FunnelJourney[] {
-      const rows = (
-        venture
-          ? db.prepare('SELECT * FROM funnel_contacts WHERE venture = ? ORDER BY created_at DESC, id').all(venture)
-          : db.prepare('SELECT * FROM funnel_contacts ORDER BY created_at DESC, id').all()
-      ) as any[];
-      const touchStmt = db.prepare('SELECT * FROM funnel_touches WHERE contact_id = ? ORDER BY seq');
-      return rows.map((r) =>
-        FunnelJourneySchema.parse({
-          id: r.id,
-          name: r.name,
-          venture: r.venture,
-          status: r.status,
-          product: r.product,
-          amountUsd: r.amount_usd,
-          relationship: r.relationship,
-          likelihood: r.likelihood,
-          email: r.email,
-          phone: r.phone,
-          person: r.person,
-          company: r.company,
-          role: r.role,
-          linkedin: r.linkedin,
-          createdAt: r.created_at,
-          touches: touchStmt.all(r.id).map(rowToFunnelTouch),
-        }),
-      );
-    },
-  };
+  
 
   return {
     departments,
@@ -1152,18 +731,12 @@ export function openDb(path: string) {
     roadmap,
     metrics,
     domains,
-    personas,
     phases,
     agentRuns,
     agentMessages,
     agentTasks,
     agentCrons,
     broadcasts,
-    contactTags,
-    social,
-    emailList,
-    socialPosts,
-    funnel,
     people,
     leadMagnets,
     sopTasks,

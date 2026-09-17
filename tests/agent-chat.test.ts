@@ -18,9 +18,9 @@ afterAll(() => {
 describe('chatWithAgent (stub provider)', () => {
   test('persists exactly a user + assistant turn and returns the stub reply', async () => {
     const db = openDb(':memory:');
-    const res = await chatWithAgent(db, realAgents, 'data-agent', 'what is our revenue split?');
+    const res = await chatWithAgent(db, realAgents, 'djed', 'what is our revenue split?');
     expect(res.reply).toContain('what is our revenue split?'); // stub echoes
-    const rows = db.agentMessages.byAgent('data-agent');
+    const rows = db.agentMessages.byAgent('djed');
     expect(rows.map((m) => m.role)).toEqual(['user', 'assistant']);
     expect(rows[0].content).toBe('what is our revenue split?');
     expect(rows[1].content).toBe(res.reply);
@@ -40,11 +40,11 @@ describe('POST /api/agents/[id]/chat', () => {
   test('returns the reply and the conversation', async () => {
     const { POST } = await import('@/app/api/agents/[id]/chat/route');
     const res = await POST(
-      new Request('http://localhost/api/agents/data-agent/chat', {
+      new Request('http://localhost/api/agents/djed/chat', {
         method: 'POST',
         body: JSON.stringify({ message: 'hello agent' }),
       }),
-      { params: { id: 'data-agent' } },
+      { params: { id: 'djed' } },
     );
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -66,8 +66,8 @@ describe('POST /api/agents/[id]/chat', () => {
   test('400s on an empty message', async () => {
     const { POST } = await import('@/app/api/agents/[id]/chat/route');
     const res = await POST(
-      new Request('http://localhost/api/agents/data-agent/chat', { method: 'POST', body: JSON.stringify({ message: '  ' }) }),
-      { params: { id: 'data-agent' } },
+      new Request('http://localhost/api/agents/djed/chat', { method: 'POST', body: JSON.stringify({ message: '  ' }) }),
+      { params: { id: 'djed' } },
     );
     expect(res.status).toBe(400);
   });

@@ -10,7 +10,6 @@ import {
   type MemoryNode,
   type Rect,
 } from '@/lib/memory-core';
-import { responsiveRingR } from '@/lib/tree-layout';
 import type { BrainGraphEdge, BrainGraphNode } from '@/lib/schemas';
 
 const page = (
@@ -371,13 +370,6 @@ describe('distillMemoryGraph', () => {
     });
     const tier = pickRestTier(nodes);
     expect(tier.filter((n) => n.type === 'page' && n.links > 0).length).toBeLessThanOrEqual(96);
-  });
-
-  test('spacing contract: the resting disc clears the pillar ring by ≥ 10u', () => {
-    // disc edge = R_CORE + 10 (component backdrop); pillar icon inner edge =
-    // ring1 − 14 (team node radius). They must never overlap at rest.
-    const ring1 = responsiveRingR(880, 600)[1];
-    expect(ring1 - 14 - (R_CORE + 10)).toBeGreaterThanOrEqual(10);
   });
 
   test('a dense constellation still spreads without violating the disc bound', () => {

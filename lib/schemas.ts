@@ -103,27 +103,7 @@ export const DomainSchema = z.object({
 // operator. Same skeleton as the creator-founder: pillars (departments) → the
 // agents that run them, the connectors they wire, the metrics they track, and
 // how they use the shared G-Brain.
-export const PersonaPillarSchema = z.object({
-  name: z.string().min(1),
-  focus: z.string().min(1),
-  agents: z.array(z.string()).min(1),
-});
 
-export const PersonaSchema = z.object({
-  id: z.string().min(1),
-  order: z.number().int(),
-  name: z.string().min(1),
-  archetype: z.string().min(1),
-  tagline: z.string().min(1),
-  summary: z.string().min(1),
-  accent: z.string().min(1),
-  northStar: z.string().min(1),
-  pillars: z.array(PersonaPillarSchema).min(1),
-  connectors: z.array(z.string()).min(1),
-  metrics: z.array(z.string()).min(1),
-  brainUse: z.string().min(1),
-  signaturePlay: z.string().min(1),
-});
 
 export const AgentRunSchema = z.object({
   id: z.string().min(1),
@@ -266,115 +246,7 @@ export const AgentCronSchema = z.object({
   createdAt: z.string().min(1),
 });
 
-export const SocialPlatformSchema = z.enum(['instagram', 'tiktok', 'twitter', 'youtube', 'linkedin']);
 
-export const SocialAccountSchema = z.object({
-  platform: SocialPlatformSchema,
-  handle: z.string().min(1),
-  url: z.string().nullable(),
-  order: z.number().int(),
-});
-
-// One row per platform per day. History accrues from the Zernio config on
-// every dashboard read; Alex's own scrapes can insert richer rows later.
-export const SocialSnapshotSchema = z.object({
-  platform: SocialPlatformSchema,
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  followers: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// null = not enough history yet (honest, never a fake zero)
-export const SocialGrowthSchema = z.object({
-  d7: z.number().nullable(),
-  d30: z.number().nullable(),
-  d60: z.number().nullable(),
-  allTime: z.number().nullable(),
-});
-
-export const SocialPlatformStatsSchema = z.object({
-  platform: SocialPlatformSchema,
-  handle: z.string().min(1),
-  url: z.string().nullable(),
-  followers: z.number().int().nonnegative().nullable(),
-  growth: SocialGrowthSchema,
-  series: z.array(z.object({ date: z.string().min(1), followers: z.number().int().nonnegative() })),
-});
-
-export const SocialDashboardSchema = z.object({
-  totalFollowers: z.number().int().nonnegative(),
-  asOf: z.string().nullable(),
-  platforms: z.array(SocialPlatformStatsSchema),
-});
-
-export const SocialPlatformDetailSchema = z.object({
-  account: SocialAccountSchema,
-  followers: z.number().int().nonnegative().nullable(),
-  growth: SocialGrowthSchema,
-  snapshots: z.array(SocialSnapshotSchema),
-});
-
-// Email-list audience tracked alongside the social platforms. One row per day.
-// Seeded from the real Beehiiv account; syncBeehiivEmail appends live snapshots
-// once BEEHIIV_API_KEY is set (same shape).
-export const EmailListSnapshotSchema = z.object({
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  subscribers: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// Per-platform DM counts. Seeded dummy until a ManyChat/Zernio source lands.
-export const SocialDmSchema = z.object({
-  platform: SocialPlatformSchema,
-  count: z.number().int().nonnegative(),
-  updatedAt: z.string().min(1),
-});
-
-// Per-platform DM count history — one row per platform per day, so DM growth
-// can be charted over 7/30/60/all windows. Seeded dummy until a real source.
-export const SocialDmSnapshotSchema = z.object({
-  platform: SocialPlatformSchema,
-  capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'capturedAt must look like 2026-06-13'),
-  count: z.number().int().nonnegative(),
-  source: z.string().min(1),
-});
-
-// A single DM message in the /social inbox (Instagram-first). Seeded dummy
-// until the ManyChat webhook (POST /api/webhooks/manychat) feeds it live —
-// ManyChat's API cannot list DMs, so the inbound stream is push, not poll.
-export const DmDirectionSchema = z.enum(['in', 'out']); // in = from the subscriber, out = from us
-export const SocialDmMessageSchema = z.object({
-  id: z.string().min(1),
-  platform: SocialPlatformSchema,
-  subscriberId: z.string().min(1),
-  name: z.string().min(1),
-  handle: z.string().nullable(),
-  text: z.string(),
-  direction: DmDirectionSchema,
-  tag: z.string().nullable(),
-  ts: z.string().min(1),
-  source: z.string().min(1),
-});
-
-export const SocialPostStatusSchema = z.enum(['queued', 'published', 'failed']);
-
-// A post composed on the Social tab and queued for the Zernio-publishing agent.
-export const SocialPostSchema = z.object({
-  id: z.string().min(1),
-  caption: z.string().min(1),
-  mediaUrl: z.string().nullable(),
-  platforms: z.array(SocialPlatformSchema).min(1, 'pick at least one platform'),
-  status: SocialPostStatusSchema,
-  scheduledFor: z.string().nullable(),
-  createdAt: z.string().min(1),
-});
-
-export const ContactTagSchema = z.object({
-  person: z.string().min(1),
-  channel: z.string().min(1), // whatsapp · email · slack · imessage …
-  tag: z.string().min(1), // client · student · friend …
-  tier: z.number().int().min(1).max(3), // 1 red · 2 yellow · 3 green
-});
 
 // ── People + SOP tasks — the humans in the process and the written-out jobs ──
 // A person is a human employee on the org graph (distinct from agents). A SOP
@@ -486,74 +358,7 @@ export const RosterClientSchema = z.object({
 
 // ── Funnel — client journeys from first touch to conversion ─────────────────
 // Canonical stages; `nurtured` is optional so a journey renders as 4–5 touches.
-export const FunnelStageSchema = z.enum(['first_touch', 'engaged', 'nurtured', 'opted_in', 'converted']);
-export const FunnelVentureSchema = z.enum(['vantage', 'launchpad-cohort']);
-export const FunnelChannelSchema = z.enum(['organic', 'ads', 'dm', 'email', 'webinar', 'call', 'checkout', 'crm']);
-// Where each touch comes from: Trakyo (organic attribution), Meta Ads MCP
-// (paid), Attio (live CRM pipeline), manual otherwise. Seeded rows carry the
-// intended source so the live swap is a repo-level change.
-export const FunnelSourceSchema = z.enum(['trakyo', 'meta-ads', 'attio', 'ghl', 'manual']);
 
-// Relationship temperature with Alex — with likelihood-to-buy (0–100) it
-// drives how a client node renders in the funnel space. Seeded dummy; later
-// computed from CRM (Attio) + Trakyo engagement.
-export const FunnelRelationshipSchema = z.enum(['cold', 'warm', 'hot']);
-
-export const FunnelContactSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  venture: FunnelVentureSchema,
-  status: FunnelStageSchema, // furthest stage reached
-  product: z.string().nullable(), // what they opted in to buy, once converted
-  amountUsd: z.number().nonnegative().nullable(),
-  relationship: FunnelRelationshipSchema,
-  likelihood: z.number().int().min(0).max(100),
-  /** Deep link to the source record (Attio web_url / GHL contact page). */
-  url: z.string().nullable().default(null),
-  /** Contact channels for outreach — GHL carries both; Attio joins them from
-   * the deal's associated person record (fetchAttioContacts). */
-  email: z.string().nullable().default(null),
-  phone: z.string().nullable().default(null),
-  /** The human behind the deal — joined from the CRM person/company records
-   * so the dossier says WHO this is, not just the deal title. */
-  person: z.string().nullable().default(null),
-  company: z.string().nullable().default(null),
-  role: z.string().nullable().default(null),
-  linkedin: z.string().nullable().default(null),
-  createdAt: z.string().min(1),
-});
-
-export const FunnelTouchSchema = z.object({
-  id: z.string().min(1),
-  contactId: z.string().min(1),
-  seq: z.number().int().positive(), // 1..n position in the journey
-  stage: FunnelStageSchema,
-  channel: FunnelChannelSchema,
-  label: z.string().min(1), // e.g. "IG reel: 3 offers that close themselves"
-  source: FunnelSourceSchema,
-  at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'at must look like 2026-06-13'),
-});
-
-export const FunnelJourneySchema = FunnelContactSchema.extend({
-  touches: z.array(FunnelTouchSchema),
-});
-
-// One bar of the funnel: journeys that progressed at least this far, split by
-// how they entered (first-touch organic vs ads).
-export const FunnelStageRowSchema = z.object({
-  stage: FunnelStageSchema,
-  total: z.number().int().nonnegative(),
-  organic: z.number().int().nonnegative(),
-  ads: z.number().int().nonnegative(),
-  conversionFromPrev: z.number().min(0).max(100).nullable(),
-});
-
-export const FunnelSummarySchema = z.object({
-  clients: z.number().int().nonnegative(),
-  converted: z.number().int().nonnegative(),
-  revenueUsd: z.number().nonnegative(),
-  stages: z.array(FunnelStageRowSchema),
-});
 
 export type Department = z.infer<typeof DepartmentSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
@@ -578,39 +383,12 @@ export type BrainGraphEdge = z.infer<typeof BrainGraphEdgeSchema>;
 export type BrainGraph = z.infer<typeof BrainGraphSchema>;
 export type LifeMapNode = z.infer<typeof LifeMapNodeSchema>;
 export type LifeMap = z.infer<typeof LifeMapSchema>;
-export type ContactTag = z.infer<typeof ContactTagSchema>;
-export type SocialPlatform = z.infer<typeof SocialPlatformSchema>;
-export type SocialAccount = z.infer<typeof SocialAccountSchema>;
-export type SocialSnapshot = z.infer<typeof SocialSnapshotSchema>;
-export type SocialGrowth = z.infer<typeof SocialGrowthSchema>;
-export type SocialPlatformStats = z.infer<typeof SocialPlatformStatsSchema>;
-export type SocialDashboard = z.infer<typeof SocialDashboardSchema>;
-export type SocialPlatformDetail = z.infer<typeof SocialPlatformDetailSchema>;
-export type EmailListSnapshot = z.infer<typeof EmailListSnapshotSchema>;
-export type SocialDm = z.infer<typeof SocialDmSchema>;
-export type SocialDmSnapshot = z.infer<typeof SocialDmSnapshotSchema>;
-export type SocialDmMessage = z.infer<typeof SocialDmMessageSchema>;
-export type DmDirection = z.infer<typeof DmDirectionSchema>;
-export type SocialPostStatus = z.infer<typeof SocialPostStatusSchema>;
-export type SocialPost = z.infer<typeof SocialPostSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
-export type PersonaPillar = z.infer<typeof PersonaPillarSchema>;
-export type Persona = z.infer<typeof PersonaSchema>;
 export type Person = z.infer<typeof PersonSchema>;
 export type SopAssigneeKind = z.infer<typeof SopAssigneeKindSchema>;
 export type SopTask = z.infer<typeof SopTaskSchema>;
 export type RosterClient = z.infer<typeof RosterClientSchema>;
-export type FunnelStage = z.infer<typeof FunnelStageSchema>;
-export type FunnelRelationship = z.infer<typeof FunnelRelationshipSchema>;
-export type FunnelVenture = z.infer<typeof FunnelVentureSchema>;
-export type FunnelChannel = z.infer<typeof FunnelChannelSchema>;
-export type FunnelSource = z.infer<typeof FunnelSourceSchema>;
-export type FunnelContact = z.infer<typeof FunnelContactSchema>;
-export type FunnelTouch = z.infer<typeof FunnelTouchSchema>;
-export type FunnelJourney = z.infer<typeof FunnelJourneySchema>;
-export type FunnelStageRow = z.infer<typeof FunnelStageRowSchema>;
-export type FunnelSummary = z.infer<typeof FunnelSummarySchema>;
 export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
 export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;

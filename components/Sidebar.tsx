@@ -67,8 +67,7 @@ const DEFAULT_W = 232;
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [live, setLive] = useState<{ up: number; total: number } | null>(null);
-  const [host, setHost] = useState<string | null>(null);
+	
   const [collapsed, setCollapsed] = useState(false);
   // The nav scrolls, and any scrolling ancestor clips an absolutely positioned
   // child — so the collapsed label is rendered fixed, outside that box.
@@ -79,17 +78,14 @@ export function Sidebar() {
   // Restore the previous shape before first paint of the nav, so the OS opens
   // the way it was left rather than snapping after hydration.
   useEffect(() => {
-    const savedW = Number(localStorage.getItem('founderos.sidebar.w'));
+    const savedW = Number(localStorage.getItem('startup.sidebar.w'));
     if (Number.isFinite(savedW) && savedW >= MIN_W && savedW <= MAX_W) setWidth(savedW);
-    setCollapsed(localStorage.getItem('founderos.sidebar.collapsed') === '1');
+    setCollapsed(localStorage.getItem('startup.sidebar.collapsed') === '1');
   }, []);
 
   // Where this instance actually is. Client-only: there is no location
   // during SSR.
-  useEffect(() => {
-    setHost(window.location.host);
-  }, []);
-
+  
   // A stale label must never hang around after the rail expands.
   useEffect(() => {
     if (!collapsed) setTip(null);
@@ -103,7 +99,7 @@ export function Sidebar() {
   }, [collapsed, width]);
 
   useEffect(() => {
-    localStorage.setItem('founderos.sidebar.collapsed', collapsed ? '1' : '0');
+    localStorage.setItem('startup.sidebar.collapsed', collapsed ? '1' : '0');
   }, [collapsed]);
 
   const onDragStart = useCallback(
@@ -127,7 +123,7 @@ export function Sidebar() {
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
         setWidth((w) => {
-          localStorage.setItem('founderos.sidebar.w', String(w));
+          localStorage.setItem('startup.sidebar.w', String(w));
           return w;
         });
       };
@@ -136,23 +132,6 @@ export function Sidebar() {
     },
     [collapsed],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/connections')
-      .then((res) => res.json())
-      .then((body: { connections?: { state: string }[] }) => {
-        if (cancelled || !Array.isArray(body.connections)) return;
-        setLive({
-          up: body.connections.filter((c) => c.state === 'connected').length,
-          total: body.connections.length,
-        });
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   return (
     <aside
@@ -173,9 +152,9 @@ export function Sidebar() {
           <div className="flex items-center gap-[11px]">
             <OsMark size={34} className="shrink-0" />
             <div>
-              <div className="text-[13px] font-bold tracking-[0.14em]">FOUNDER OS</div>
+              <div className="text-[13px] font-bold tracking-[0.14em]">STARTUP</div>
               <div className="mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.16em] text-os-dim">
-                v3 · Operator Mode
+                Investment Company
               </div>
             </div>
           </div>
@@ -198,24 +177,23 @@ export function Sidebar() {
         <NavGroup title="System" items={NAV_SYSTEM} pathname={pathname} collapsed={collapsed} onTip={setTip} />
         <NavGroup title="Variants" items={NAV_LIBRARY} pathname={pathname} collapsed={collapsed} onTip={setTip} />
       </nav>
-      <div
-        className={`flex flex-col gap-2 border-t border-os-border py-3.5 ${
-          collapsed ? 'items-center px-0' : 'px-[18px]'
-        }`}
-      >
-        <div className="flex items-center gap-2 whitespace-nowrap font-mono text-[10px] text-os-muted">
-          <span className="dot ok pulse" />
-          {!collapsed && <>{live ? `${live.up}/${live.total}` : '—/—'} systems live</>}
-        </div>
-        {!collapsed && (
-          // The host is read at runtime, so a deployed instance never claims to
-          // be localhost. Wraps rather than nowrap, which used to clip the line
-          // off the edge of the rail.
-          <div className="break-words font-mono text-[10px] leading-relaxed text-os-dim">
-            {host ?? '…'} · sqlite · real agents
-          </div>
-        )}
-      </div>
+      
+			<div
+  			className={`flex flex-col gap-2 border-t border-os-border py-3.5 ${
+			    collapsed ? 'items-center px-0' : 'px-[18px]'
+			  }`}
+			>
+ 				<div className="flex items-center gap-2 whitespace-nowrap font-mono text-[10px] text-os-muted">
+    			<span className="dot" />
+    			{!collapsed && <span>Foundation Mode</span>}
+  			</div>
+
+			  {!collapsed && (
+    			<div className="break-words font-mono text-[10px] leading-relaxed text-os-dim">
+      			Clean setup · no production agents
+    			</div>
+  			)}
+			</div>
 
       {collapsed && tip && (
         <div

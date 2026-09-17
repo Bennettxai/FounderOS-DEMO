@@ -1,5 +1,5 @@
 /**
- * LLM connector — backs agent & Conductor chat through the Vercel AI Gateway.
+ * LLM connector — backs agent & chat through the Vercel AI Gateway.
  *
  * Mirrors the brain.ts provider shape: a real `gateway` provider (default) that
  * calls the AI SDK with a `"provider/model"` string, plus a `stub` provider

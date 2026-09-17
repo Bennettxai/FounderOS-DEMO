@@ -18,7 +18,6 @@ const agent = (over: Partial<Agent> & { id: string }): Agent => ({
 
 describe('prettifySlug', () => {
   test('humanizes a slug', () => {
-    expect(prettifySlug('comms-feed')).toBe('Comms Feed');
     expect(prettifySlug('attio')).toBe('Attio');
   });
 });

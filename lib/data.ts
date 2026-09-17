@@ -1,34 +1,51 @@
-import path from 'node:path';
 import fs from 'node:fs';
+import path from 'node:path';
+
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
 
 /**
- * App-level singleton. Larp-first, real-ready: every page and API route reads
- * through this seeded SQLite database, so swapping in live sources later is a
- * repo-level change, not a UI rewrite.
+ * Application database singleton.
+ *
+ * The database starts with structural company information only:
+ * departments and registered agents.
+ *
+ * Operational history must be created exclusively by real company activity.
  */
 let instance: FounderDb | null = null;
 
 export function getDb(): FounderDb {
-  if (instance) return instance;
-  const dbPath = process.env.FOUNDER_OS_DB ?? path.join(process.cwd(), 'data', 'founder-os.db');
-  if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  if (instance) {
+    return instance;
+  }
+
+  const dbPath =
+    process.env.FOUNDER_OS_DB ??
+    path.join(process.cwd(), 'data', 'founder-os.db');
+
+  if (dbPath !== ':memory:') {
+    fs.mkdirSync(path.dirname(dbPath), {
+      recursive: true,
+    });
+  }
+
   instance = openDb(dbPath);
-  // Seed on first touch so a fresh clone boots looking alive. Each clause
-  // back-fills databases created before that table existed; seedDatabase is
-  // idempotent (INSERT OR REPLACE), so re-running only adds what's missing.
+
+  /**
+   * Seed only when the structural company foundation is missing.
+   *
+   * Empty workflows, tasks, skills, memories, portfolio records or
+   * performance history are valid states and must never trigger demo data.
+   */
+  const departments = instance.departments.all();
+  const agents = instance.agents.all();
+
   if (
-    instance.departments.all().length === 0 ||
-    instance.workflows.all().length === 0 ||
-    instance.skills.all().length === 0 ||
-    instance.social.accounts().length === 0 ||
-    instance.emailList.snapshots().length === 0 ||
-    instance.social.dmSnapshots().length === 0 ||
-    instance.social.dmMessages().length === 0 ||
-    instance.leadMagnets.all().length === 0
+    departments.length !== 3 ||
+    agents.length !== 19
   ) {
     seedDatabase(instance);
   }
+
   return instance;
 }

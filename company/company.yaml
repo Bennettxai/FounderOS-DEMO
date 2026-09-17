@@ -1,0 +1,125 @@
+company:
+  id: startup-investment-company
+  name: Piter
+  version: "0.1.0"
+  specification_version: "1.0"
+
+  business_unit:
+    id: investments-personal-portfolio-management
+    name: Investments and Personal Portfolio Management
+
+  description: >
+    AI-operated investment organization designed to research,
+    evaluate, structure, monitor and improve investment decisions
+    across equities, ETFs and cryptocurrencies while preserving
+    ultimate human authority.
+
+  mission: >
+    Build a continuously improving investment organization capable
+    of identifying high-quality investment opportunities, evaluating
+    their risks independently, translating approved ideas into
+    executable plans, monitoring portfolio outcomes and learning
+    systematically from the experience accumulated by the company.
+
+  asset_classes:
+    - equities
+    - etfs
+    - cryptocurrencies
+
+  ownership:
+    owner_type: human
+    role: CEO
+    ultimate_authority: true
+
+  ceo:
+    authority:
+      - approve_research_proposals
+      - reject_research_proposals
+      - approve_final_execution
+      - execute_orders
+      - modify_orders
+      - cancel_orders
+      - deposit_funds
+      - withdraw_funds
+      - approve_company_policies
+      - approve_risk_policy
+      - approve_material_process_changes
+
+  organization:
+    departments:
+      - research_investments
+      - risk_analysis
+      - portfolio_monitoring_and_performance_control
+
+    employee_count: 19
+
+  operating_model:
+    human_in_the_loop: true
+    autonomous_financial_execution: false
+
+    principles:
+      - evidence_over_opinion
+      - quality_over_quantity
+      - independent_review
+      - separation_of_duties
+      - human_final_authority
+      - traceability
+      - source_provenance
+      - no_retroactive_rewriting
+      - institutional_memory
+      - continuous_improvement
+      - contextual_learning
+      - process_quality_separate_from_outcome
+      - sufficient_sample_size_before_generalization
+
+  safety:
+    agents_may_execute_trades: false
+    agents_may_withdraw_funds: false
+    agents_may_deposit_funds: false
+    agents_may_hold_trading_credentials: false
+    agents_may_hold_withdrawal_credentials: false
+
+    rule: >
+      AI employees may research, analyze, recommend, review,
+      structure and monitor financial operations, but only the
+      human CEO may perform financial execution.
+
+  architecture:
+    principle: >
+      No framework owns the company. The company owns the frameworks.
+
+    company_control_plane:
+      role: >
+        Deterministic authority responsible for workflow state,
+        permissions, approvals, routing constraints, scheduling,
+        auditability and enforcement of company governance.
+
+    startup_brain:
+      provider: cognee
+      role: >
+        Institutional memory of company reasoning, decisions,
+        experiences, relationships, lessons and organizational
+        knowledge.
+
+    founder_os:
+      role: >
+        Company operating interface, agent registry, dashboard,
+        organization visualization, task interface, workflow
+        visualization and integration shell.
+
+  source_of_truth:
+    company_identity: company/company.yaml
+    organization: company/organization.yaml
+    governance: company/governance.yaml
+    memory_policy: policies/memory_policy.yaml
+
+    principle: >
+      Framework-specific configurations must conform to the Company
+      Specification and must never silently redefine company roles,
+      authority, policies or workflows.
+
+  change_management:
+    versioned: true
+    undocumented_production_changes_allowed: false
+    tests_required_for_material_changes: true
+    approval_required_for_material_changes: true
