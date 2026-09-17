@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { isValidCron } from '@/lib/cron';
 import {
   AgentCronSchema,
+  BrandDealOverrideSchema,
   AgentMessageSchema,
   AgentRunSchema,
   AgentSchema,
@@ -34,6 +35,7 @@ import {
   ToolSchema,
   type Agent,
   type AgentCron,
+  type BrandDealOverride,
   type AgentMessage,
   type AgentRun,
   type AgentTask,
@@ -316,6 +318,12 @@ CREATE TABLE IF NOT EXISTS skills (
   tools TEXT NOT NULL DEFAULT '[]',
   markdown TEXT NOT NULL DEFAULT '',
   ord INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS brand_deal_overrides (
+  deal_id TEXT PRIMARY KEY,
+  outcome TEXT NOT NULL DEFAULT 'open',
+  amount_usd INTEGER,
+  updated_at TEXT NOT NULL
 );
 `;
 
@@ -1145,6 +1153,27 @@ export function openDb(path: string) {
     },
   };
 
+  const rowToBrandDealOverride = (r: any): BrandDealOverride =>
+    BrandDealOverrideSchema.parse({
+      dealId: r.deal_id, outcome: r.outcome, amountUsd: r.amount_usd ?? null, updatedAt: r.updated_at,
+    });
+
+  const brandDeals = {
+    upsert(o: BrandDealOverride): void {
+      BrandDealOverrideSchema.parse(o);
+      db.prepare(
+        'INSERT OR REPLACE INTO brand_deal_overrides (deal_id, outcome, amount_usd, updated_at) VALUES (?, ?, ?, ?)',
+      ).run(o.dealId, o.outcome, o.amountUsd, o.updatedAt);
+    },
+    get(dealId: string): BrandDealOverride | null {
+      const r = db.prepare('SELECT * FROM brand_deal_overrides WHERE deal_id = ?').get(dealId);
+      return r ? rowToBrandDealOverride(r) : null;
+    },
+    all(): BrandDealOverride[] {
+      return db.prepare('SELECT * FROM brand_deal_overrides').all().map(rowToBrandDealOverride);
+    },
+  };
+
   return {
     departments,
     agents,
@@ -1169,6 +1198,7 @@ export function openDb(path: string) {
     sopTasks,
     workflows,
     skills,
+    brandDeals,
     close: () => db.close(),
   };
 }

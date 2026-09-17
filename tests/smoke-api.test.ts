@@ -25,6 +25,8 @@ const ROUTES: RouteEntry[] = [
   { route: 'agents/broadcast', load: () => import('@/app/api/agents/broadcast/route'), url: 'http://localhost/api/agents/broadcast' },
   { route: 'agents/work', load: () => import('@/app/api/agents/work/route'), url: 'http://localhost/api/agents/work?agentId=data-agent' },
   { route: 'brain', load: () => import('@/app/api/brain/route'), url: 'http://localhost/api/brain' },
+  { route: 'brand-deals', load: () => import('@/app/api/brand-deals/route'), url: 'http://localhost/api/brand-deals' },
+  { route: 'brand-deals/draft', load: () => import('@/app/api/brand-deals/draft/route'), url: 'http://localhost/api/brand-deals/draft?id=r123' },
   { route: 'brain/graph', load: () => import('@/app/api/brain/graph/route'), url: 'http://localhost/api/brain/graph' },
   { route: 'brain/overview', load: () => import('@/app/api/brain/overview/route'), url: 'http://localhost/api/brain/overview' },
   { route: 'comms', load: () => import('@/app/api/comms/route'), url: 'http://localhost/api/comms' },

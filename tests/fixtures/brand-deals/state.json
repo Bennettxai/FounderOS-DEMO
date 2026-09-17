@@ -1,0 +1,103 @@
+{
+ "offset": 1,
+ "announced": {
+  "r2001": 1,
+  "r2002": 1,
+  "r2003": 1,
+  "r2004": 1,
+  "r2005": 1,
+  "r2006": 1,
+  "r2007": 1,
+  "r2008": 1,
+  "r2009": 1,
+  "r2010": 1,
+  "r2011": 1,
+  "r2012": 1,
+  "r2013": 1,
+  "r2014": 1,
+  "r2015": 1,
+  "r2016": 1,
+  "r3001": 1,
+  "r1001": 1,
+  "r1002": 1,
+  "r1003": 1,
+  "r1004": 1,
+  "r1005": 1,
+  "r1006": 1,
+  "r1007": 1,
+  "r1008": 1
+ },
+ "done": [
+  "r2001",
+  "r2002",
+  "r2003",
+  "r2004",
+  "r2005",
+  "r2006",
+  "r2007",
+  "r2008",
+  "r2009",
+  "r2010",
+  "r2011",
+  "r2012",
+  "r2013",
+  "r2014",
+  "r2015",
+  "r2016",
+  "r3001"
+ ],
+ "tags": {
+  "r1001": [
+   "UNIQUE",
+   "event or usage-rights ask beyond the rate card"
+  ],
+  "r1003": [
+   "UNIQUE",
+   "event or usage-rights ask beyond the rate card"
+  ],
+  "r1006": [
+   "UNIQUE",
+   "event or usage-rights ask beyond the rate card"
+  ],
+  "r1008": [
+   "UNIQUE",
+   "event or usage-rights ask beyond the rate card"
+  ]
+ },
+ "summaries": {
+  "r1001": "Jane Doe wants a sponsored Reel; budget discussed.",
+  "r1002": "Sam Lee wants a sponsored Reel; budget discussed.",
+  "r1003": "Priya Nair wants a sponsored Reel; budget discussed.",
+  "r1004": "Omar Haddad wants a sponsored Reel; budget discussed.",
+  "r1005": "Mei Tanaka wants a sponsored Reel; budget discussed.",
+  "r1006": "Luca Rossi wants a sponsored Reel; budget discussed.",
+  "r1007": "Ana Silva wants a sponsored Reel; budget discussed.",
+  "r1008": "Tom Baker wants a sponsored Reel; budget discussed."
+ },
+ "chains": {
+  "r1001": [
+   "Full chain, 42 messages, oldest first:\n\n<b>Jane Doe <jane@brandone.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 8.5k.</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>4 May 2026 10:00</i>\n<blockquote expandable>message 6 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>4 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>5 May 2026 10:00</i>\n<blockquote expandable>message 8 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>5 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>6 May 2026 10:00</i>\n<blockquote expandable>message 10 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>6 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>7 May 2026 10:00</i>\n<blockquote expandable>message 12 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>7 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>8 May 2026 10:00</i>\n<blockquote expandable>message 14 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>8 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>9 May 2026 10:00</i>\n<blockquote expandable>message 16 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>9 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>10 May 2026 10:00</i>\n<blockquote expandable>message 18 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>10 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>11 May 2026 10:00</i>\n<blockquote expandable>message 20 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>11 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>12 May 2026 10:00</i>\n<blockquote expandable>message 22 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>12 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>13 May 2026 10:00</i>\n<blockquote expandable>message 24 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>13 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>14 May 2026 10:00</i>\n<blockquote expandable>message 26 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>14 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>15 May 2026 10:00</i>\n<blockquote expandable>message 28 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>15 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>16 May 2026 10:00</i>\n<blockquote expandable>message 30 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>16 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>17 May 2026 10:00</i>\n<blockquote expandable>message 32 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>17 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>18 May 2026 10:00</i>\n<blockquote expandable>message 34 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>18 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>19 May 2026 10:00</i>\n<blockquote expandable>message 36 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>19 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>20 May 2026 10:00</i>\n<blockquote expandable>message 38 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>20 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Jane Doe <jane@brandone.example></b>  <i>21 May 2026 10:00</i>\n<blockquote expandable>message 40 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>21 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 8.5k.</blockquote>"
+  ],
+  "r1002": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Sam Lee <sam@northwind.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $4,500.</blockquote>\n<b>Sam Lee <sam@northwind.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Sam Lee <sam@northwind.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $4,500.</blockquote>"
+  ],
+  "r1003": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Priya Nair <priya@lumen.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 6k.</blockquote>\n<b>Priya Nair <priya@lumen.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Priya Nair <priya@lumen.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 6k.</blockquote>"
+  ],
+  "r1004": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Omar Haddad <omar@fieldset.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 12k.</blockquote>\n<b>Omar Haddad <omar@fieldset.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Omar Haddad <omar@fieldset.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 12k.</blockquote>"
+  ],
+  "r1005": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Mei Tanaka <mei@kobold.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $7,000.</blockquote>\n<b>Mei Tanaka <mei@kobold.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Mei Tanaka <mei@kobold.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $7,000.</blockquote>"
+  ],
+  "r1006": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Luca Rossi <luca@verdant.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 3.5k.</blockquote>\n<b>Luca Rossi <luca@verdant.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Luca Rossi <luca@verdant.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 3.5k.</blockquote>"
+  ],
+  "r1007": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Ana Silva <ana@harbor.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 9k.</blockquote>\n<b>Ana Silva <ana@harbor.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Ana Silva <ana@harbor.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at 9k.</blockquote>"
+  ],
+  "r1008": [
+   "Full chain, 6 messages, oldest first:\n\n<b>Tom Baker <tom@quill.example></b>  <i>1 May 2026 10:00</i>\n<blockquote expandable>message 0 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>1 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $5,500.</blockquote>\n<b>Tom Baker <tom@quill.example></b>  <i>2 May 2026 10:00</i>\n<blockquote expandable>message 2 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>2 May 2026 11:00</i>\n<blockquote expandable>thanks, sending over the deck</blockquote>\n<b>Tom Baker <tom@quill.example></b>  <i>3 May 2026 10:00</i>\n<blockquote expandable>message 4 from the brand &lt;details&gt;</blockquote>\n<b>Operator</b>  <i>3 May 2026 11:00</i>\n<blockquote expandable>For that scope we are at $5,500.</blockquote>"
+  ]
+ }
+}
