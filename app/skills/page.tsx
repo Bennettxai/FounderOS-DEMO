@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { SkillsGrid, type SkillCard } from '@/components/SkillsGrid';
 import { readPluginSkills, readUserSkills } from '@/lib/skills-catalog';
 
@@ -44,7 +45,9 @@ export default function SkillsPage() {
   return (
     <div>
       <PageHeader eyebrow="capability library" title="Skills" />
-      <SkillsGrid cards={cards} sourceNote={sourceNote} />
+      <Rise i={1}>
+        <SkillsGrid cards={cards} sourceNote={sourceNote} />
+      </Rise>
     </div>
   );
 }

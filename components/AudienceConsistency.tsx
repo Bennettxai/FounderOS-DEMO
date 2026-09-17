@@ -139,7 +139,7 @@ function ChartPair({
             <line key={g} x1="0" x2={W} y1={HA - PAD - g * (HA - 2 * PAD)} y2={HA - PAD - g * (HA - 2 * PAD)} stroke="var(--border)" strokeDasharray="2 4" />
           ))}
           {audPts.length > 1 && <path d={`${audLine} L${audPts[audPts.length - 1][0]},${HA} L${audPts[0][0]},${HA} Z`} fill="url(#ac-area)" />}
-          {audPts.length > 1 && <path d={audLine} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />}
+          {audPts.length > 1 && <path d={audLine} pathLength={1} className="draw" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinejoin="round" />}
           {crosshair(HA)}
           {hover != null && audienceVals[hover] != null && (
             <circle cx={xAt(hover)} cy={yA(audienceVals[hover]!)} r="3.5" fill="var(--accent)" stroke="var(--surface)" strokeWidth="2" />

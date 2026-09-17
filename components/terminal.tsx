@@ -90,7 +90,7 @@ export function SectionHead({
   href?: string;
 }) {
   return (
-    <div className="mb-3 flex items-baseline justify-between gap-3">
+    <div className="rise mb-3 flex items-baseline justify-between gap-3">
       <div className="min-w-0 flex-1">
         <Label count={count} rule>
           {label}

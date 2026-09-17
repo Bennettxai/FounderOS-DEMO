@@ -1,5 +1,6 @@
 import { CalendarDays, Hash, Mail, MessageSquare, type LucideIcon } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { CommsTabs } from '@/components/CommsTabs';
 import { gatherCommsLanes } from '@/lib/comms-lanes';
 import { gatherSlackClientBoard } from '@/lib/slack-clients';
@@ -42,7 +43,7 @@ export default async function CommsPage() {
       />
 
       {/* Source status row */}
-      <section className="mb-7">
+      <Rise as="section" i={1} className="mb-7">
         <SectionHead label="Sources" count={`${connectedSources}/${sources.length} connected`} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {sources.map((source) => {
@@ -68,14 +69,16 @@ export default async function CommsPage() {
             );
           })}
         </div>
-      </section>
+      </Rise>
 
       {/* Swappable front: the messaging board (source lanes + Slack) or the 7-day meetings calendar */}
-      <CommsTabs lanes={lanes} slackCards={slackCards} channels={channels} events={weekEvents} accounts={calLegend} nowISO={nowISO} />
+      <Rise i={2}>
+        <CommsTabs lanes={lanes} slackCards={slackCards} channels={channels} events={weekEvents} accounts={calLegend} nowISO={nowISO} />
+      </Rise>
 
-      <p className="mt-4 rounded-xl border border-dashed border-os-border-strong px-3 py-3 text-center font-mono text-[10.5px] text-os-dim">
+      <Rise as="p" i={3} className="mt-4 rounded-xl border border-dashed border-os-border-strong px-3 py-3 text-center font-mono text-[10.5px] text-os-dim">
         Four inboxes (expand to read + reply) and WhatsApp as lanes · Slack per client + every current channel · meetings via CalDAV
-      </p>
+      </Rise>
     </div>
   );
 }

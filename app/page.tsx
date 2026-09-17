@@ -12,6 +12,8 @@ import { gatherCommsFeed } from '@/lib/comms-feed';
 import { inboundLast24h } from '@/lib/comms';
 import { groupRoadmapByQuarter } from '@/lib/roadmap';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 import { HomeSocialGraph } from '@/components/HomeSocialGraph';
 import { Badge, Dot, Kbd, Label, SectionHead, Spark } from '@/components/terminal';
 import { runsPerDay, inboundPerDay, stateOfWorld, type Tone } from '@/lib/pulse-history';
@@ -198,50 +200,50 @@ export default async function HomePage() {
       />
 
       {/* Honest state-of-the-world line — what needs you, straight from live data */}
-      <div className="-mt-3 mb-[18px] flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px]">
+      <Rise i={1} className="-mt-3 mb-[18px] flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[12px]">
         {hero.map((s, i) => (
           <span key={i} className="flex items-center gap-2">
             {i > 0 && <span className="text-os-border-strong">·</span>}
             <span className={TONE_CLASS[s.tone]}>{s.text}</span>
           </span>
         ))}
-      </div>
+      </Rise>
 
       {/* Pulse row */}
-      <section className="mb-[18px] grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
+      <Rise as="section" i={2} className="mb-[18px] grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
         <StatTile
           href="/integrations"
           label="Systems"
-          value={connected}
+          value={<CountUp value={connected} />}
           unit={`/ ${connections.length} connected`}
           foot={<ConnectorBars connections={connections} />}
         />
         <StatTile
           href="/agents"
           label="Agents live"
-          value={activeAgents}
+          value={<CountUp value={activeAgents} />}
           unit={`/ ${agents.length} roster`}
           foot={<Spark data={agentsSpark} />}
         />
         <StatTile
           href="/comms"
           label="Communications"
-          value={inbound}
+          value={<CountUp value={inbound} />}
           unit="inbound · 24h"
           foot={<Spark data={commsSpark} />}
         />
         <StatTile
           href="/brain"
           label="G-Brain health"
-          value={health ?? '—'}
+          value={health == null ? '—' : <CountUp value={health} />}
           unit={`/ 100${overview.doctor.connected ? ` · ${overview.doctor.status}` : ' · offline'}`}
           valueClass="text-os-accent"
           foot={<HealthMeter value={health ?? null} />}
         />
-      </section>
+      </Rise>
 
       {/* Live ticker */}
-      <section className="mb-[22px] relative overflow-hidden rounded-md-t border border-os-border bg-os-surface">
+      <Rise as="section" i={3} className="mb-[22px] relative overflow-hidden rounded-md-t border border-os-border bg-os-surface">
         <div className="absolute inset-y-0 left-0 z-[2] flex items-center gap-[7px] border-r border-os-border bg-os-surface px-3.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-os-dim">
           <Dot state="connected" pulse /> live
         </div>
@@ -259,10 +261,10 @@ export default async function HomePage() {
             </div>
           ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Connections strip */}
-      <section className="mb-[22px]">
+      <Rise as="section" i={4} className="mb-[22px]">
         <SectionHead label="Connections" count={`${connected}/${connections.length}`} link="Open board" href="/integrations" />
         <div className="grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
           {connections.slice(0, 12).map((c) => (
@@ -277,19 +279,19 @@ export default async function HomePage() {
             </Link>
           ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Social media — combined audience over time (under Connections,
           above the agents / recent-runs row) */}
-      <section className="mb-[22px]">
+      <Rise as="section" i={5} className="mb-[22px]">
         <SectionHead label="Social media" count="audience over time" link="Open Social" href="/social" />
         <HomeSocialGraph series={[all, ...channels]} posting={posting} />
-      </section>
+      </Rise>
 
       {/* Main grid */}
       <div className="grid grid-cols-[1.05fr_0.95fr] items-start gap-6 max-[1100px]:grid-cols-1">
         {/* Agents */}
-        <section className="min-w-0">
+        <Rise as="section" i={6} className="min-w-0">
           <SectionHead label="Agents" count={`${activeAgents} live`} link="Full roster" href="/agents" />
           <div className="flex flex-col gap-2">
             {agents.map((a) => {
@@ -324,10 +326,10 @@ export default async function HomePage() {
               );
             })}
           </div>
-        </section>
+        </Rise>
 
         {/* Activity + focus */}
-        <section className="flex min-w-0 flex-col gap-[22px]">
+        <Rise as="section" i={7} className="flex min-w-0 flex-col gap-[22px]">
           <div>
             <SectionHead label="Recent runs" count={recentRuns.length} />
             <ul className="flex flex-col gap-1.5">
@@ -381,7 +383,7 @@ export default async function HomePage() {
             </div>
             <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-os-dim" />
           </Link>
-        </section>
+        </Rise>
       </div>
     </div>
   );

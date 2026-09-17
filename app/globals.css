@@ -13,6 +13,13 @@
 }
 
 /* Dark (phosphor terminal). */
+/* Workflow tree node surfaces. Layered translucent gradients off the
+   colorway's own surface and bg, so every theme keeps its tint. */
+:root {
+  --wft-node-bg: linear-gradient(165deg, color-mix(in oklab, var(--surface-2) 55%, transparent) 0%, color-mix(in oklab, var(--bg) 65%, transparent) 55%, color-mix(in oklab, var(--bg) 82%, transparent) 100%);
+  --wft-node-bg-hover: linear-gradient(165deg, color-mix(in oklab, var(--surface-2) 70%, transparent) 0%, color-mix(in oklab, var(--bg) 75%, transparent) 55%, color-mix(in oklab, var(--bg) 90%, transparent) 100%);
+}
+
 :root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #050807;
@@ -851,4 +858,81 @@ html.conductor-dragging .os-shell {
   background-clip: text;
   color: transparent;
   animation: synth-sweep 1.6s linear infinite;
+}
+
+/* ── Slab motion (OS-wide, 2026-09-17) ───────────────────────────────────
+   Four shared entry moves on the house ease:
+   .rise   the element rises in, staggered by --rise-i at 90ms a step
+   .draw   an SVG line draws itself (needs pathLength={1} on the path)
+   .fill   a horizontal bar fills from the left
+   .grow   a vertical bar grows from the bottom
+   .rise-card adds a 1px hover lift (two properties, 200ms).
+   Reduced motion kills all of it below. */
+@keyframes os-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.992); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes os-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes os-fill {
+  from { transform: scaleX(0); }
+}
+@keyframes os-grow {
+  from { transform: scaleY(0); }
+}
+@keyframes os-sweep {
+  to { stroke-dashoffset: 0; }
+}
+:root {
+  --rise-i: 0;
+}
+.rise {
+  animation: os-rise 0.6s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms);
+}
+.rise-card {
+  transition:
+    transform 200ms var(--ease),
+    border-color 200ms var(--ease);
+}
+.rise-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
+.draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: os-draw 1.4s var(--ease) 0.3s both;
+}
+.fill {
+  transform-origin: left;
+  animation: os-fill 1.1s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms + 300ms);
+}
+.grow {
+  transform-origin: bottom;
+  animation: os-grow 0.9s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms + 200ms);
+}
+/* .sweep: a donut slice that draws itself clockwise; SharePie sets the
+   per-slice duration and delay inline so the ring is one continuous hand. */
+.sweep {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .draw,
+  .fill,
+  .grow {
+    animation: none !important;
+  }
+  .sweep {
+    animation: none !important;
+    stroke-dashoffset: 0;
+  }
+  .rise-card:hover {
+    transform: none !important;
+  }
 }

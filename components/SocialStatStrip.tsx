@@ -96,6 +96,8 @@ function LineChart({ series, range }: { series: LabelledSeries[]; range: Range }
         s.points.length === 0 ? null : (
           <g key={s.key}>
             <polyline
+              pathLength={1}
+              className="draw"
               points={s.points.map((p) => `${x(p.date)},${y(p.value)}`).join(' ')}
               fill="none"
               stroke={s.color}

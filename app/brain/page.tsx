@@ -5,6 +5,7 @@ import { buildKnowledgeGraph } from '@/lib/knowledge-graph';
 import { demoMemoryGraph, distillMemoryGraph, type MemoryGraph } from '@/lib/memory-core';
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { BrainDump } from '@/components/BrainDump';
 import { BrainGraphView } from '@/components/BrainGraphView';
 
@@ -84,7 +85,7 @@ export default function BrainPage() {
       {/* pull the graph up under the header (offsets PageHeader's shared mb-6)
           so the capture slot sits close to the graph and the canvas gets the
           rest of the viewport */}
-      <div className="-mt-3 min-h-0 flex-1">
+      <Rise i={1} className="-mt-3 min-h-0 flex-1">
         <BrainGraphView
           fill
           graph={knowledgeGraph}
@@ -96,7 +97,7 @@ export default function BrainPage() {
           clients={clientRoster(db)}
           runsByAgent={runsByAgent}
         />
-      </div>
+      </Rise>
     </div>
   );
 }

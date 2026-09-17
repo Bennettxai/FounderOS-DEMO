@@ -431,9 +431,15 @@ export const SopTaskSchema = z.object({
 export const WorkflowOwnerKindSchema = z.enum(['human', 'agent']);
 export const WorkflowAutomationStateSchema = z.enum(['live', 'suggested']);
 
+export const WorkflowBranchSchema = z.object({
+  from: z.string().min(1), // step id this one forks from
+  condition: z.string().min(1), // the edge label on the fork
+});
+
 export const WorkflowStepSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
+  detail: z.string().default(''), // full step description for the step-detail drawer
   ownerKind: WorkflowOwnerKindSchema,
   owner: z.string().min(1), // "Alex · Founder" / "SDR Agent"
   hoursPerWeek: z.number().nonnegative(),
@@ -447,6 +453,7 @@ export const WorkflowStepSchema = z.object({
       recoveredUsd: z.number().nonnegative(), // $/mo the automation carries
     })
     .nullable(),
+  branch: WorkflowBranchSchema.nullable().default(null), // a real fork off an earlier step
 });
 
 export const WorkflowSchema = z.object({
@@ -613,7 +620,11 @@ export type FunnelStageRow = z.infer<typeof FunnelStageRowSchema>;
 export type FunnelSummary = z.infer<typeof FunnelSummarySchema>;
 export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
-export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
-export type Workflow = z.infer<typeof WorkflowSchema>;
+export type WorkflowBranch = z.infer<typeof WorkflowBranchSchema>;
+// Authoring shape: `detail` and `branch` are optional here so seeds and rows
+// written before those fields existed still typecheck; every read goes
+// through WorkflowSchema.parse, which defaults them.
+export type WorkflowStep = z.input<typeof WorkflowStepSchema>;
+export type Workflow = z.input<typeof WorkflowSchema>;
 export type SkillStatus = z.infer<typeof SkillStatusSchema>;
 export type Skill = z.infer<typeof SkillSchema>;

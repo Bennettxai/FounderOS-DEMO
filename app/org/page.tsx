@@ -7,6 +7,7 @@ import { VENTURES, getVenture, ventureAgentSet, venturesForAgent } from '@/lib/v
 import { ConductorCard } from '@/components/ConductorCard';
 import { SparkIcon } from '@/components/SparkIcon';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import type { Agent, AgentStatus } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
@@ -108,7 +109,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
 
       {/* Venture switcher: Vantage / Launchpad Cohort — one click swaps which
           crew lights up below. All data stays shared. */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <Rise i={1} className="mb-3 flex flex-wrap items-center gap-2">
         <Link
           href="/org"
           className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
@@ -134,10 +135,11 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           );
         })}
         {venture && <span className="text-[11px] text-os-dim">{venture.kind} · {venture.detail}</span>}
-      </div>
+      </Rise>
 
       {venture && (
-        <div
+        <Rise
+          i={2}
           className="mb-4 rounded-lg border bg-os-surface px-4 py-3"
           style={{ borderColor: `${venture.color}66`, boxShadow: `inset 3px 0 0 ${venture.color}` }}
         >
@@ -155,11 +157,11 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           <div className="mt-2 font-mono text-[10px] text-os-dim">
             G-Brain tag: #{venture.brainTag} · {ventureSet?.size} agents on this venture
           </div>
-        </div>
+        </Rise>
       )}
 
       {/* Life-area legend: every crew below is tinted by the part of life it serves */}
-      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-os-border bg-os-surface px-3 py-2">
+      <Rise i={3} className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-os-border bg-os-surface px-3 py-2">
         <span className="text-[9px] uppercase tracking-[0.2em] text-os-dim">Life areas</span>
         {LIFE_AREAS.map((area) => (
           <span key={area.id} className="flex items-center gap-1.5 text-[10px] text-os-muted">
@@ -167,20 +169,20 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
             {area.label}
           </span>
         ))}
-      </div>
+      </Rise>
 
       {/* Operator */}
-      <div className="flex flex-col items-center">
+      <Rise i={4} className="flex flex-col items-center">
         <Users className="h-7 w-7 text-os-text" />
         <div className="mt-1 text-base font-bold tracking-wide">Alex Rivera</div>
         <div className="text-[10px] uppercase tracking-[0.3em] text-os-dim">Operator</div>
         <div className="mt-2 h-6 w-px bg-os-border-bright" />
         <div className="text-[10px] uppercase tracking-[0.2em] text-os-muted">Conductor (Super Agent)</div>
         <div className="h-3 w-px bg-os-border-bright" />
-      </div>
+      </Rise>
 
       {/* AI Head row: G-Brain ── Conductor ── Comms Feed */}
-      <div className="flex items-center justify-center gap-0">
+      <Rise i={5} className="flex items-center justify-center gap-0">
         <SystemCard href="/brain" title="G-Brain" caption="markdown + pgvector knowledge store" />
         <div className="hidden h-px w-10 bg-os-border-bright md:block" />
         {conductor ? (
@@ -192,7 +194,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
         )}
         <div className="hidden h-px w-10 bg-os-border-bright md:block" />
         <SystemCard href="/comms" title="Comms Feed" caption="Gmail · WhatsApp · Slack, unified" />
-      </div>
+      </Rise>
 
       {/* Trunk down to the department rail */}
       <div className="mx-auto h-10 w-px bg-os-border-bright" />
@@ -201,7 +203,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           The whole row is centered under the Conductor (mx-auto w-max) and only
           scrolls when it genuinely overflows the viewport. Spacing widens with
           the screen: gap-4 → gap-8 (wide) → gap-12 (ultra / 32"). */}
-      <div className="overflow-x-auto overflow-y-hidden pb-4 overscroll-x-contain">
+      <Rise i={6} className="overflow-x-auto overflow-y-hidden pb-4 overscroll-x-contain">
         <div className="mx-auto w-max">
           {/* Rail inset by half a column (mx-36 = ½ of w-72) so it runs exactly
               center-to-center across the crews — connectors always meet it. */}
@@ -305,7 +307,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           })}
           </div>
         </div>
-      </div>
+      </Rise>
     </div>
   );
 }

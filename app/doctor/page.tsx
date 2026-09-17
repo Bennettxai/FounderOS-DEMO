@@ -2,6 +2,7 @@ import { createGBrainProvider } from '@/lib/connectors/gbrain';
 import { foldersToClusters } from '@/lib/brain-viz';
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { BrainCore } from '@/components/BrainCore';
 import { PillarRadar } from '@/components/PillarRadar';
 import { pillarRadarAxes } from '@/lib/pillar-radar';
@@ -150,7 +151,7 @@ export default async function DoctorPage() {
       {/* G-Brain knowledge core: the PILLAR SPIDER CHART on the LEFT, the
           radar/health monitor on the RIGHT — a 50/50 split of the row.
           Stacks on narrow screens. */}
-      <div className="mt-5 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
+      <Rise i={1} className="mt-5 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
         <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg-t border border-os-border bg-os-surface">
           <div className="flex items-start justify-between px-4 pt-3.5 font-mono text-[10px] leading-normal text-os-dim">
             <span>
@@ -191,7 +192,7 @@ export default async function DoctorPage() {
           </div>
         </div>
 
-      </div>
+      </Rise>
 
       {/* Core status: storage layers + doctor-health footer, full width. */}
       <div className="mt-4 flex flex-col overflow-hidden rounded-lg-t border border-os-border bg-os-surface">
@@ -227,7 +228,7 @@ export default async function DoctorPage() {
       </div>
 
       {/* The pipeline: where knowledge lives and how it becomes searchable */}
-      <section className="mt-8">
+      <Rise as="section" i={2} className="mt-8">
         <SectionHead label="Pipeline" count={`${store.totalFiles} pages on disk`} />
         <div className="flex flex-col gap-2 xl:flex-row xl:items-stretch">
           <Stage step="1" title="Markdown brain-store" caption={storeShort}>
@@ -310,10 +311,10 @@ export default async function DoctorPage() {
             </div>
           </Stage>
         </div>
-      </section>
+      </Rise>
 
       {/* How a query actually resolves */}
-      <section className="mt-8">
+      <Rise as="section" i={3} className="mt-8">
         <SectionHead label="Query path" />
         <p className="mb-3 text-xs text-os-dim">
           What happens when an agent calls <code className="font-mono">gbrain query</code> — hybrid retrieval with an
@@ -340,7 +341,7 @@ export default async function DoctorPage() {
             detail="If Supabase is paused or unreachable, FOUNDER OS greps the markdown brain-store directly — fewer smarts, zero downtime."
           />
         </div>
-      </section>
+      </Rise>
     </div>
   );
 }

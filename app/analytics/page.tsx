@@ -15,6 +15,7 @@ import type { PieItem } from '@/lib/social-chart';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge, Label, SectionHead, Spark } from '@/components/terminal';
 import { SharePie } from '@/components/SharePie';
+import { Rise } from '@/components/motion';
 import { formatFollowers, GrowthBadge, MiniBars } from '@/components/SocialStats';
 
 export const dynamic = 'force-dynamic';
@@ -246,15 +247,15 @@ export default async function AnalyticsPage() {
 
       {/* Live metric tiles */}
       {live.length > 0 && (
-        <section className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
+        <Rise as="section" i={1} className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
           {live.map((tile) => (
             <MetricCard key={tile.id} tile={tile} />
           ))}
-        </section>
+        </Rise>
       )}
 
       {/* Distribution — share donuts across audience, agents, run outcomes */}
-      <section className="mb-6">
+      <Rise as="section" i={2} className="mb-6">
         <SectionHead label="Distribution" count="share of totals" />
         <div className="grid gap-3.5 lg:grid-cols-3">
           {audienceReach > 0 && (
@@ -291,10 +292,10 @@ export default async function AnalyticsPage() {
             />
           )}
         </div>
-      </section>
+      </Rise>
 
       {/* Agent run volume (real log) + awaiting-credentials sidebar */}
-      <section className="mb-6 grid gap-3.5 xl:grid-cols-3">
+      <Rise as="section" i={3} className="mb-6 grid gap-3.5 xl:grid-cols-3">
         <div className="rounded-lg-t border border-os-border bg-os-surface p-5 xl:col-span-2">
           <div className="flex items-center justify-between gap-2">
             <Label>Agent run volume · 14d</Label>
@@ -340,10 +341,10 @@ export default async function AnalyticsPage() {
             wire connectors → flip to live
           </Link>
         </div>
-      </section>
+      </Rise>
 
       {/* Audience by platform — real Zernio snapshot data */}
-      <section>
+      <Rise as="section" i={4}>
         <SectionHead label="Audience · by platform" count={`${formatFollowers(totalFollowers)} total`} link="Open Social" href="/social" />
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3 ultra:grid-cols-4">
           {dash.platforms.map((p) => {
@@ -381,7 +382,7 @@ export default async function AnalyticsPage() {
             );
           })}
         </div>
-      </section>
+      </Rise>
     </div>
   );
 }

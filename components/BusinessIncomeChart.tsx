@@ -125,7 +125,7 @@ export function BusinessIncomeChart({ series }: { series: BusinessSeries }) {
                     </span>
                   )}
                   <div
-                    className={`w-full max-w-[28px] rounded-sm-t transition-[opacity,filter] duration-150 ${barClass}`}
+                    className={`grow w-full max-w-[28px] rounded-sm-t transition-[opacity,filter] duration-150 ${barClass}`}
                     style={{ height: `${h}px`, opacity: hot ? 1 : hovered ? 0.45 : 0.8 }}
                   />
                 </div>

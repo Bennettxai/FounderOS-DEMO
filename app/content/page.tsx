@@ -4,6 +4,7 @@ import { getDb } from '@/lib/data';
 import { contentAgents } from '@/lib/content';
 import { zernioRecentPosts, zernioPostDays } from '@/lib/connectors/zernio';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { LeadMagnets } from '@/components/LeadMagnets';
 import { Badge, Dot, SectionHead } from '@/components/terminal';
 import type { Agent } from '@/lib/schemas';
@@ -115,7 +116,7 @@ export default async function ContentPage() {
       />
 
       {/* Backlinks to the Vantage content-intelligence system */}
-      <section>
+      <Rise as="section" i={1}>
         <SectionHead label="Content intelligence" />
         <div className="grid gap-3 sm:grid-cols-2">
           <BacklinkCard
@@ -131,10 +132,10 @@ export default async function ContentPage() {
             sub="Per-piece performance and audience analytics from the intelligence system."
           />
         </div>
-      </section>
+      </Rise>
 
       {/* The content agent + crew (real seed roster) */}
-      <section className="mt-8">
+      <Rise as="section" i={2} className="mt-8">
         <SectionHead
           label="Content agents"
           count={`${crew.length}`}
@@ -153,10 +154,10 @@ export default async function ContentPage() {
             ))}
           </div>
         )}
-      </section>
+      </Rise>
 
       {/* Zernio content pipeline — recent published content + cadence */}
-      <section className="mt-8">
+      <Rise as="section" i={3} className="mt-8">
         <SectionHead
           label="Zernio content pipeline"
           count={posts.length > 0 ? `${posts.length} recent` : 'no live pull'}
@@ -188,10 +189,10 @@ export default async function ContentPage() {
             No live Zernio pull right now — recent content shows here once the API responds (key from ~/.config/social/.env).
           </p>
         )}
-      </section>
+      </Rise>
 
       {/* Lead magnets — every landing page we ship, with the live link */}
-      <section className="mt-8">
+      <Rise as="section" i={4} className="mt-8">
         <SectionHead label="Lead magnets" count={`${leadMagnets.filter((m) => m.status === 'live').length} live`} />
         <p className="mb-3 flex items-center gap-1.5 text-xs text-os-dim">
           Every landing page shipped behind a post ·{' '}
@@ -203,7 +204,7 @@ export default async function ContentPage() {
           </Link>
         </p>
         <LeadMagnets rows={leadMagnets.slice(0, 4)} />
-      </section>
+      </Rise>
     </div>
   );
 }

@@ -12,6 +12,8 @@ import { openLedger } from '@/lib/ledger';
 import { openBankStore } from '@/lib/bank';
 import { businessSeries } from '@/lib/bank-statements';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 import { SharePie } from '@/components/SharePie';
 import { StatementUploader } from '@/components/StatementUploader';
 import { BusinessIncomeChart } from '@/components/BusinessIncomeChart';
@@ -117,37 +119,37 @@ export default async function FinancesPage() {
 
       {/* Summary tiles — slim single-line rows so the page opens condensed */}
       <section className="mb-5 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
+        <Rise i={0} className="rise-card flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <Label>Income · MTD</Label>
             <ArrowDownLeft className="h-3 w-3 text-os-ok" strokeWidth={1.8} />
           </div>
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-mono text-[16px] font-semibold leading-none tracking-[-0.02em] text-os-ok">
-              {usd(incomeMtd)}
+              <CountUp value={incomeMtd} kind="usd" />
             </span>
             <span className="min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">
               {liveCount}/{accounts.length} live
             </span>
           </div>
-        </div>
+        </Rise>
 
-        <div className="flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
+        <Rise i={1} className="rise-card flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <Label>Expenses · /mo</Label>
             <ArrowUpRight className="h-3 w-3 text-os-err" strokeWidth={1.8} />
           </div>
           <div className="flex items-baseline justify-between gap-2">
-            <span className="font-mono text-[16px] font-semibold leading-none tracking-[-0.02em]">{usd(expenses)}</span>
+            <span className="font-mono text-[16px] font-semibold leading-none tracking-[-0.02em]"><CountUp value={expenses} kind="usd" /></span>
             <span
               className={`min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] ${expensesLive ? 'text-os-ok' : 'text-os-warn'}`}
             >
               {expensesLive ? `uploaded · ${monthLabel}` : 'sample'}
             </span>
           </div>
-        </div>
+        </Rise>
 
-        <div className="flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
+        <Rise i={2} className="rise-card flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <Label>Net · /mo</Label>
             <Scale className="h-3 w-3 text-os-accent" strokeWidth={1.8} />
@@ -157,43 +159,43 @@ export default async function FinancesPage() {
               className={`font-mono text-[16px] font-semibold leading-none tracking-[-0.02em] ${netMonthly >= 0 ? 'text-os-ok' : 'text-os-err'}`}
             >
               {netMonthly >= 0 ? '' : '−'}
-              {usd(Math.abs(netMonthly))}
+              <CountUp value={Math.abs(netMonthly)} kind="usd" />
             </span>
             <span className="min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">in − out</span>
           </div>
-        </div>
+        </Rise>
 
-        <div className="flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
+        <Rise i={3} className="rise-card flex flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2">
           <div className="flex items-center justify-between gap-2">
             <Label>Stripe balance</Label>
             <Landmark className="h-3 w-3 text-os-accent" strokeWidth={1.8} />
           </div>
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-mono text-[16px] font-semibold leading-none tracking-[-0.02em]">
-              {stripeLive ? usd(available, true) : '—'}
+              {stripeLive ? <CountUp value={available} kind="usdCents" /> : '—'}
             </span>
             <span className="min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">
               {stripeLive ? `${usd(pending, true)} pending` : 'connect Stripe'}
             </span>
           </div>
-        </div>
+        </Rise>
       </section>
 
       {/* Income by processor */}
       {/* Income by business — from uploaded bank statements, with a range dropdown */}
       {bankSeries.length > 0 && (
-        <section className="mb-5">
+        <Rise as="section" i={4} className="mb-5">
           <SectionHead label="Income · by business" count="bank deposits" />
           <div className="grid gap-3.5 lg:grid-cols-2">
             {bankSeries.map((s) => (
               <BusinessIncomeChart key={s.business} series={s} />
             ))}
           </div>
-        </section>
+        </Rise>
       )}
 
       {/* Monthly expenses by category */}
-      <section className="mb-5">
+      <Rise as="section" i={5} className="mb-5">
         <SectionHead
           label="Monthly expenses · by category"
           count={expensesLive && monthLabel ? `${usd(expenses)} · ${monthLabel}` : `${usd(expenses)} /mo`}
@@ -218,7 +220,7 @@ export default async function FinancesPage() {
                     <span className="text-os-text">{usd(c.total)}</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-sm-t bg-os-surface2">
-                    <div className="h-full bg-os-accent opacity-60" style={{ width: `${(c.total / maxCategory) * 100}%` }} />
+                    <div className="fill h-full bg-os-accent opacity-60" style={{ width: `${(c.total / maxCategory) * 100}%` }} />
                   </div>
                 </div>
               ))}
@@ -228,9 +230,9 @@ export default async function FinancesPage() {
           {/* Statement ingestion — upload a CSV to replace the sample figures */}
           <StatementUploader />
         </div>
-      </section>
+      </Rise>
 
-      <section className="mb-5">
+      <Rise as="section" i={6} className="mb-5">
         <SectionHead label="Income · by processor" count={`${liveCount}/${accounts.length} live`} />
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {accounts.map((a) => (
@@ -267,11 +269,11 @@ export default async function FinancesPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Outgoing transfers — Wise (hidden entirely until a Wise key lands) */}
       {wiseOut && (
-        <section className="mb-5">
+        <Rise as="section" i={7} className="mb-5">
           <SectionHead label="Outgoing · Wise" count={`${wiseOut.length} transfer${wiseOut.length === 1 ? '' : 's'}`} />
           {wiseOut.length === 0 ? (
             <div className="rounded-lg-t border border-os-border bg-os-surface px-4 py-3 font-mono text-[11px] text-os-dim">
@@ -294,12 +296,12 @@ export default async function FinancesPage() {
               ))}
             </ul>
           )}
-        </section>
+        </Rise>
       )}
 
       {/* Recent income — real Stripe charges */}
       {stripeLive && recent.length > 0 && (
-        <section>
+        <Rise as="section" i={8}>
           <SectionHead label="Recent income" count="Stripe · live" />
           <ul className="space-y-1.5">
             {recent.map((c, i) => (
@@ -313,7 +315,7 @@ export default async function FinancesPage() {
               </li>
             ))}
           </ul>
-        </section>
+        </Rise>
       )}
     </div>
   );

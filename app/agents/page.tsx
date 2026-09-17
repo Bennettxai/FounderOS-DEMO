@@ -1,5 +1,7 @@
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 import { AgentChat } from '@/components/AgentChat';
 import { ConductorChat } from '@/components/ConductorChat';
 import { AgentActivityFeed } from '@/components/AgentActivityFeed';
@@ -125,11 +127,11 @@ export default function AgentsPage() {
         title="Real Agents"
       />
 
-      <div className="mb-6">
+      <Rise i={1} className="mb-6">
         <ConductorChat agentNames={agentNames} />
-      </div>
+      </Rise>
 
-      <div className="mb-6 grid grid-cols-5 gap-3 max-[1100px]:grid-cols-2">
+      <Rise i={2} className="mb-6 grid grid-cols-5 gap-3 max-[1100px]:grid-cols-2">
         {[
           ['Total', agents.length],
           ['Active', agents.filter((a) => a.status === 'active').length],
@@ -139,16 +141,18 @@ export default function AgentsPage() {
         ].map(([label, value]) => (
           <div key={label} className="hoverable flex flex-col gap-1.5 rounded-lg-t border border-os-border bg-os-surface px-4 py-3">
             <Label>{label}</Label>
-            <div className="font-mono text-[26px] font-semibold tracking-[-0.02em]">{value}</div>
+            <div className="font-mono text-[26px] font-semibold tracking-[-0.02em]">
+              <CountUp value={Number(value)} kind="int" />
+            </div>
           </div>
         ))}
-      </div>
+      </Rise>
 
-      <div className="mb-8">
+      <Rise i={3} className="mb-8">
         <AgentActivityFeed initialEvents={activity} agentNames={agentNames} />
-      </div>
+      </Rise>
 
-      <div className="space-y-8">
+      <Rise i={4} className="space-y-8">
         {departments.map((dept) => {
           const deptAgents = agents.filter((a) => a.departmentId === dept.id);
           if (deptAgents.length === 0) return null;
@@ -172,7 +176,7 @@ export default function AgentsPage() {
             </section>
           );
         })}
-      </div>
+      </Rise>
     </div>
   );
 }

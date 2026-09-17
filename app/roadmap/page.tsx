@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/data';
 import { groupRoadmapByQuarter } from '@/lib/roadmap';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { Badge, SectionHead, type BadgeTone } from '@/components/terminal';
 import type { RoadmapStatus } from '@/lib/schemas';
 
@@ -27,7 +28,7 @@ export default function RoadmapPage() {
       />
 
       {/* High-level functionality phases */}
-      <section className="mb-9">
+      <Rise as="section" i={1} className="mb-9">
         <SectionHead label="Phases" count={phases.length} />
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
           {phases.map((phase) => (
@@ -47,9 +48,10 @@ export default function RoadmapPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Quarterly columns */}
+      <Rise i={2}>
       <SectionHead label="Quarter by quarter" />
       <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
         {quarters.map(({ quarter, items }) => {
@@ -100,6 +102,7 @@ export default function RoadmapPage() {
           );
         })}
       </div>
+      </Rise>
     </div>
   );
 }

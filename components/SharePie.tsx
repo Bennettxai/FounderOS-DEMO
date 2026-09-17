@@ -4,6 +4,10 @@ import { pieSlices, type PieItem } from '@/lib/social-chart';
  * Monolith where color is reserved for status. */
 const SLICE_VARS = ['--funnel-s0', '--funnel-s1', '--funnel-s2', '--funnel-s3', '--funnel-s5', '--funnel-s6'];
 
+/** One full turn of the sweep hand, plus the lead-in before it starts. */
+const SWEEP_MS = 1100;
+const SWEEP_LEAD_MS = 200;
+
 const rad = (deg: number) => (deg * Math.PI) / 180;
 
 /** Donut arc path between two angles at radius r (ring thickness via stroke). */
@@ -66,17 +70,29 @@ export function SharePie({
         role="img"
         aria-label={ariaLabel}
       >
-        {slices.map((s, i) => (
+        {slices.map((s, i) => {
+          // Clockwise sweep from 12 o'clock: each slice draws itself for a
+          // duration proportional to its share, starting where the previous
+          // slice ended, so the ring reads as one continuous hand at constant
+          // angular speed (linear per slice) landing on the real shares.
+          const before = slices.slice(0, i).reduce((acc, x) => acc + x.share, 0);
+          const delay = Math.round(SWEEP_LEAD_MS + before * SWEEP_MS);
+          const dur = Math.max(60, Math.round(s.share * SWEEP_MS));
+          return (
           <path
             key={s.key}
             d={arcPath(C, C, R, s.startAngle + 0.6, s.endAngle - 0.6)}
+            pathLength={1}
+            className="sweep"
+            style={{ animation: `os-sweep ${dur}ms linear both`, animationDelay: `${delay}ms` }}
             fill="none"
             stroke={`var(${SLICE_VARS[i % SLICE_VARS.length]})`}
             strokeWidth={17}
           >
             <title>{`${s.label} · ${format(s.value)} · ${(s.share * 100).toFixed(1)}%`}</title>
           </path>
-        ))}
+          );
+        })}
         <text x={C} y={C - 3} textAnchor="middle" fill="var(--text)" fontSize={15} fontWeight={700} fontFamily="var(--font-mono)" letterSpacing="-0.02em">
           {format(total)}
         </text>

@@ -1,5 +1,6 @@
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { PersonasViewer } from '@/components/PersonasViewer';
 import { Badge } from '@/components/terminal';
 
@@ -15,7 +16,9 @@ export default function PersonasPage() {
         title="Personas"
         right={<Badge tone="accent">{personas.length} templates</Badge>}
       />
-      <PersonasViewer personas={personas} />
+      <Rise i={1}>
+        <PersonasViewer personas={personas} />
+      </Rise>
     </div>
   );
 }

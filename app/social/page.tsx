@@ -1,3 +1,4 @@
+import type React from 'react';
 import Link from 'next/link';
 import { Instagram, Linkedin, Mail, Music2, Twitter, Youtube, type LucideIcon } from 'lucide-react';
 import { getDb } from '@/lib/data';
@@ -17,6 +18,8 @@ import { buildEmailList, syncBeehiivEmail } from '@/lib/email-list';
 import { likeToViewRatio, averageLikeToView, formatRatioPct } from '@/lib/engagement';
 import type { SocialPlatform } from '@/lib/schemas';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 import { Badge, SectionHead } from '@/components/terminal';
 import { formatFollowers, formatPct } from '@/components/SocialStats';
 import { SocialStatStrip } from '@/components/SocialStatStrip';
@@ -123,7 +126,7 @@ export default async function SocialPage() {
           Click through for the platform detail. */}
       <SectionHead label="Accounts" count={`${formatFollowers(total)} total`} />
       <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        {dash.platforms.map((p) => {
+        {dash.platforms.map((p, i) => {
           const Icon = PLATFORM_ICONS[p.platform];
           const share = total > 0 && p.followers != null ? (p.followers / total) * 100 : 0;
           return (
@@ -131,7 +134,8 @@ export default async function SocialPage() {
               key={p.platform}
               href={`/social/${p.platform}`}
               title={`${share.toFixed(0)}% of reach`}
-              className="hoverable group rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+              className="hoverable rise group rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+              style={{ '--rise-i': i } as React.CSSProperties}
             >
               <div className="flex items-center gap-2">
                 <Icon className="h-4 w-4 shrink-0 text-os-text" />
@@ -148,11 +152,11 @@ export default async function SocialPage() {
                 </span>
               </div>
               <div className="mt-3 font-mono text-[26px] font-semibold leading-none tracking-[-0.02em]">
-                {formatFollowers(p.followers)}
+                {p.followers == null ? formatFollowers(null) : <CountUp value={p.followers} kind="followers" />}
               </div>
               <div className="mt-1.5 truncate font-mono text-[9.5px] text-os-dim">{p.handle}</div>
               <div className="mt-3 h-1 overflow-hidden rounded-sm-t bg-os-surface2">
-                <div className="h-full bg-os-accent opacity-60" style={{ width: `${share}%` }} />
+                <div className="fill h-full bg-os-accent opacity-60" style={{ width: `${share}%` }} />
               </div>
             </Link>
           );
@@ -162,7 +166,8 @@ export default async function SocialPage() {
         <Link
           href="/social/beehiiv"
           title={`${total > 0 && email.subscribers != null ? ((email.subscribers / total) * 100).toFixed(0) : 0}% of reach · open Beehiiv analytics`}
-          className="hoverable rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+          className="hoverable rise rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+          style={{ '--rise-i': dash.platforms.length } as React.CSSProperties}
         >
           <div className="flex items-center gap-2">
             <Mail className="h-4 w-4 shrink-0 text-os-accent" />
@@ -177,12 +182,12 @@ export default async function SocialPage() {
             </span>
           </div>
           <div className="mt-3 font-mono text-[26px] font-semibold leading-none tracking-[-0.02em]">
-            {formatFollowers(email.subscribers)}
+            {email.subscribers == null ? formatFollowers(null) : <CountUp value={email.subscribers} kind="followers" />}
           </div>
           <div className="mt-1.5 truncate font-mono text-[9.5px] text-os-dim">Beehiiv · Alex&apos;s Newsletter</div>
           <div className="mt-3 h-1 overflow-hidden rounded-sm-t bg-os-surface2">
             <div
-              className="h-full bg-os-accent opacity-60"
+              className="fill h-full bg-os-accent opacity-60"
               style={{ width: `${total > 0 && email.subscribers != null ? (email.subscribers / total) * 100 : 0}%` }}
             />
           </div>
@@ -192,6 +197,7 @@ export default async function SocialPage() {
       {/* Summary strip — Total reach + Audience-growth + Total-DMs interactive
           tiles, and the Instagram DMs tile (click to open the inbox and reply).
           The old "Top platform" tile was retired as a dead metric. */}
+      <Rise i={dash.platforms.length + 1}>
       <SocialStatStrip
         audienceTotal={total}
         audienceGrowth={audienceGrowth(db)}
@@ -201,10 +207,11 @@ export default async function SocialPage() {
         dmThreads={dmInbox}
         nowMs={Date.now()}
       />
+      </Rise>
 
       {/* Charts left, audience-share pie riding the right of the same card;
           Recent posts live underneath as a row of boxes. */}
-      <div className="mb-6">
+      <Rise i={dash.platforms.length + 2} className="mb-6">
         <AudienceConsistencyLazy
           audience={audiencePoints}
           postDays={postDays}
@@ -226,11 +233,11 @@ export default async function SocialPage() {
             />
           }
         />
-      </div>
+      </Rise>
 
       {/* Recent posts — box row, newest first; the dot strip grades recency
           (all dots lit = most recent, fading down to the oldest). */}
-      <section className="mb-6">
+      <Rise as="section" i={dash.platforms.length + 3} className="mb-6">
         <SectionHead
           label="Recent posts"
           count={
@@ -293,13 +300,13 @@ export default async function SocialPage() {
                 </div>
               ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Publish — compose a post that queues for the Social agent */}
-      <section className="mt-10">
+      <Rise as="section" i={dash.platforms.length + 4} className="mt-10">
         <SectionHead label="Publish" count={`${queued} queued`} link="Social agent" href="/agents" />
         <PostComposer initialPosts={posts} />
-      </section>
+      </Rise>
     </div>
   );
 }

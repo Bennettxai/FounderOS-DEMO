@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getDb } from '@/lib/data';
+import { Rise } from '@/components/motion';
 import {
   attentionQueue,
   funnelSummary,
@@ -355,7 +356,7 @@ export default async function FunnelPage({
   return (
     <div>
       {/* Camera-ready: two slim rows, then the space owns the viewport. */}
-      <header className="mb-2 flex items-end justify-between gap-4">
+      <Rise as="header" i={0} className="mb-2 flex items-end justify-between gap-4">
         <h1 className="text-[25px] font-bold uppercase leading-[1.1] tracking-[0.06em]">Funnel</h1>
         <div className="flex shrink-0 items-center gap-2">
           {isLive ? (
@@ -369,10 +370,10 @@ export default async function FunnelPage({
             {summary.converted}/{summary.clients} converted · {usd(summary.revenueUsd)}
           </Badge>
         </div>
-      </header>
+      </Rise>
 
       {/* one control line: venture filter · synced sources · view toggle */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+      <Rise i={1} className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <span className="flex items-center gap-1.5">
           {VENTURE_TABS.map((tab) => {
             const active = (venture ?? 'all') === tab.id;
@@ -436,11 +437,11 @@ export default async function FunnelPage({
             archive ({archived.length})
           </Link>
         </span>
-      </div>
+      </Rise>
 
       {/* The space — every node is a client travelling toward conversion.
           Leads quiet past DECAY_DAYS decay into the archive tab. */}
-      <section>
+      <Rise as="section" i={2}>
         <div className="rounded-lg-t border border-os-border bg-os-surface p-2">
           {view === 'archive' ? (
             archived.length === 0 ? (
@@ -506,12 +507,12 @@ export default async function FunnelPage({
             <FunnelSpaceLazy nodes={spaceNodes} summary={summary} initialLeadId={lead} />
           ) : null}
         </div>
-      </section>
+      </Rise>
 
       {/* What to act on today — the funnel answering a question. Every row
           click pins that lead's dossier in the canvas above. */}
       {view === 'live' && (attention.pushNow.length > 0 || attention.saveNow.length > 0) && (
-        <section className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <Rise as="section" i={3} className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
           <div className="rounded-lg-t border border-os-border bg-os-surface">
             <div className="flex items-baseline justify-between px-2.5 py-2">
               <span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.22em] text-os-accent">
@@ -550,11 +551,11 @@ export default async function FunnelPage({
               ))
             )}
           </div>
-        </section>
+        </Rise>
       )}
 
       {/* The same clients as formatted data — pick a segment, contact them */}
-      <section className="mt-8">
+      <Rise as="section" i={4} className="mt-8">
         <SectionHead label="Journey data" count={`${tableJourneys.length}`} />
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <Link
@@ -623,7 +624,7 @@ export default async function FunnelPage({
             </table>
           </div>
         )}
-      </section>
+      </Rise>
     </div>
   );
 }

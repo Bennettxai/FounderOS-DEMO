@@ -6,6 +6,8 @@ import { PLATFORM_LABELS, platformDetail, syncFromZernioConfig } from '@/lib/soc
 import type { SocialPlatform } from '@/lib/schemas';
 import { formatFollowers, formatPct, GrowthBadge } from '@/components/SocialStats';
 import { FollowerBarChart } from '@/components/FollowerBarChart';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,7 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
         All platforms
       </Link>
 
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
+      <Rise as="header" i={0} className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[25px] font-bold uppercase leading-[1.1] tracking-[0.06em]">{PLATFORM_LABELS[account.platform]}</h1>
           <p className="mt-1 text-sm text-os-muted">{account.handle}</p>
@@ -44,12 +46,14 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
             <ExternalLink className="h-3 w-3" />
           </a>
         )}
-      </header>
+      </Rise>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 ultra:grid-cols-5">
+      <Rise i={1} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 ultra:grid-cols-5">
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Followers</div>
-          <div className="mt-2 text-3xl font-bold tracking-tight">{formatFollowers(followers)}</div>
+          <div className="mt-2 text-3xl font-bold tracking-tight">
+            {followers === null ? formatFollowers(followers) : <CountUp value={followers} kind="followers" />}
+          </div>
         </div>
         {(
           [
@@ -66,9 +70,9 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
             </div>
           </div>
         ))}
-      </div>
+      </Rise>
 
-      <section className="mt-6 rounded-xl border border-os-border bg-os-surface p-5">
+      <Rise as="section" i={2} className="mt-6 rounded-xl border border-os-border bg-os-surface p-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-os-muted">
             Follower history
@@ -95,7 +99,7 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
             </span>
           </div>
         )}
-      </section>
+      </Rise>
     </div>
   );
 }

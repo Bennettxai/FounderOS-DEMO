@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { LeadMagnets } from '@/components/LeadMagnets';
 import { NewLeadMagnet } from '@/components/NewLeadMagnet';
 import { Badge } from '@/components/terminal';
@@ -33,8 +34,12 @@ export default function LeadMagnetsPage() {
         Every landing page we ship, with the live link on each row. Open it, or copy it straight
         to whoever asked.
       </p>
-      <NewLeadMagnet />
-      <LeadMagnets rows={rows} showCopy manage />
+      <Rise i={1}>
+        <NewLeadMagnet />
+      </Rise>
+      <Rise i={2}>
+        <LeadMagnets rows={rows} showCopy manage />
+      </Rise>
     </div>
   );
 }

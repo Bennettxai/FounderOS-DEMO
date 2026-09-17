@@ -1046,11 +1046,30 @@ export function openDb(path: string) {
           }),
         );
     },
+    /** Single workflow by id, or null when it doesn't exist: the builder's
+     *  update/delete routes use this to tell "not found" from a real 500. */
+    get(id: string): Workflow | null {
+      const r = db.prepare('SELECT * FROM workflows WHERE id = ?').get(id) as any;
+      if (!r) return null;
+      return WorkflowSchema.parse({
+        id: r.id,
+        name: r.name,
+        subtitle: r.subtitle,
+        revenueUsd: r.revenue_usd,
+        order: r.ord,
+        steps: JSON.parse(r.steps),
+      });
+    },
     insert(w: Workflow): void {
       WorkflowSchema.parse(w);
       db.prepare(
         'INSERT OR REPLACE INTO workflows (id, name, subtitle, revenue_usd, ord, steps) VALUES (?, ?, ?, ?, ?, ?)',
       ).run(w.id, w.name, w.subtitle, w.revenueUsd, w.order, JSON.stringify(w.steps));
+    },
+    /** Deletes one workflow by id: the builder's delete affordance. Distinct
+     *  from deleteWhereIdNotIn, which is the seed's bulk reconciliation. */
+    remove(id: string): void {
+      db.prepare('DELETE FROM workflows WHERE id = ?').run(id);
     },
     deleteWhereIdNotIn(ids: string[]): void {
       const placeholders = ids.map(() => '?').join(', ');

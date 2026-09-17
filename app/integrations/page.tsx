@@ -2,6 +2,7 @@ import { allConnectorStatuses } from '@/lib/connectors';
 import { readEnvLocal } from '@/lib/creds';
 import { connectionCatalog, integrationsByCategory, type CatalogEntry } from '@/lib/integrations-catalog';
 import { PageHeader } from '@/components/PageHeader';
+import { Rise } from '@/components/motion';
 import { ApiKeys } from '@/components/ApiKeys';
 import { SectionHead } from '@/components/terminal';
 import { ConnectionCard } from '@/components/ConnectionCard';
@@ -29,28 +30,28 @@ export default async function ConnectionsPage() {
 
       {/* Your connected tools — driven by real connector status */}
       {connected.length > 0 && (
-        <section className="mb-8">
+        <Rise as="section" i={1} className="mb-8">
           <SectionHead label="Your connected tools" count={connected.length} />
           <div className={GRID}>
             {connected.map((entry) => (
               <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
             ))}
           </div>
-        </section>
+        </Rise>
       )}
 
       {/* Popular */}
-      <section className="mb-8">
+      <Rise as="section" i={2} className="mb-8">
         <SectionHead label="Popular" count={popular.length} />
         <div className={GRID}>
           {popular.map((entry) => (
             <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
           ))}
         </div>
-      </section>
+      </Rise>
 
       {/* Browse by category — collapsible */}
-      <section className="mb-8">
+      <Rise as="section" i={3} className="mb-8">
         <SectionHead label="Browse by category" count={categories.length} />
         <div className="flex flex-col gap-2.5">
           {categories.map(([category, tools], idx) => (
@@ -67,9 +68,11 @@ export default async function ConnectionsPage() {
             </IntegrationCategory>
           ))}
         </div>
-      </section>
+      </Rise>
 
-      <ApiKeys />
+      <Rise i={4}>
+        <ApiKeys />
+      </Rise>
     </div>
   );
 }

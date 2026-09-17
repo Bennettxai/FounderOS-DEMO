@@ -3,6 +3,8 @@ import { ArrowLeft, ExternalLink, Mail } from 'lucide-react';
 import { getNewsletters, newsletterSummary } from '@/lib/newsletters';
 import { beehiivSubscribers } from '@/lib/connectors/beehiiv';
 import { NewsletterList } from '@/components/NewsletterList';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,7 @@ export default async function BeehiivDashboardPage() {
         All platforms
       </Link>
 
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-3">
+      <Rise as="header" i={0} className="mb-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="mb-1 flex items-center gap-2">
             <Mail className="h-4 w-4 text-os-accent" />
@@ -44,16 +46,20 @@ export default async function BeehiivDashboardPage() {
           Open Beehiiv
           <ExternalLink className="h-3 w-3" />
         </a>
-      </header>
+      </Rise>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Rise i={1} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Subscribers</div>
-          <div className="mt-2 text-3xl font-bold tracking-tight">{fmt(subscribers)}</div>
+          <div className="mt-2 text-3xl font-bold tracking-tight">
+            {subscribers == null ? fmt(subscribers) : <CountUp value={subscribers} kind="followers" />}
+          </div>
         </div>
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Newsletters sent</div>
-          <div className="mt-2 text-3xl font-bold tracking-tight">{fmt(summary.count)}</div>
+          <div className="mt-2 text-3xl font-bold tracking-tight">
+            <CountUp value={summary.count} kind="followers" />
+          </div>
         </div>
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Avg open rate</div>
@@ -63,15 +69,15 @@ export default async function BeehiivDashboardPage() {
           <div className="text-xs uppercase tracking-wider text-os-muted">Best open rate</div>
           <div className="mt-2 text-3xl font-bold tracking-tight">{pct(summary.bestOpenRate)}</div>
         </div>
-      </div>
+      </Rise>
 
-      <section className="mt-8">
+      <Rise as="section" i={2} className="mt-8">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-os-muted">Past newsletters</h2>
           <span className="font-mono text-[10px] text-os-dim">click any issue to expand its analytics</span>
         </div>
         <NewsletterList newsletters={newsletters} />
-      </section>
+      </Rise>
     </div>
   );
 }
