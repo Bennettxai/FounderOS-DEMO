@@ -520,9 +520,6 @@ export function seedDatabase(db: FounderDb): void {
   // No replacement demo data is inserted.
   // ----------------------------------------------------------------------
 
-  db.people.deleteWhereIdNotIn([]);
-  db.leadMagnets.deleteWhereIdNotIn([]);
-  db.sopTasks.deleteWhereIdNotIn([]);
   db.workflows.deleteWhereIdNotIn([]);
   db.skills.deleteWhereIdNotIn([]);
 

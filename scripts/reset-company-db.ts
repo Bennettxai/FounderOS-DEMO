@@ -62,9 +62,6 @@ try {
   const agents = db.agents.all();
 
   const legacyCounts = {
-    people: db.people.all().length,
-    leadMagnets: db.leadMagnets.all().length,
-    sopTasks: db.sopTasks.all().length,
     workflows: db.workflows.all().length,
     skills: db.skills.all().length,
     tools: db.tools.all().length,

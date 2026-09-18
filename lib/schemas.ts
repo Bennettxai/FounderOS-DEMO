@@ -252,13 +252,6 @@ export const AgentCronSchema = z.object({
 // A person is a human employee on the org graph (distinct from agents). A SOP
 // task is one written-out job owned by exactly ONE worker — an agent or a
 // person, never both, never shared (the "monogamy" rule; enforced by tests).
-export const PersonSchema = z.object({
-  id: z.string().min(1),
-  departmentId: z.string().min(1),
-  name: z.string().min(1),
-  role: z.string().min(1),
-  tools: z.array(z.string().min(1)).min(1), // same slug namespace agents use
-});
 
 export const SopAssigneeKindSchema = z.enum(['agent', 'person']);
 
@@ -266,36 +259,7 @@ export const SopAssigneeKindSchema = z.enum(['agent', 'person']);
 export const LeadMagnetStatusSchema = z.enum(['live', 'draft', 'paused', 'archived']);
 export type LeadMagnetStatus = z.infer<typeof LeadMagnetStatusSchema>;
 
-export const LeadMagnetSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  /** what the visitor actually gets */
-  offer: z.string(),
-  url: z.string().url(),
-  status: LeadMagnetStatusSchema,
-  /** what the page asks for: an email, a booking, or nothing yet */
-  captures: z.enum(['email', 'booking', 'none']),
-  /** where those leads land (newsletter list, CRM, calendar) */
-  destination: z.string(),
-  /** the campaign / post this page was built for */
-  source: z.string(),
-  launchedAt: z.string().min(4),
-  notes: z.string().default(''),
-  /** who made it: the seed file, or the operator creating one from the OS. Seeding
-   *  may only prune its own rows, so 'os' rows survive a re-seed. */
-  origin: z.enum(['seed', 'os']).default('seed'),
-});
-export type LeadMagnet = z.infer<typeof LeadMagnetSchema>;
 
-export const SopTaskSchema = z.object({
-  id: z.string().min(1),
-  departmentId: z.string().min(1),
-  title: z.string().min(1), // the job, stated as work ("Triage the four inboxes")
-  summary: z.string(),
-  steps: z.array(z.string().min(1)).min(3), // the written-out SOP checklist
-  assigneeKind: SopAssigneeKindSchema,
-  assigneeId: z.string().min(1),
-});
 
 // ── Workflows — the machine, mapped as a chain of owned process steps ───────
 // Each step is owned by a human or an agent, costs weekly hours, may leak money
@@ -385,9 +349,7 @@ export type LifeMapNode = z.infer<typeof LifeMapNodeSchema>;
 export type LifeMap = z.infer<typeof LifeMapSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
-export type Person = z.infer<typeof PersonSchema>;
 export type SopAssigneeKind = z.infer<typeof SopAssigneeKindSchema>;
-export type SopTask = z.infer<typeof SopTaskSchema>;
 export type RosterClient = z.infer<typeof RosterClientSchema>;
 export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;

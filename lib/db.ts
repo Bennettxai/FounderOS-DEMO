@@ -13,10 +13,6 @@ import {
   MetricSchema,
   PhaseSchema,
   RoadmapItemSchema,
-  PersonSchema,
-  LeadMagnetSchema,
-  type LeadMagnet,
-  SopTaskSchema,
   WorkflowSchema,
   SkillSchema,
   ToolSchema,
@@ -32,8 +28,6 @@ import {
   type Metric,
   type Phase,
   type RoadmapItem,
-  type Person,
-  type SopTask,
   type Workflow,
   type Skill,
   type Tool,
@@ -146,35 +140,6 @@ CREATE TABLE IF NOT EXISTS broadcast_replies (
   finished_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS people (
-  id TEXT PRIMARY KEY,
-  department_id TEXT NOT NULL REFERENCES departments(id),
-  name TEXT NOT NULL,
-  role TEXT NOT NULL,
-  tools TEXT NOT NULL DEFAULT '[]'
-);
-CREATE TABLE IF NOT EXISTS lead_magnets (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  offer TEXT NOT NULL DEFAULT '',
-  url TEXT NOT NULL,
-  status TEXT NOT NULL,
-  captures TEXT NOT NULL,
-  destination TEXT NOT NULL DEFAULT '',
-  source TEXT NOT NULL DEFAULT '',
-  launched_at TEXT NOT NULL,
-  notes TEXT NOT NULL DEFAULT '',
-  origin TEXT NOT NULL DEFAULT 'seed'
-);
-CREATE TABLE IF NOT EXISTS sop_tasks (
-  id TEXT PRIMARY KEY,
-  department_id TEXT NOT NULL REFERENCES departments(id),
-  title TEXT NOT NULL,
-  summary TEXT NOT NULL DEFAULT '',
-  steps TEXT NOT NULL DEFAULT '[]',
-  assignee_kind TEXT NOT NULL,
-  assignee_id TEXT NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS workflows (
   id TEXT PRIMARY KEY,
@@ -247,21 +212,12 @@ function rowToAgent(row: AgentRow): Agent {
   });
 }
 
-/** lead_magnets gained `origin` when the operator started creating them from the
- *  OS; older databases predate the column. */
-function migrateLeadMagnetsTable(db: InstanceType<typeof Database>): void {
-  const columns = new Set(
-    (db.prepare('PRAGMA table_info(lead_magnets)').all() as { name: string }[]).map((c) => c.name),
-  );
-  if (!columns.has('origin')) db.exec("ALTER TABLE lead_magnets ADD COLUMN origin TEXT NOT NULL DEFAULT 'seed'");
-}
 
 export function openDb(path: string) {
   const db = new Database(path);
   db.pragma('journal_mode = WAL');
   db.exec(DDL);
   migrateAgentsTable(db);
-  migrateLeadMagnetsTable(db);
   migrateSkillsTable(db);
 
   const departments = {
@@ -556,113 +512,6 @@ export function openDb(path: string) {
     },
   };
 
-  const people = {
-    all(): Person[] {
-      return db
-        .prepare('SELECT * FROM people ORDER BY department_id, name')
-        .all()
-        .map((r: any) =>
-          PersonSchema.parse({
-            id: r.id,
-            departmentId: r.department_id,
-            name: r.name,
-            role: r.role,
-            tools: JSON.parse(r.tools),
-          }),
-        );
-    },
-    insert(p: Person): void {
-      PersonSchema.parse(p);
-      db.prepare(
-        'INSERT OR REPLACE INTO people (id, department_id, name, role, tools) VALUES (?, ?, ?, ?, ?)',
-      ).run(p.id, p.departmentId, p.name, p.role, JSON.stringify(p.tools));
-    },
-    deleteWhereIdNotIn(ids: string[]): void {
-      const placeholders = ids.map(() => '?').join(', ');
-      db.prepare(`DELETE FROM people WHERE id NOT IN (${placeholders})`).run(...ids);
-    },
-  };
-
-  const leadMagnets = {
-    all(): LeadMagnet[] {
-      return db
-        .prepare('SELECT * FROM lead_magnets ORDER BY launched_at DESC, name')
-        .all()
-        .map((r: any) =>
-          LeadMagnetSchema.parse({
-            id: r.id,
-            name: r.name,
-            offer: r.offer,
-            url: r.url,
-            status: r.status,
-            captures: r.captures,
-            destination: r.destination,
-            source: r.source,
-            launchedAt: r.launched_at,
-            notes: r.notes,
-            origin: r.origin ?? 'seed',
-          }),
-        );
-    },
-    insert(m: LeadMagnet): void {
-      LeadMagnetSchema.parse(m);
-      db.prepare(
-        'INSERT OR REPLACE INTO lead_magnets (id, name, offer, url, status, captures, destination, source, launched_at, notes, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      ).run(m.id, m.name, m.offer, m.url, m.status, m.captures, m.destination, m.source, m.launchedAt, m.notes, m.origin ?? 'seed');
-    },
-    byId(id: string): LeadMagnet | null {
-      const r = db.prepare('SELECT * FROM lead_magnets WHERE id = ?').get(id) as any;
-      if (!r) return null;
-      return LeadMagnetSchema.parse({
-        id: r.id, name: r.name, offer: r.offer, url: r.url, status: r.status,
-        captures: r.captures, destination: r.destination, source: r.source,
-        launchedAt: r.launched_at, notes: r.notes, origin: r.origin ?? 'seed',
-      });
-    },
-    /** Delete one row by id. Returns false when it was not there, so the API
-     *  can 404 instead of pretending. */
-    remove(id: string): boolean {
-      return db.prepare('DELETE FROM lead_magnets WHERE id = ?').run(id).changes > 0;
-    },
-    /** Prune retired SEED rows only. Anything created from the OS is the operator's
-     *  and is never deleted by a re-seed. */
-    deleteWhereIdNotIn(ids: string[]): void {
-      const placeholders = ids.map(() => '?').join(', ');
-      db.prepare(
-        `DELETE FROM lead_magnets WHERE origin = 'seed' AND id NOT IN (${placeholders})`,
-      ).run(...ids);
-    },
-  };
-
-  const sopTasks = {
-    all(): SopTask[] {
-      return db
-        .prepare('SELECT * FROM sop_tasks ORDER BY department_id, title')
-        .all()
-        .map((r: any) =>
-          SopTaskSchema.parse({
-            id: r.id,
-            departmentId: r.department_id,
-            title: r.title,
-            summary: r.summary,
-            steps: JSON.parse(r.steps),
-            assigneeKind: r.assignee_kind,
-            assigneeId: r.assignee_id,
-          }),
-        );
-    },
-    insert(t: SopTask): void {
-      SopTaskSchema.parse(t);
-      db.prepare(
-        'INSERT OR REPLACE INTO sop_tasks (id, department_id, title, summary, steps, assignee_kind, assignee_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).run(t.id, t.departmentId, t.title, t.summary, JSON.stringify(t.steps), t.assigneeKind, t.assigneeId);
-    },
-    deleteWhereIdNotIn(ids: string[]): void {
-      const placeholders = ids.map(() => '?').join(', ');
-      db.prepare(`DELETE FROM sop_tasks WHERE id NOT IN (${placeholders})`).run(...ids);
-    },
-  };
-
   const workflows = {
     all(): Workflow[] {
       return db
@@ -737,9 +586,6 @@ export function openDb(path: string) {
     agentTasks,
     agentCrons,
     broadcasts,
-    people,
-    leadMagnets,
-    sopTasks,
     workflows,
     skills,
     close: () => db.close(),
