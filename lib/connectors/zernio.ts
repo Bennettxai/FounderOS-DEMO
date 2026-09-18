@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { CRED_FILES, resolveCred } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 const CONFIG_PATH = path.join(os.homedir(), '.config/social', 'config.json');
@@ -26,7 +26,7 @@ export function zernioAccounts(): Record<string, { handle?: string; followers?: 
 }
 
 export function zernioKey(): string | undefined {
-  return resolveCred('ZERNIO_API_KEY', [CRED_FILES.socialMedia, CRED_FILES.agentsEnv]);
+  return resolveCred('ZERNIO_API_KEY');
 }
 
 // ── Live follower counts ────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ export async function zernioStatus(): Promise<ConnectorStatus> {
       name: 'Zernio (Social)',
       kind: 'social',
       state: 'not_configured',
-      detail: 'ZERNIO_API_KEY not found in env, ~/.config/social/.env, or knowledge/.env.agents.',
+      detail: 'ZERNIO_API_KEY not set (add it to .env.local).',
     };
   }
   const followers = accounts.reduce((sum, [, a]) => sum + (a.followers ?? 0), 0);

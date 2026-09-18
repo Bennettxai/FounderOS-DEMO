@@ -8,7 +8,7 @@
  * AI_GATEWAY_API_KEY ⇒ not_configured, never a fake "connected".
  */
 import { z } from 'zod';
-import { CRED_FILES, resolveCred } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export type LlmRole = 'system' | 'user' | 'assistant' | 'tool';
@@ -40,9 +40,9 @@ export interface LlmProvider {
 const GATEWAY_KEY = 'AI_GATEWAY_API_KEY';
 const DEFAULT_MODEL = process.env.LLM_MODEL ?? 'anthropic/claude-sonnet-5';
 
-/** process.env first (Next auto-loads .env.local), then Alex's cred files. */
+/** .env.local (fresh) then process.env — no machine-wide file fallback. */
 function resolveGatewayKey(): string | undefined {
-  return resolveCred(GATEWAY_KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  return resolveCred(GATEWAY_KEY);
 }
 
 /** Stub trigger: a user message containing `use-tool:<name>` fires that tool. */
@@ -72,8 +72,8 @@ export function createGatewayProvider(model: string = DEFAULT_MODEL): LlmProvide
     name: 'gateway',
     async chat(req) {
       // Fail fast with an honest message instead of letting the SDK hang —
-      // and hydrate process.env from Alex's cred files so a key that
-      // exists outside .env.local still works.
+      // and hydrate process.env from a fresh .env.local read so a key pasted
+      // via the connect flow works without a restart.
       const key = resolveGatewayKey();
       if (!key) {
         throw new Error('AI_GATEWAY_API_KEY is not set — add it to .env.local to enable agent chat.');

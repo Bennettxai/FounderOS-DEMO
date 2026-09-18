@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { INTEGRATIONS, connectKeysFor } from '@/lib/integrations-catalog';
 import { readEnvLocal, upsertEnvLocal, removeEnvLocal } from '@/lib/creds';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,9 @@ function entryFor(slug: string) {
 }
 
 export async function POST(req: Request) {
+  const gate = requireSession(req);
+  if (gate) return gate;
+
   let body: z.infer<typeof ConnectBody>;
   try {
     body = ConnectBody.parse(await req.json());
@@ -59,6 +63,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  const gate = requireSession(req);
+  if (gate) return gate;
+
   let body: z.infer<typeof DisconnectBody>;
   try {
     body = DisconnectBody.parse(await req.json());

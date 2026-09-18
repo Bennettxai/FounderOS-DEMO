@@ -4,13 +4,13 @@
  * a Private Integration Token (Settings → Private Integrations, read scopes)
  * plus the location id. Never reports a fake "connected".
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export async function ghlStatus(): Promise<ConnectorStatus> {
   const base = { id: 'ghl', name: 'GoHighLevel', kind: 'crm' } as const;
-  const key = resolveCred('GHL_API_KEY', [CRED_FILES.agentsEnv]);
-  const locationId = resolveCred('GHL_LOCATION_ID', [CRED_FILES.agentsEnv]);
+  const key = resolveCred('GHL_API_KEY');
+  const locationId = resolveCred('GHL_LOCATION_ID');
   if (!key || !locationId) {
     return {
       ...base,

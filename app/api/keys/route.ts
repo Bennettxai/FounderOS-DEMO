@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'node:path';
 import { z } from 'zod';
 import { KEY_SLOTS, listKeyStatuses, upsertEnvLocal } from '@/lib/keys';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ const SetKeySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = SetKeySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

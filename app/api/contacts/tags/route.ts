@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDb } from '@/lib/data';
 import { CONTACT_TIERS } from '@/lib/life-map';
 import { ContactTagSchema } from '@/lib/schemas';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = ContactTagSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
@@ -22,6 +26,9 @@ export async function POST(request: Request) {
 const RemoveSchema = z.object({ person: z.string().min(1), channel: z.string().min(1) });
 
 export async function DELETE(request: Request) {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = RemoveSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

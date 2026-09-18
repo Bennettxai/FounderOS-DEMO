@@ -10,7 +10,7 @@
  * first stage → first_touch, then engaged (<0.4), nurtured (<0.75), opted_in;
  * a `won` opportunity is the conversion regardless of stage.
  */
-import { resolveCred, CRED_FILES } from '@/lib/creds';
+import { resolveCred } from '@/lib/creds';
 import { FUNNEL_STAGES } from '@/lib/funnel';
 import { FunnelJourneySchema, type FunnelJourney, type FunnelStage, type FunnelTouch } from '@/lib/schemas';
 
@@ -156,8 +156,8 @@ export async function ghlFunnelJourneys(
   now = new Date(),
 ): Promise<{ journeys: FunnelJourney[]; excluded: number; total: number } | null> {
   if ((process.env.FUNNEL_PROVIDER ?? 'attio') !== 'attio') return null; // seed-pinned (tests)
-  const key = resolveCred('GHL_API_KEY', [CRED_FILES.agentsEnv]);
-  const locationId = resolveCred('GHL_LOCATION_ID', [CRED_FILES.agentsEnv]);
+  const key = resolveCred('GHL_API_KEY');
+  const locationId = resolveCred('GHL_LOCATION_ID');
   if (!key || !locationId) return null;
   const headers = { Authorization: `Bearer ${key}`, Version: GHL_VERSION, Accept: 'application/json' };
   try {

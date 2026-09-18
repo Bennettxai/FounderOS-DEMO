@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDb } from '@/lib/data';
 import { sendManyChatText } from '@/lib/connectors/manychat';
 import type { SocialDmMessage } from '@/lib/schemas';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ const ReplySchema = z.object({
  * a reply that didn't actually go out.
  */
 export async function POST(request: Request): Promise<Response> {
+  const gate = requireSession(request);
+  if (gate) return gate;
+
   const parsed = ReplySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: parsed.error.flatten() }, { status: 400 });

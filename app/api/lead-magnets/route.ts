@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/lib/data';
 import { LeadMagnetStatusSchema } from '@/lib/schemas';
+import { requireSession } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const gate = requireSession(req);
+  if (gate) return gate;
+
   const parsed = CreateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });

@@ -19,7 +19,7 @@ import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
 import { getBrainProvider } from '@/lib/brain';
-import { resolveManychatKey, runtimeEnv } from '@/lib/creds';
+import { runtimeEnv } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 async function brainConnectorStatus(): Promise<ConnectorStatus> {
@@ -40,17 +40,7 @@ const CHECKS: [string, ConnectorStatus['kind'], () => Promise<ConnectorStatus>][
   ['whatsapp', 'social', whatsappStatus],
   ['zernio', 'social', zernioStatus],
   ['beehiiv', 'social', () => beehiivStatus(runtimeEnv())],
-  [
-    'manychat',
-    'social',
-    () => {
-      // Alex's real key rides in ~/.config/mcp.json (the manychat MCP
-      // registration), same reuse pattern as Attio — .env.local still wins.
-      const env = runtimeEnv();
-      if (!env.MANYCHAT_API_KEY) env.MANYCHAT_API_KEY = resolveManychatKey();
-      return manychatStatus(env);
-    },
-  ],
+  ['manychat', 'social', () => manychatStatus(runtimeEnv())],
   ['attio', 'crm', attioStatus],
   ['webinarjam', 'crm', webinarjamStatus],
   ['trakyo', 'crm', trakyoStatus],

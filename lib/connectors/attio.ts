@@ -10,7 +10,7 @@ export async function attioStatus(): Promise<ConnectorStatus> {
       name: 'Attio (CRM)',
       kind: 'crm',
       state: 'not_configured',
-      detail: 'ATTIO_API_KEY not found in env or ~/.config/mcp.json mcpServers.',
+      detail: 'ATTIO_API_KEY not set (add it to .env.local).',
     };
   }
   try {

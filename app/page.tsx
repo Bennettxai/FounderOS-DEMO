@@ -194,7 +194,7 @@ export default async function HomePage() {
 
       <PageHeader
         eyebrow="operator console"
-        title={`${greeting()}, Alex`}
+        title={`${greeting()}, Moses`}
         caret
         right={<Kbd>⌘K</Kbd>}
       />
