@@ -129,72 +129,6 @@ export const ActivityEventSchema = z.object({
   ok: z.boolean().optional(),
 });
 
-export const BrainOverviewSchema = z.object({
-  store: z.object({
-    path: z.string().min(1),
-    totalFiles: z.number().int().nonnegative(),
-    folders: z.array(z.object({ name: z.string().min(1), files: z.number().int().positive() })),
-  }),
-  doctor: z.object({
-    connected: z.boolean(),
-    status: z.string().min(1),
-    healthScore: z.number().nullable(),
-    checks: z.array(z.object({ name: z.string(), status: z.string(), message: z.string() })),
-    detail: z.string(),
-  }),
-});
-
-export const BrainGraphNodeSchema = z.object({
-  id: z.string().min(1),
-  type: z.enum(['folder', 'page']),
-  label: z.string().min(1),
-  folder: z.string().min(1),
-  kind: z.string().min(1), // color-key for future per-type/per-person color coding
-  excerpt: z.string(),
-  wordCount: z.number().int().nonnegative(),
-  tags: z.array(z.string()),
-  agents: z.array(z.string()),
-  vx: z.number().min(-1).max(1), // embedding projection coords
-  vy: z.number().min(-1).max(1),
-  vector: z.array(z.number()), // 64-dim lexical embedding fingerprint
-  chunks: z.number().int().nonnegative(), // embedding-pipeline chunk count
-});
-
-export const BrainGraphEdgeSchema = z.object({
-  source: z.string().min(1),
-  target: z.string().min(1),
-  type: z.enum(['member', 'wikilink', 'similar']),
-});
-
-export const BrainGraphSchema = z.object({
-  nodes: z.array(BrainGraphNodeSchema),
-  edges: z.array(BrainGraphEdgeSchema),
-  // PCA basis of the store's embedding space, so the client can project
-  // a live query vector into the same 2D plane the nodes occupy.
-  space: z.object({
-    dim: z.number().int().positive(),
-    mean: z.array(z.number()),
-    components: z.array(z.array(z.number())).length(2),
-    scale: z.number(),
-  }),
-});
-
-
-export const LifeMapNodeSchema = z.object({
-  id: z.string().min(1),
-  type: z.enum(['center', 'area', 'module', 'tier']),
-  label: z.string().min(1),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  parent: z.string().nullable(),
-  detail: z.string(),
-  agents: z.array(z.string()),
-  brainFolders: z.array(z.string()),
-});
-
-export const LifeMapSchema = z.object({
-  nodes: z.array(LifeMapNodeSchema),
-  edges: z.array(z.object({ source: z.string().min(1), target: z.string().min(1) })),
-});
 
 export const AgentTaskSchema = z.object({
   id: z.string().min(1),
@@ -220,12 +154,6 @@ export const AgentCronSchema = z.object({
 // A person is a human employee on the org graph (distinct from agents). A SOP
 // task is one written-out job owned by exactly ONE worker — an agent or a
 // person, never both, never shared (the "monogamy" rule; enforced by tests).
-
-export const SopAssigneeKindSchema = z.enum(['agent', 'person']);
-
-// ── Lead magnets — every landing page we ship, as a register ───────────────
-export const LeadMagnetStatusSchema = z.enum(['live', 'draft', 'paused', 'archived']);
-export type LeadMagnetStatus = z.infer<typeof LeadMagnetStatusSchema>;
 
 
 
@@ -296,7 +224,6 @@ export type Department = z.infer<typeof DepartmentSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type Tool = z.infer<typeof ToolSchema>;
-export type BrainOverview = z.infer<typeof BrainOverviewSchema>;
 export type AgentTier = z.infer<typeof AgentTierSchema>;
 export type Broadcast = z.infer<typeof BroadcastSchema>;
 export type BroadcastReply = z.infer<typeof BroadcastReplySchema>;
@@ -305,14 +232,8 @@ export type AgentMessage = z.infer<typeof AgentMessageSchema>;
 export type AgentToolCall = z.infer<typeof AgentToolCallSchema>;
 export type AgentMessageRole = z.infer<typeof AgentMessageRoleSchema>;
 export type ActivityEvent = z.infer<typeof ActivityEventSchema>;
-export type BrainGraphNode = z.infer<typeof BrainGraphNodeSchema>;
-export type BrainGraphEdge = z.infer<typeof BrainGraphEdgeSchema>;
-export type BrainGraph = z.infer<typeof BrainGraphSchema>;
-export type LifeMapNode = z.infer<typeof LifeMapNodeSchema>;
-export type LifeMap = z.infer<typeof LifeMapSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
-export type SopAssigneeKind = z.infer<typeof SopAssigneeKindSchema>;
 export type RosterClient = z.infer<typeof RosterClientSchema>;
 export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
 export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
