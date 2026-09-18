@@ -6,7 +6,7 @@ import { POST } from '@/app/api/lead-magnets/route';
 import { PATCH, DELETE } from '@/app/api/lead-magnets/[id]/route';
 
 /**
- * Rounding out the panel a register you can only add to
+ * Rounding out the panel (the operator, 2026-08-14): a register you can only add to
  * is half a tool. A row has to be retirable and editable from the same page.
  */
 

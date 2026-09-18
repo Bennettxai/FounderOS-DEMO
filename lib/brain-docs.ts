@@ -104,7 +104,7 @@ export function buildBrainDocs(input: DocsInput): BrainDoc[] {
         ? `${(owner as Agent | undefined)?.instance ?? 'builtin'} · ${(owner as Agent | undefined)?.model ?? 'unknown'}`
         : 'human · judgment call';
     const lead = humanLeadByDept.get(t.departmentId);
-    const escalateTo = t.assigneeKind === 'person' ? 'Alex' : lead ? `${lead.name} (${link(lead.id)})` : 'Alex';
+    const escalateTo = t.assigneeKind === 'person' ? 'the operator' : lead ? `${lead.name} (${link(lead.id)})` : 'the operator';
     const firstStep = t.steps[0] ?? '';
     const lastStep = t.steps[t.steps.length - 1] ?? '';
     docs.push({

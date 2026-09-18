@@ -5,11 +5,12 @@ import type { Agent, AgentRun, Department, Person, SopTask } from '@/lib/schemas
 import { graphDirectory, toolSlugOf, type KnowledgeGraph as KGData, type DirectoryGroup } from '@/lib/knowledge-graph';
 import { neuralLayout, NEURAL_H, NEURAL_W, type NeuralStrand } from '@/lib/neural-layout';
 import { NeuralDetail } from '@/components/NeuralDetail';
+import type { WikiIndex } from '@/lib/brain-wiki';
 import { GraphDirectory } from '@/components/GraphDirectory';
 
 /**
  * The horizontal "neural network" view of the SAME knowledge graph: tools as
- * the labeled input layer, then workers → SOP tasks → pillars → the Notes
+ * the labeled input layer, then workers → SOP tasks → pillars → the Obsidian
  * core as the single output neuron. Deep navy canvas, thousands of silky
  * signed strands (green positive / red negative, opacity by magnitude, cheap
  * two-pass bloom), floating terminal layer-cards with a clickable activation,
@@ -56,7 +57,7 @@ const hoverKind = (id: string): string => {
 };
 
 export function NeuralGraph({
-  graph, agents = [], departments = [], people = [], tasks = [], runsByAgent = {},
+  graph, agents = [], departments = [], people = [], tasks = [], runsByAgent = {}, wiki,
 }: {
   graph: KGData;
   agents?: Agent[];
@@ -64,6 +65,8 @@ export function NeuralGraph({
   people?: Person[];
   tasks?: SopTask[];
   runsByAgent?: Record<string, AgentRun>;
+  /** real brain-store pages for the agent + tool nodes (lib/brain-wiki) */
+  wiki?: WikiIndex;
 }) {
   const { layers, pos, strands, reports } = useMemo(() => neuralLayout(graph), [graph]);
   const labelById = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n.label])), [graph]);
@@ -251,7 +254,7 @@ export function NeuralGraph({
                   )}
                   {isSelf && (
                     <text y={24} textAnchor="middle" fontFamily="var(--font-mono)" fontSize={9.5} fontWeight={600} fill="var(--kg-mem, #e35c35)">
-                      Notes
+                      Obsidian
                     </text>
                   )}
                 </g>
@@ -310,6 +313,7 @@ export function NeuralGraph({
             people={people}
             tasks={tasks}
             runsByAgent={runsByAgent}
+            wiki={wiki}
             onSelect={setSelectedId}
             onClose={() => setSelectedId(null)}
           />

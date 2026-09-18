@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
+import { Badge, SectionHead } from '@/components/terminal';
 import { WorkflowTree, type AgentPresence } from '@/components/WorkflowTree';
+import { ScheduledTasks } from '@/components/ScheduledTasks';
+import { scheduledJobRows } from '@/lib/scheduled-jobs';
 import { BrandLogo } from '@/lib/brand-logos';
 import { toolBrand } from '@/lib/workflow-tool-brands';
 import { agentAvatars } from '@/lib/agent-avatars';
@@ -13,14 +15,33 @@ export const dynamic = 'force-dynamic';
 const RUNS_PER_OWNER = 4;
 
 /**
- * The process map: collapsed cards that expand into a vertical tree with
- * real forks, a step-detail drawer, and a builder that writes the same
+ * Two halves. The clock half (scheduled tasks, real crons, real run history)
+ * is the operator's and stays first. The process-map half is the Slab tree
+ * (imported): collapsed cards that expand into a vertical tree
+ * with real forks, a step-detail drawer, and a builder that writes the same
  * workflows table.
  */
 export default function WorkflowsPage() {
   const db = getDb();
   const workflows = db.workflows.all();
   const agents = db.agents.all();
+
+  // The clock half: what the OS runs on a schedule, and whether it actually
+  // ran. Names resolve from the agent roster so a row reads as "Stack Monitor"
+  // rather than a slug, and an unresolvable one is flagged instead of quietly
+  // rendered blank.
+  const crons = db.agentCrons.all();
+  const jobs = scheduledJobRows({
+    crons,
+    stats: db.cronRuns.statsByCron(),
+    agentNames: Object.fromEntries(agents.map((a) => [a.id, a.name])),
+    // Real run history per cron, straight off cron_runs, for the 12-run strip
+    // and the inline failure summary.
+    recentRuns: Object.fromEntries(
+      crons.map((c) => [c.id, db.cronRuns.byCron(c.id, 12).map((r) => ({ ok: r.ok, summary: r.summary }))]),
+    ),
+  });
+  const healthy = jobs.filter((j) => j.enabled && !j.unknownAgent && !j.overdue && j.lastOk !== false).length;
 
   // Render the company logos here, server-side: BrandLogo pulls simple-icons,
   // which must never enter the client bundle. The tree receives ready nodes.
@@ -53,17 +74,25 @@ export default function WorkflowsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="process map" title="Workflows" />
-      <Rise i={1}>
-        <WorkflowTree
-          workflows={workflows}
-          toolLogos={toolLogos}
-          agentPresence={agentPresence}
-          agents={agents.map((a) => ({ id: a.id, name: a.name }))}
-          avatarByOwner={avatarByOwner}
-          runsByOwner={runsByOwner}
-        />
-      </Rise>
+      <PageHeader
+        eyebrow="scheduled tasks + process map"
+        title="Workflows"
+        right={
+          <Badge tone={healthy === jobs.length ? 'accent' : 'default'}>
+            {jobs.length} crons · {healthy} healthy
+          </Badge>
+        }
+      />
+      <ScheduledTasks jobs={jobs} agents={agents.map((a) => ({ id: a.id, name: a.name }))} />
+      <SectionHead label="Process map" />
+      <WorkflowTree
+        workflows={workflows}
+        toolLogos={toolLogos}
+        agentPresence={agentPresence}
+        agents={agents.map((a) => ({ id: a.id, name: a.name }))}
+        avatarByOwner={avatarByOwner}
+        runsByOwner={runsByOwner}
+      />
     </div>
   );
 }

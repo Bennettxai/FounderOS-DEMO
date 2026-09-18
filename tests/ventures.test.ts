@@ -12,7 +12,7 @@ import { realAgents } from '@/lib/agents/real';
 const KNOWN_AGENTS = new Set(realAgents.map((a) => a.id));
 
 describe('VENTURES', () => {
-  test("Alex's two active income sources, each with a distinct color and brain tag", () => {
+  test('the two active income sources, each with a distinct color and brain tag', () => {
     expect(VENTURES.map((v) => v.id)).toEqual(['vantage', 'launchpad-cohort']);
     expect(new Set(VENTURES.map((v) => v.color)).size).toBe(2);
     expect(new Set(VENTURES.map((v) => v.brainTag)).size).toBe(2);

@@ -1,6 +1,4 @@
 import Link from 'next/link';
-import { getDb } from '@/lib/data';
-import { Rise } from '@/components/motion';
 import {
   attentionQueue,
   funnelSummary,
@@ -13,9 +11,7 @@ import {
 } from '@/lib/funnel';
 import { funnelSpaceModel } from '@/lib/funnel';
 import { funnelRadialModel } from '@/lib/funnel-radial';
-import { attioFunnelJourneys } from '@/lib/funnel-live';
-import { ghlFunnelJourneys } from '@/lib/funnel-ghl';
-import { mergeTrakyoTouches, trakyoTouches } from '@/lib/funnel-trakyo';
+import { composeFunnelJourneys } from '@/lib/funnel-compose';
 import { lastMessageFor } from '@/lib/funnel-contact';
 import { gatherCommsFeed } from '@/lib/comms-feed';
 import type { CommsItem } from '@/lib/comms';
@@ -26,6 +22,7 @@ import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { getVenture } from '@/lib/ventures';
 import { FunnelRadialLazy, FunnelSpaceLazy } from '@/components/FunnelGraphsLazy';
 import { Badge, SectionHead } from '@/components/terminal';
+import { Rise } from '@/components/motion';
 import {
   FunnelStageSchema,
   FunnelVentureSchema,
@@ -42,6 +39,11 @@ const VENTURE_TABS: { id: FunnelVenture | 'all'; label: string }[] = [
   { id: 'all', label: 'All clients' },
   { id: 'vantage', label: 'Vantage' },
   { id: 'launchpad-cohort', label: 'Launchpad Cohort' },
+];
+
+const VIEWS: { id: 'flow' | 'radial'; label: string }[] = [
+  { id: 'flow', label: 'Flow' },
+  { id: 'radial', label: 'Radial' },
 ];
 
 function usd(amount: number): string {
@@ -145,7 +147,8 @@ function AttentionRow({
   return (
     <Link
       href={href}
-      className="group flex items-baseline gap-2 border-t border-os-border px-2.5 py-1.5 transition-colors hover:bg-os-surface2"
+      data-lens="r"
+      className="pressable is-row group flex items-baseline gap-2 border-t border-os-border px-2.5 py-1.5"
     >
       <span className="min-w-0 flex-1 truncate text-[12px] font-semibold group-hover:text-os-accent">
         {journey.person ?? journey.name}
@@ -313,21 +316,21 @@ export default async function FunnelPage({
   };
 
   const now = new Date();
-  // Live-first: Attio ∪ GHL when keys resolve (either alone works); seed
-  // otherwise. Trakyo's attributed touches merge in the moment its API exists.
-  const [attioLive, ghlLive] = await Promise.all([attioFunnelJourneys(now), ghlFunnelJourneys(now)]);
-  const liveJourneys = [...(attioLive?.journeys ?? []), ...(ghlLive?.journeys ?? [])];
-  const isLive = liveJourneys.length > 0;
+  // Same composer the /api/funnel route uses, so the page can never again miss
+  // a source the route has (this is how every Stripe buyer went invisible):
+  // Attio ∪ GHL live journeys, Trakyo touches + Stripe payments folded on,
+  // venture-filtered; seeded funnel otherwise.
+  const composed = await composeFunnelJourneys(now, venture);
+  const { attioLive, ghlLive, isLive } = composed;
   const excludedCount = (attioLive?.closedLost ?? 0) + (ghlLive?.excluded ?? 0);
   const liveLabel = [
     attioLive && attioLive.journeys.length > 0 ? `Attio ${attioLive.total}` : null,
     ghlLive && ghlLive.journeys.length > 0 ? `GHL ${ghlLive.total}` : null,
+    composed.stripeWins && composed.stripeWins.length > 0 ? `Stripe ${composed.stripeWins.length}` : null,
   ]
     .filter(Boolean)
     .join(' + ');
-  const allJourneys = isLive
-    ? mergeTrakyoTouches(liveJourneys, await trakyoTouches()).filter((j) => !venture || j.venture === venture)
-    : getDb().funnel.journeys(venture);
+  const allJourneys = composed.journeys;
   // Quiet past DECAY_DAYS → out of the space, into the archive tab.
   const { active: journeys, archived } = splitFunnelJourneys(allJourneys, now);
   const summary = funnelSummary(journeys);
@@ -382,11 +385,11 @@ export default async function FunnelPage({
                 key={tab.id}
                 href={href(tab.id === 'all' ? undefined : (tab.id as FunnelVenture), view)}
                 title={tab.id !== 'all' && isLive ? 'Live split = deal-name heuristic; add a venture attribute in Attio for exact' : undefined}
-                className={`rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors ${
-                  active
-                    ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-                    : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-                }`}
+                data-lens="c" className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
+ active
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
               >
                 {tab.id !== 'all' && (
                   <span
@@ -406,35 +409,41 @@ export default async function FunnelPage({
           <SourceCheck status={trakyo} />
           <SourceCheck status={metaAds} />
         </span>
-        <span className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wide">
+        <span className="ml-auto flex items-center gap-1.5">
+          {VIEWS.map((v) => {
+            const active = layout === v.id && view === 'live';
+            return (
+              <Link
+                key={v.id}
+                href={href(venture, 'live', stage, v.id)}
+                title={
+                  v.id === 'flow'
+                    ? "Open space left → right · every lead orbits the stage it's in now"
+                    : 'Circle, outside → in · center is the purchase'
+                }
+                data-lens="c"
+                className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
+ active
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
+              >
+                {v.label}
+              </Link>
+            );
+          })}
+          <span className="mx-0.5 h-3 w-px bg-os-border" />
           <Link
-            href={href(venture, 'live', stage, 'flow')}
-            title="Open space left → right — every lead orbits the stage it's in now"
-            className={layout === 'flow' && view === 'live' ? 'text-os-accent' : 'text-os-dim hover:text-os-muted'}
+            href={view === 'archive' ? href(venture, 'live') : href(venture, 'archive')}
+            title="Leads quiet past the decay window rest here"
+            data-lens="c"
+            className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
+ view === 'archive'
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
           >
-            flow
-          </Link>
-          <span className="text-os-dim">·</span>
-          <Link
-            href={href(venture, 'live', stage, 'radial')}
-            title="Circle, outside → in — center is the purchase"
-            className={layout === 'radial' && view === 'live' ? 'text-os-accent' : 'text-os-dim hover:text-os-muted'}
-          >
-            radial
-          </Link>
-          <span className="mx-1 h-3 w-px bg-os-border" />
-          <Link
-            href={href(venture, 'live')}
-            className={view === 'live' ? 'text-os-accent' : 'text-os-dim hover:text-os-muted'}
-          >
-            live funnel
-          </Link>
-          <span className="text-os-dim">·</span>
-          <Link
-            href={href(venture, 'archive')}
-            className={view === 'archive' ? 'text-os-accent' : 'text-os-dim hover:text-os-muted'}
-          >
-            archive ({archived.length})
+            Archive ({archived.length})
           </Link>
         </span>
       </Rise>
@@ -446,7 +455,7 @@ export default async function FunnelPage({
           {view === 'archive' ? (
             archived.length === 0 ? (
               <p className="py-6 text-center font-mono text-[11.5px] text-os-dim">
-                Nothing decayed — no lead has sat quiet past {DECAY_DAYS} days.
+                Nothing decayed · no lead has sat quiet past {DECAY_DAYS} days.
               </p>
             ) : (
               <table className="w-full border-collapse text-left">
@@ -519,7 +528,7 @@ export default async function FunnelPage({
                 push now
               </span>
               <span className="font-mono text-[9px] uppercase tracking-wide text-os-dim">
-                hot + moving — close them
+                hot + moving · close them
               </span>
             </div>
             {attention.pushNow.length === 0 ? (
@@ -538,12 +547,12 @@ export default async function FunnelPage({
                 save now
               </span>
               <span className="font-mono text-[9px] uppercase tracking-wide text-os-dim">
-                fading toward the archive — highest likelihood first
+                fading toward the archive · highest likelihood first
               </span>
             </div>
             {attention.saveNow.length === 0 ? (
               <p className="border-t border-os-border px-2.5 py-2 font-mono text-[10px] text-os-dim">
-                nothing fading — every lead is fresh
+                nothing fading · every lead is fresh
               </p>
             ) : (
               attention.saveNow.map((j) => (
@@ -560,11 +569,11 @@ export default async function FunnelPage({
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
           <Link
             href={href(venture, view, undefined)}
-            className={`rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors ${
-              !stage
-                ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-                : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-            }`}
+            data-lens="c" className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
+ !stage
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
           >
             All segments
           </Link>
@@ -574,11 +583,11 @@ export default async function FunnelPage({
               <Link
                 key={s.id}
                 href={href(venture, view, active ? undefined : s.id)}
-                className={`rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide transition-colors ${
-                  active
-                    ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-                    : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-                }`}
+                data-lens="c" className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
+ active
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
               >
                 <span
                   className="mr-1 inline-block h-1.5 w-1.5 rounded-full align-middle"
@@ -589,7 +598,7 @@ export default async function FunnelPage({
             );
           })}
           {stage && !commsFeed && tableJourneys.length > 0 && (
-            <span className="font-mono text-[10px] text-os-dim">comms feed unavailable — last messages hidden</span>
+            <span className="font-mono text-[10px] text-os-dim">comms feed unavailable · last messages hidden</span>
           )}
         </div>
         {tableJourneys.length === 0 ? (

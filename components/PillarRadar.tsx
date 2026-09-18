@@ -146,7 +146,7 @@ export function PillarRadar({
               key={layer.key}
               onMouseEnter={() => setActive(layer.key)}
               onMouseLeave={() => setActive(null)}
-              className={`flex items-center gap-1.5 transition-opacity ${dim ? 'opacity-30' : ''} ${on ? 'text-os-text' : 'text-os-dim'}`}
+              className={`pressable flex items-center gap-1.5 transition-opacity ${dim ? 'opacity-30' : ''} ${on ? 'text-os-text' : 'text-os-dim'}`}
             >
               <svg width="18" height="6" aria-hidden>
                 <line x1="0" y1="3" x2="18" y2="3" stroke={layer.color} strokeWidth={on ? 3 : layer.fill ? 2.6 : 1.8} strokeDasharray={on ? undefined : layer.dash} />

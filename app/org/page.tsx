@@ -1,14 +1,17 @@
 import Link from 'next/link';
 import { Users } from 'lucide-react';
 import { getDb } from '@/lib/data';
+import { paperclipAgents, type PaperclipAgent } from '@/lib/connectors/paperclip';
+import { LIVE_DOT, overlayLiveOrg } from '@/lib/org-live';
 import { buildHierarchy, flattenNodes, type AgentNode } from '@/lib/hierarchy';
 import { LIFE_AREAS, lifeAreaForDepartment } from '@/lib/life-map';
-import { VENTURES, getVenture, ventureAgentSet, venturesForAgent } from '@/lib/ventures';
+import { VENTURES, getVenture, ventureAgentSet } from '@/lib/ventures';
 import { ConductorCard } from '@/components/ConductorCard';
+import { OrgWorkerPill, VentureDots } from '@/components/OrgWorkerPill';
 import { SparkIcon } from '@/components/SparkIcon';
 import { PageHeader } from '@/components/PageHeader';
 import { Rise } from '@/components/motion';
-import type { Agent, AgentStatus } from '@/lib/schemas';
+import type { AgentStatus } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,32 +22,6 @@ const STATUS_DOT: Record<AgentStatus, string> = {
   planned: 'border border-os-dim bg-transparent',
 };
 
-/** Tiny colored dots showing which ventures an agent serves. */
-function VentureDots({ agentId }: { agentId: string }) {
-  const serving = venturesForAgent(agentId);
-  if (serving.length === 0) return null;
-  return (
-    <span className="flex shrink-0 items-center gap-0.5">
-      {serving.map((v) => (
-        <span key={v.id} title={v.label} className="h-1 w-1 rounded-full" style={{ background: v.color }} />
-      ))}
-    </span>
-  );
-}
-
-/** Small black task pill, FounderOS-board style. */
-function AgentPill({ agent, dim = false }: { agent: Agent; dim?: boolean }) {
-  return (
-    <div
-      title={`${agent.role} — ${agent.description}`}
-      className={`hoverable flex items-center gap-1.5 rounded-full border border-os-border bg-os-bg px-2.5 py-1.5 ${dim ? 'opacity-20' : ''}`}
-    >
-      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[agent.status]}`} />
-      <span className="truncate text-[10px] font-medium">{agent.name}</span>
-      <VentureDots agentId={agent.id} />
-    </div>
-  );
-}
 
 function AgentNodePill({
   node,
@@ -57,7 +34,7 @@ function AgentNodePill({
 }) {
   return (
     <div className="space-y-1.5" style={{ paddingLeft: depth ? `${depth * 10}px` : undefined }}>
-      <AgentPill agent={node.agent} dim={dimFor?.(node.agent.id) ?? false} />
+      <OrgWorkerPill agent={node.agent} dim={dimFor?.(node.agent.id) ?? false} />
       {node.children.map((child) => (
         <AgentNodePill key={child.agent.id} node={child} depth={depth + 1} dimFor={dimFor} />
       ))}
@@ -70,10 +47,10 @@ function SystemCard({ href, title, caption }: { href: string; title: string; cap
   return (
     <Link
       href={href}
-      className="hoverable group block w-44 rounded-xl border border-os-border bg-os-surface p-3 text-center"
+      data-lens="r" className="pressable is-row group block w-44 rounded-panel border border-os-border bg-os-surface p-3 text-center"
     >
       <div className="flex justify-center">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-os-border-bright bg-os-bg">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md-t border border-os-border-bright bg-os-bg">
           <SparkIcon size={20} shade="#a3a3a3" />
         </div>
       </div>
@@ -83,10 +60,27 @@ function SystemCard({ href, title, caption }: { href: string; title: string; cap
   );
 }
 
-export default function OrgChartPage({ searchParams }: { searchParams?: { venture?: string } }) {
+/** Tiny live chip — board status dot + model, worn by nodes the board matches. */
+function LiveChip({ agent }: { agent: PaperclipAgent }) {
+  return (
+    <span
+      title={`Paperclip board: ${agent.name} is ${agent.status}${agent.model ? ` on ${agent.model}` : ''}`}
+      className="flex items-center gap-1 rounded-full border border-os-border bg-os-bg px-1.5 py-0.5 font-mono text-[8.5px] uppercase tracking-[0.08em] text-os-muted"
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${LIVE_DOT[agent.status]}`} />
+      {agent.status}
+      {agent.model && <span className="text-os-dim normal-case">· {agent.model}</span>}
+    </span>
+  );
+}
+
+export default async function OrgChartPage({ searchParams }: { searchParams?: { venture?: string } }) {
   const db = getDb();
   const departments = db.departments.all();
   const agents = db.agents.all();
+  // The REAL company: live agents from the Paperclip board (private network). Name
+  // match overlays their statuses onto the frozen markup; board down = inert.
+  const liveOrg = overlayLiveOrg(departments, await paperclipAgents());
   // The venture lens: same roster, same DB — the switcher just changes which
   // crew lights up. No venture param = everything bright.
   const venture = getVenture(searchParams?.venture ?? '');
@@ -107,12 +101,30 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
         title="Agent Hierarchy"
       />
 
-      {/* Venture switcher: Vantage / Launchpad Cohort — one click swaps which
-          crew lights up below. All data stays shared. */}
-      <Rise i={1} className="mb-3 flex flex-wrap items-center gap-2">
+      {/* Live board strip — the REAL org (Paperclip over the private network). Only
+          renders when the board answered; extras are agents with no pillar
+          slot (Forge, Hermes Workers, …). */}
+      {(liveOrg.conductor || liveOrg.extras.length > 0) && (
+        <Rise i={1} className="mb-3 flex flex-wrap items-center gap-2 rounded-panel border border-os-border bg-os-surface px-3 py-2">
+          <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em] text-os-muted">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-os-ok" />
+            Board live
+          </span>
+          {liveOrg.extras.map((extra) => (
+            <span key={extra.id} className="flex items-center gap-1.5 font-mono text-[10px] text-os-muted">
+              <span className={`h-1.5 w-1.5 rounded-full ${LIVE_DOT[extra.status]}`} />
+              {extra.name}
+            </span>
+          ))}
+        </Rise>
+      )}
+
+      {/* Venture switcher: Vantage / Launchpad Cohort / Personal Brand — one
+          click swaps which crew lights up below. All data stays shared. */}
+      <Rise i={2} className="mb-3 flex flex-wrap items-center gap-2">
         <Link
           href="/org"
-          className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+          data-lens="c" className={`pressable rounded-ctl border px-3 py-1.5 text-xs font-semibold ${
             !venture ? 'border-os-text bg-os-text text-os-bg' : 'border-os-border bg-os-surface text-os-muted hover:text-os-text'
           }`}
         >
@@ -124,7 +136,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
             <Link
               key={v.id}
               href={`/org?venture=${v.id}`}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              data-lens="c" className={`pressable flex items-center gap-1.5 rounded-ctl border px-3 py-1.5 text-xs font-semibold ${
                 active ? 'text-black' : 'border-os-border bg-os-surface text-os-muted hover:text-os-text'
               }`}
               style={active ? { background: v.color, borderColor: v.color } : undefined}
@@ -139,8 +151,8 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
 
       {venture && (
         <Rise
-          i={2}
-          className="mb-4 rounded-lg border bg-os-surface px-4 py-3"
+          i={3}
+          className="mb-4 rounded-panel border bg-os-surface px-4 py-3"
           style={{ borderColor: `${venture.color}66`, boxShadow: `inset 3px 0 0 ${venture.color}` }}
         >
           <div className="text-[9px] uppercase tracking-[0.2em]" style={{ color: venture.color }}>
@@ -161,7 +173,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
       )}
 
       {/* Life-area legend: every crew below is tinted by the part of life it serves */}
-      <Rise i={3} className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-os-border bg-os-surface px-3 py-2">
+      <Rise i={4} className="mb-6 flex flex-wrap items-center gap-4 rounded-panel border border-os-border bg-os-surface px-3 py-2">
         <span className="text-[9px] uppercase tracking-[0.2em] text-os-dim">Life areas</span>
         {LIFE_AREAS.map((area) => (
           <span key={area.id} className="flex items-center gap-1.5 text-[10px] text-os-muted">
@@ -172,23 +184,26 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
       </Rise>
 
       {/* Operator */}
-      <Rise i={4} className="flex flex-col items-center">
+      <Rise i={5} className="flex flex-col items-center">
         <Users className="h-7 w-7 text-os-text" />
         <div className="mt-1 text-base font-bold tracking-wide">Alex Rivera</div>
         <div className="text-[10px] uppercase tracking-[0.3em] text-os-dim">Operator</div>
         <div className="mt-2 h-6 w-px bg-os-border-bright" />
-        <div className="text-[10px] uppercase tracking-[0.2em] text-os-muted">Conductor (Super Agent)</div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-os-muted">Conductor (Super Agent)</span>
+          {liveOrg.conductor && <LiveChip agent={liveOrg.conductor} />}
+        </div>
         <div className="h-3 w-px bg-os-border-bright" />
       </Rise>
 
       {/* AI Head row: G-Brain ── Conductor ── Comms Feed */}
-      <Rise i={5} className="flex items-center justify-center gap-0">
+      <Rise i={6} className="flex items-center justify-center gap-0">
         <SystemCard href="/brain" title="G-Brain" caption="markdown + pgvector knowledge store" />
         <div className="hidden h-px w-10 bg-os-border-bright md:block" />
         {conductor ? (
           <ConductorCard conductor={conductor} agentNames={agentNames} initialBroadcast={lastBroadcast} />
         ) : (
-          <div className="rounded-xl border border-dashed border-os-border px-6 py-4 text-xs text-os-dim">
+          <div className="rounded-ctl border border-dashed border-os-border px-6 py-4 text-xs text-os-dim">
             conductor missing — run npm run seed
           </div>
         )}
@@ -203,7 +218,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
           The whole row is centered under the Conductor (mx-auto w-max) and only
           scrolls when it genuinely overflows the viewport. Spacing widens with
           the screen: gap-4 → gap-8 (wide) → gap-12 (ultra / 32"). */}
-      <Rise i={6} className="overflow-x-auto overflow-y-hidden pb-4 overscroll-x-contain">
+      <Rise i={7} className="overflow-x-auto overflow-y-hidden pb-4 overscroll-x-contain">
         <div className="mx-auto w-max">
           {/* Rail inset by half a column (mx-36 = ½ of w-72) so it runs exactly
               center-to-center across the crews — connectors always meet it. */}
@@ -223,9 +238,12 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
             return (
               <section
                 key={department.id}
-                className="org-connector flex w-72 shrink-0 flex-col items-center gap-2.5 wide:rounded-2xl wide:border wide:border-os-border wide:bg-os-surface wide:px-4 wide:py-5"
+                className="org-connector flex w-72 shrink-0 flex-col items-center gap-2.5 wide:rounded-panel wide:border wide:border-os-border wide:bg-os-surface wide:px-4 wide:py-5"
               >
-                <div className="text-xs font-bold">{department.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold">{department.name}</span>
+                  {liveOrg.byDepartment[department.id] && <LiveChip agent={liveOrg.byDepartment[department.id]} />}
+                </div>
                 {area && (
                   <div className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.2em]" style={{ color: area.color }}>
                     <span className="h-1.5 w-1.5 rounded-full" style={{ background: area.color }} />
@@ -233,7 +251,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
                   </div>
                 )}
                 <div
-                  className="hoverable group flex h-16 w-16 items-center justify-center rounded-2xl bg-os-raised"
+                  data-lens="r" className="pressable is-row group flex h-16 w-16 items-center justify-center rounded-panel bg-os-raised"
                   style={{ border: `1px solid ${area?.color ?? '#333333'}55`, boxShadow: `0 0 18px ${area?.color ?? '#000000'}22` }}
                 >
                   <SparkIcon size={34} shade={area?.color ?? department.color} />
@@ -249,7 +267,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
                     <div
                       key={agent.id}
                       title={agent.description}
-                      className={`hoverable w-full rounded-xl border border-os-border-bright bg-os-surface px-3 py-2 ${
+                      data-lens="r" className={`pressable is-row w-full rounded-ctl border border-os-border-bright bg-os-surface px-3 py-2 ${
                         dimFor(agent.id) ? 'opacity-20' : ''
                       }`}
                       style={
@@ -283,7 +301,7 @@ export default function OrgChartPage({ searchParams }: { searchParams?: { ventur
               )}
 
               {all.length === 0 && (
-                <div className="w-full rounded-xl border border-dashed border-os-border px-3 py-5 text-center text-[10px] text-os-dim">
+                <div className="w-full rounded-ctl border border-dashed border-os-border px-3 py-5 text-center text-[10px] text-os-dim">
                   Agents land here as this department goes live
                 </div>
               )}

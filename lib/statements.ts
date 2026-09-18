@@ -6,6 +6,8 @@
  * separate store (lib/ledger.ts), never the shared app DB.
  */
 
+import type { CardId } from '@/lib/cards';
+
 export type Direction = 'in' | 'out';
 export type ParsedRow = {
   date: string;
@@ -15,7 +17,7 @@ export type ParsedRow = {
   /** the export's own category (top-level), e.g. Amex "Merchandise & Supplies" */
   sourceCategory?: string;
 };
-export type LedgerRow = ParsedRow & { category: string };
+export type LedgerRow = ParsedRow & { category: string; card?: CardId };
 
 // Tokenize whole CSV text into records, honoring double-quoted fields that may
 // contain commas AND embedded newlines (e.g. Amex "Extended Details" wraps a
@@ -158,4 +160,54 @@ export function categorize(row: ParsedRow): string {
   for (const [re, cat] of CATEGORY_RULES) if (re.test(row.description)) return cat;
   if (row.sourceCategory) return row.sourceCategory;
   return 'Uncategorized';
+}
+
+// ── PDF-extracted credit-card statements ────────────────────────────────────
+
+// The statement's own year, from the closing/statement date line. Charge lines
+// on an Amex PDF print MM/DD only, so without this a January statement would
+// file itself under the wrong year.
+const STATEMENT_DATE = /(?:closing date|statement date|statement closing date|billing period)[:\s]*(?:\d{1,2}\/\d{1,2}\/\d{2,4}\s*(?:-|to|through)\s*)?(\d{1,2})\/(\d{1,2})\/(\d{2,4})/i;
+
+// A transaction line: a leading MM/DD (or MM/DD/YY), an optional posting date,
+// the merchant, then the amount last on the line. `-$` or a trailing CR marks
+// money coming back (a payment or refund), not spend.
+const TXN_LINE =
+  /^\s*(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\*?\s+(.+?)\s+(-?)\$?(-?)([\d,]+\.\d{2})\s*(CR)?\s*$/;
+
+const LEADING_DATE = /^\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\*?\s+/;
+
+/**
+ * Parse a credit-card statement that arrived as a PDF (text extracted by
+ * poppler, or pasted). Line-oriented rather than column-oriented: anything that
+ * does not start with a transaction date is ignored, which drops the summary
+ * lines ("Total New Charges") and page furniture without guessing at them.
+ */
+export function parseCardStatementText(text: string): ParsedRow[] {
+  const stmt = text.match(STATEMENT_DATE);
+  const stmtYear = stmt ? (stmt[3].length === 2 ? `20${stmt[3]}` : stmt[3]) : null;
+
+  const rows: ParsedRow[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.match(TXN_LINE);
+    if (!m) continue;
+    const [, mm, dd, yy, rawDesc, dash, innerDash, amount, cr] = m;
+    const year = yy ? (yy.length === 2 ? `20${yy}` : yy) : stmtYear;
+    if (!year) continue; // MM/DD with no statement year: refuse to guess
+
+    // Some issuers print a posting date after the transaction date; drop it.
+    const description = rawDesc.replace(LEADING_DATE, '').replace(/\s{2,}/g, ' ').trim();
+    if (description === '' || /^total\b/i.test(description)) continue;
+
+    const cents = Math.round(Number(amount.replace(/,/g, '')) * 100);
+    if (!Number.isFinite(cents) || cents === 0) continue;
+    const credit = dash === '-' || innerDash === '-' || cr === 'CR';
+    rows.push({
+      date: `${year}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`,
+      description,
+      amountCents: cents,
+      direction: credit ? 'in' : 'out',
+    });
+  }
+  return rows;
 }

@@ -9,7 +9,6 @@ import path from 'node:path';
 beforeAll(() => {
   process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-test-')), 'test.db');
   process.env.FUNNEL_PROVIDER = 'seed';
-  process.env.GBRAIN_BIN = path.join(tmpdir(), 'founder-os-no-gbrain-cli');
 });
 
 describe('API route handlers', () => {
@@ -250,11 +249,11 @@ describe('API route handlers', () => {
     expect(res.status).toBe(404);
   });
 
-  test('GET /api/brain reports real gbrain status', async () => {
+  test('GET /api/brain reports the real brain status, both halves named', async () => {
     const { GET } = await import('@/app/api/brain/route');
     const res = await GET(new Request('http://localhost/api/brain'));
     const body = await res.json();
-    expect(body.provider).toBe('gbrain');
+    expect(body.provider).toBe('federated');
     expect(typeof body.connected).toBe('boolean');
     expect(body.detail.length).toBeGreaterThan(0);
   });

@@ -13,19 +13,19 @@ const item = (over: Partial<CommsItem>): CommsItem => ({
 describe('lastMessageFor', () => {
   test('matches by email against replyTo or sender, case-insensitive', () => {
     const items = [
-      item({ replyTo: 'jordan.blake@example.com', ts: '2026-06-30T10:00:00Z' }),
+      item({ replyTo: 'casey.jordan@example.com', ts: '2026-06-30T10:00:00Z' }),
       item({ sender: 'someone@else.com', ts: '2026-07-01T10:00:00Z' }),
     ];
-    const hit = lastMessageFor({ name: 'Jordan Blake', email: 'jordan.blake@example.com' }, items);
-    expect(hit?.replyTo).toBe('jordan.blake@example.com');
+    const hit = lastMessageFor({ name: 'Casey Jordan', email: 'casey.jordan@example.com' }, items);
+    expect(hit?.replyTo).toBe('casey.jordan@example.com');
   });
 
   test('falls back to name matching in sender/title and picks the newest', () => {
     const items = [
-      item({ source: 'whatsapp', sender: 'Jordan Blake', ts: '2026-06-20T10:00:00Z', preview: 'older' }),
-      item({ source: 'whatsapp', title: 'Jordan Blake — LC group', ts: '2026-06-28T10:00:00Z', preview: 'newer' }),
+      item({ source: 'whatsapp', sender: 'Casey Jordan', ts: '2026-06-20T10:00:00Z', preview: 'older' }),
+      item({ source: 'whatsapp', title: 'Casey Jordan — LC Execs', ts: '2026-06-28T10:00:00Z', preview: 'newer' }),
     ];
-    const hit = lastMessageFor({ name: 'Jordan Blake', email: null }, items);
+    const hit = lastMessageFor({ name: 'Casey Jordan', email: null }, items);
     expect(hit?.preview).toBe('newer');
   });
 

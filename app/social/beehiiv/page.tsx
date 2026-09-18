@@ -20,7 +20,7 @@ export default async function BeehiivDashboardPage() {
     <div>
       <Link
         href="/social"
-        className="mb-4 inline-flex items-center gap-1.5 text-xs text-os-muted transition-colors hover:text-os-text"
+        className="mb-4 inline-flex items-center gap-1.5 text-xs text-os-muted linky"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All platforms
@@ -41,7 +41,8 @@ export default async function BeehiivDashboardPage() {
           href="https://app.beehiiv.com"
           target="_blank"
           rel="noreferrer"
-          className="flex items-center gap-1.5 rounded-lg border border-os-border px-3 py-1.5 text-xs text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+          data-lens="c"
+          className="pressable is-dark flex items-center gap-1.5 rounded-ctl border border-os-border px-3 py-1.5 text-xs text-os-muted"
         >
           Open Beehiiv
           <ExternalLink className="h-3 w-3" />
@@ -51,9 +52,7 @@ export default async function BeehiivDashboardPage() {
       <Rise i={1} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Subscribers</div>
-          <div className="mt-2 text-3xl font-bold tracking-tight">
-            {subscribers == null ? fmt(subscribers) : <CountUp value={subscribers} kind="followers" />}
-          </div>
+          <div className="mt-2 text-3xl font-bold tracking-tight">{fmt(subscribers)}</div>
         </div>
         <div className="rounded-xl border border-os-border bg-os-surface p-5">
           <div className="text-xs uppercase tracking-wider text-os-muted">Newsletters sent</div>

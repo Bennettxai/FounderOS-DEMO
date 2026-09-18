@@ -24,7 +24,7 @@ describe('inboundLast24h', () => {
 describe('mergeFeed', () => {
   const items: CommsItem[] = [
     { source: 'email', title: 'Invoice #42', preview: 'Payment due', ts: '2026-06-10T10:00:00.000Z' },
-    { source: 'whatsapp', title: 'LC EXECS', preview: 'Marco: closing call at 3', ts: '2026-06-11T09:00:00.000Z' },
+    { source: 'whatsapp', title: 'LC Execs', preview: 'Marco: closing call at 3', ts: '2026-06-11T09:00:00.000Z' },
     { source: 'slack', title: '#general', preview: 'standup posted', ts: '2026-06-11T08:00:00.000Z' },
   ];
 

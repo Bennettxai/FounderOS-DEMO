@@ -52,12 +52,25 @@ describe('ACQUISITIONS — the rim segments', () => {
   });
 });
 
+describe('acquisitionFor — a Trakyo-attributed touch beats the keyword guess', () => {
+  test('the acquisition stamp wins even when the label sniffs differently', () => {
+    // content title carries no platform keyword — Trakyo knows it was YouTube
+    expect(acquisitionFor(journey({}, [touch({ label: 'How the operator console works', acquisition: 'youtube' })]))).toBe('youtube');
+    // label says YouTube, but Trakyo attributed the click to an IG bio link
+    expect(acquisitionFor(journey({}, [touch({ label: 'YT long-form repost', acquisition: 'instagram' })]))).toBe('instagram');
+  });
+
+  test('without a stamp the keyword classification still runs', () => {
+    expect(acquisitionFor(journey({}, [touch({ label: 'YT long-form: agency build' })]))).toBe('youtube');
+  });
+});
+
 describe('acquisitionFor — keyword classification of the entry touch', () => {
-  test('instagram family: IG, TikTok short-form, Meta ads, DMFlow', () => {
+  test('instagram family: IG, TikTok short-form, Meta ads, ManyChat', () => {
     expect(acquisitionFor(firstTouch('IG reel: "3 AI offers that close themselves"'))).toBe('instagram');
     expect(acquisitionFor(firstTouch('TikTok: "day in the life running an AI agency"'))).toBe('instagram');
     expect(acquisitionFor(firstTouch('Meta ad: "stop selling hours" (cold traffic)', 'ads'))).toBe('instagram');
-    expect(acquisitionFor(firstTouch('DMFlow keyword "SCALE" → DM flow', 'dm'))).toBe('instagram');
+    expect(acquisitionFor(firstTouch('ManyChat keyword "SCALE" → DM flow', 'dm'))).toBe('instagram');
   });
 
   test('youtube wins over the form keyword inside "long-form"', () => {
@@ -164,7 +177,7 @@ describe('originOf — where they came from, in words (AC53)', () => {
   });
 
   test('an untracked CRM entry is honestly word of mouth', () => {
-    const j = journey({}, [touch({ label: 'Deal created in Ledger', channel: 'crm', source: 'attio' })]);
+    const j = journey({}, [touch({ label: 'Deal created in Attio', channel: 'crm', source: 'attio' })]);
     expect(originOf(j).segment).toBe('Word of mouth');
     expect(originOf(j).source).toBe('attio');
   });

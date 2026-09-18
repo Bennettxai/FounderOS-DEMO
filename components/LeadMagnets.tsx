@@ -4,8 +4,9 @@ import { LeadMagnetRowActions } from '@/components/LeadMagnetRowActions';
 import type { LeadMagnet } from '@/lib/schemas';
 
 /**
- * Lead magnets, as a Notion-style database: a property table, not cards, so
- * it replaces a database rather than a bookmark folder. Columns are name + offer, status pill, what it captures, where the leads land,
+ * Lead magnets, as a Notion-style database (the operator is retiring Notion
+ * and running this out of the OS). A property table, not
+ * cards: name + offer, status pill, what it captures, where the leads land,
  * and the campaign it was built for. Every row opens the real page.
  */
 const STATUS: Record<LeadMagnet['status'], { dot: string; text: string }> = {

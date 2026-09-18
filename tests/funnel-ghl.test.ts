@@ -57,12 +57,12 @@ describe('mapGhlOpportunities', () => {
       opp({
         id: 'o1',
         contactId: 'CUeK123',
-        contact: { name: 'Jordan Blake', email: 'jordan.blake@example.com', phone: '+15550100199' },
+        contact: { name: 'Casey Jordan', email: 'casey.jordan@example.com', phone: '+15550100412' },
       }),
     ], NOW, 'loc_abc');
     const j = journeys[0];
-    expect(j.email).toBe('jordan.blake@example.com');
-    expect(j.phone).toBe('+15550100199');
+    expect(j.email).toBe('casey.jordan@example.com');
+    expect(j.phone).toBe('+15550100412');
     expect(j.url).toBe('https://app.gohighlevel.com/v2/location/loc_abc/contacts/detail/CUeK123');
   });
 

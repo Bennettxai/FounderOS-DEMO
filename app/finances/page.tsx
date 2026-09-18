@@ -1,23 +1,27 @@
 import { ArrowDownLeft, ArrowUpRight, Scale, Landmark, Send } from 'lucide-react';
-import { configuredProcessors, monthToDateIncome, stripeSnapshot, wiseOutgoing, fanbasisMonthToDateIncome } from '@/lib/connectors/payments';
+import { configuredProcessors, monthToDateIncome, stripeMtdForKey, stripeSnapshot, wiseOutgoing, paykitMonthToDateIncome } from '@/lib/connectors/payments';
 import {
   incomeAccounts,
   totalIncome,
+  totalIncomeUpper,
   totalExpenses,
   expensesByCategory,
   net,
-  SAMPLE_EXPENSES,
+  DECLARED_EXPENSES,
 } from '@/lib/finances';
+import type { IncomeBand } from '@/lib/finances';
 import { openLedger } from '@/lib/ledger';
+import { openPaykitHistory, type PaykitHistory } from '@/lib/paykit-history';
+import type { SpendRow } from '@/lib/spend-report';
 import { openBankStore } from '@/lib/bank';
 import { businessSeries } from '@/lib/bank-statements';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
-import { CountUp } from '@/components/CountUp';
-import { SharePie } from '@/components/SharePie';
 import { StatementUploader } from '@/components/StatementUploader';
+import { MonthlyExpenses } from '@/components/MonthlyExpenses';
 import { BusinessIncomeChart } from '@/components/BusinessIncomeChart';
 import { Badge, Label, SectionHead } from '@/components/terminal';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,28 +63,56 @@ export default async function FinancesPage() {
   // Which processors have keys (honest config), so non-Stripe cards show
   // "key set · pull pending" vs "connect →" rather than a misleading live badge.
   const configuredMap = Object.fromEntries(configuredProcessors(process.env).map((p) => [p.id, p.configured]));
-  // Live FanBasis month-to-date income per account (null when unkeyed).
-  const [fbAa, fbMer] = await Promise.all([
-    fanbasisMonthToDateIncome(process.env.FANBASIS_LC_KEY).catch(() => null),
-    fanbasisMonthToDateIncome(process.env.FANBASIS_VANTAGE_KEY).catch(() => null),
-  ]);
-  const liveIncomeUsd: Record<string, number> = {};
-  if (fbAa != null) liveIncomeUsd['fanbasis-lc'] = fbAa;
-  if (fbMer != null) liveIncomeUsd['fanbasis-vantage'] = fbMer;
+  // Live month-to-date income per account (null when unkeyed): PayKit via
+  // its customers API, Vantage's own Stripe via the charges API.
+  // The PayKit pull is handed a snapshot store, so this render both READS
+  // /customers and keeps it. A month bracketed by two stored snapshots comes
+  // back exact rather than bounded. See lib/paykit-history.ts and OS-658.
+  let fbHistory: PaykitHistory | null = null;
+  try {
+    fbHistory = openPaykitHistory();
+  } catch {
+    fbHistory = null; // No writable data dir — the band below still renders.
+  }
+  let fbAa: Awaited<ReturnType<typeof paykitMonthToDateIncome>> = null;
+  let stripeMer: Awaited<ReturnType<typeof stripeMtdForKey>> = null;
+  try {
+    [fbAa, stripeMer] = await Promise.all([
+      paykitMonthToDateIncome(process.env.PAYKIT_LC_KEY, undefined, fbHistory ?? undefined).catch(() => null),
+      stripeMtdForKey(process.env.STRIPE_VANTAGE_KEY).catch(() => null),
+    ]);
+  } finally {
+    fbHistory?.close();
+  }
+  // A PayKit month the snapshots do not reach back before stays a BAND, not a
+  // number: the API alone cannot split a repeat buyer's lifetime spend across
+  // months, so the card shows "floor – ceiling" rather than the old confident
+  // (and, for six months, inflated) single figure. See OS-655.
+  const liveIncomeUsd: Record<string, number | IncomeBand> = {};
+  if (fbAa != null) liveIncomeUsd['paykit-lc'] = fbAa;
+  if (stripeMer != null) liveIncomeUsd['stripe-vantage'] = stripeMer.amountCents / 100;
   const accounts = incomeAccounts({ connected: stripeLive, mtdUsd }, configuredMap, liveIncomeUsd);
   // Outgoing Wise transfers — null (no Wise key) hides the section entirely.
   const wiseOut = await wiseOutgoing(process.env).catch(() => null);
   const incomeMtd = totalIncome(accounts);
-  // Expenses from the uploaded statement ledger when present; seeded SAMPLE
-  // otherwise (honest "sample" vs "uploaded" label below).
+  // Expenses from the uploaded statement ledger when present; the DECLARED set
+  // fees otherwise (Marco CSM — subscriptions arrive via statement upload).
+  // Every out-row goes to the client so the pie and the full expenditure
+  // statement can be recomputed per month without another round trip.
+  let ledgerRows: SpendRow[] = [];
+  let ledgerMonths: string[] = [];
   let ledgerSpend: { category: string; total: number }[] = [];
   let ledgerMonth: string | null = null;
   try {
     const ledger = openLedger();
+    ledgerRows = ledger.allRows();
+    ledgerMonths = ledger.monthsAscending();
     ledgerSpend = ledger.monthly();
     ledgerMonth = ledger.latestMonth();
     ledger.close();
   } catch {
+    ledgerRows = [];
+    ledgerMonths = [];
     ledgerSpend = [];
   }
   const expensesLive = ledgerSpend.length > 0;
@@ -97,12 +129,13 @@ export default async function FinancesPage() {
   const monthLabel = ledgerMonth
     ? new Date(`${ledgerMonth}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
     : null;
-  const byCategory = expensesLive ? ledgerSpend : expensesByCategory(SAMPLE_EXPENSES);
-  const expenses = expensesLive ? ledgerSpend.reduce((s, c) => s + c.total, 0) : totalExpenses(SAMPLE_EXPENSES);
+  const expenses = expensesLive ? ledgerSpend.reduce((s, c) => s + c.total, 0) : totalExpenses(DECLARED_EXPENSES);
   const netMonthly = net(incomeMtd, expenses);
   const liveCount = accounts.filter((a) => a.live).length;
-  const maxAccount = Math.max(...accounts.map((a) => a.income ?? 0), 1);
-  const maxCategory = Math.max(...byCategory.map((c) => c.total), 1);
+  // Scale bars by the ceiling so a bounded account is not drawn as if its floor
+  // were the whole story; the printed figure still leads with the floor.
+  const maxAccount = Math.max(...accounts.map((a) => a.incomeUpper ?? a.income ?? 0), 1);
+  const incomeMtdUpper = totalIncomeUpper(accounts);
 
   return (
     <div>
@@ -127,6 +160,12 @@ export default async function FinancesPage() {
           <div className="flex items-baseline justify-between gap-2">
             <span className="font-mono text-[16px] font-semibold leading-none tracking-[-0.02em] text-os-ok">
               <CountUp value={incomeMtd} kind="usd" />
+              {/* The headline leads with the proven floor. When a source could
+                  only bound its month, the ceiling rides alongside instead of
+                  being quietly folded in. */}
+              {incomeMtdUpper > incomeMtd ? (
+                <span className="text-os-dim"> – {usd(incomeMtdUpper)}</span>
+              ) : null}
             </span>
             <span className="min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">
               {liveCount}/{accounts.length} live
@@ -144,7 +183,7 @@ export default async function FinancesPage() {
             <span
               className={`min-w-0 truncate font-mono text-[9.5px] uppercase tracking-[0.1em] ${expensesLive ? 'text-os-ok' : 'text-os-warn'}`}
             >
-              {expensesLive ? `uploaded · ${monthLabel}` : 'sample'}
+              {expensesLive ? `uploaded · ${monthLabel}` : 'set fees · card subs via statement'}
             </span>
           </div>
         </Rise>
@@ -194,49 +233,26 @@ export default async function FinancesPage() {
         </Rise>
       )}
 
-      {/* Monthly expenses by category */}
-      <Rise as="section" i={5} className="mb-5">
-        <SectionHead
-          label="Monthly expenses · by category"
-          count={expensesLive && monthLabel ? `${usd(expenses)} · ${monthLabel}` : `${usd(expenses)} /mo`}
-        />
-        <div className="grid items-stretch gap-3.5 lg:grid-cols-[1.15fr_1fr_0.85fr]">
-          {/* where the money goes — share per category */}
-          <SharePie
-            items={byCategory.map((c) => ({ key: c.category, label: c.category, value: Math.round(c.total * 100) }))}
-            total={Math.round(expenses * 100)}
-            centerLabel={expensesLive && monthLabel ? monthLabel : 'per month'}
-            format={(cents) => usd(cents / 100)}
-            donutPx={190}
-            ariaLabel="Monthly expenses by category"
-          />
-
-          <div className="rounded-lg-t border border-os-border bg-os-surface p-4">
-            <div className="flex flex-col gap-2.5">
-              {byCategory.map((c) => (
-                <div key={c.category}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2 font-mono text-[11px]">
-                    <span className="text-os-muted">{c.category}</span>
-                    <span className="text-os-text">{usd(c.total)}</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-sm-t bg-os-surface2">
-                    <div className="fill h-full bg-os-accent opacity-60" style={{ width: `${(c.total / maxCategory) * 100}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Statement ingestion — upload a CSV to replace the sample figures */}
-          <StatementUploader />
-        </div>
+      {/* Monthly expenses by category, month by month (client-side) */}
+      <Rise i={5}>
+      <MonthlyExpenses
+        rows={ledgerRows}
+        months={ledgerMonths}
+        fallback={expensesByCategory(DECLARED_EXPENSES).map((c) => ({
+          category: c.category,
+          totalCents: Math.round(c.total * 100),
+        }))}
+      >
+        {/* Statement ingestion: pick a card lane, drop a CSV or PDF */}
+        <StatementUploader />
+      </MonthlyExpenses>
       </Rise>
 
       <Rise as="section" i={6} className="mb-5">
         <SectionHead label="Income · by processor" count={`${liveCount}/${accounts.length} live`} />
         <div className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
           {accounts.map((a) => (
-            <div key={a.id} className="hoverable rounded-lg-t border border-os-border bg-os-surface px-4 py-3">
+            <div key={a.id} data-lens="r" className="pressable is-row rounded-lg-t border border-os-border bg-os-surface px-4 py-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-[13px] font-semibold">{a.label}</div>
@@ -255,25 +271,62 @@ export default async function FinancesPage() {
               <div className="mt-2 flex items-baseline gap-1.5">
                 <span className="font-mono text-[18px] font-semibold tracking-[-0.02em]">
                   {a.income != null ? usd(a.income) : '—'}
+                  {a.incomeUpper != null ? (
+                    <span className="text-os-dim"> – {usd(a.incomeUpper)}</span>
+                  ) : null}
                 </span>
                 <span className="font-mono text-[9.5px] text-os-dim">
                   {a.live ? 'this month' : a.configured ? 'pull pending' : 'awaiting key'}
                 </span>
               </div>
+              {/* A bounded month says so out loud rather than printing one
+                  confident number the source cannot actually support. */}
+              {a.unsplittableCustomers > 0 ? (
+                <div className="mt-1 font-mono text-[9.5px] text-os-dim">
+                  {a.unsplittableCustomers} repeat {a.unsplittableCustomers === 1 ? 'customer' : 'customers'} · split unavailable
+                </div>
+              ) : null}
               <div className="mt-2 h-1 overflow-hidden rounded-sm-t bg-os-surface2">
-                <div
-                  className="h-full bg-os-accent opacity-60"
-                  style={{ width: `${a.income != null ? (a.income / maxAccount) * 100 : 0}%` }}
-                />
+                {/* Floor solid, the unprovable remainder faint on top. */}
+                <div className="flex h-full">
+                  <div
+                    className="h-full bg-os-accent opacity-60"
+                    style={{ width: `${a.income != null ? (a.income / maxAccount) * 100 : 0}%` }}
+                  />
+                  <div
+                    className="h-full bg-os-accent opacity-20"
+                    style={{
+                      width: `${a.incomeUpper != null ? ((a.incomeUpper - (a.income ?? 0)) / maxAccount) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           ))}
         </div>
       </Rise>
 
+      {/* Recent income — real Stripe charges */}
+      {stripeLive && recent.length > 0 && (
+        <Rise as="section" i={7} className="mb-5">
+          <SectionHead label="Recent income" count="Stripe · live" />
+          <ul className="space-y-1.5">
+            {recent.map((c, i) => (
+              <li
+                key={`${c.created}-${i}`}
+                data-lens="r" className="pressable is-row flex items-center gap-3.5 rounded-lg-t border border-os-border bg-os-surface px-4 py-3"
+              >
+                <span className="font-mono text-[15px] font-semibold text-os-ok">+{usd(c.amount / 100, true)}</span>
+                <span className="min-w-0 flex-1 truncate text-[12.5px] text-os-muted">{c.description}</span>
+                <span className="shrink-0 font-mono text-[11px] text-os-dim">{ago(c.created)}</span>
+              </li>
+            ))}
+          </ul>
+      </Rise>
+      )}
       {/* Outgoing transfers — Wise (hidden entirely until a Wise key lands) */}
       {wiseOut && (
-        <Rise as="section" i={7} className="mb-5">
+        <Rise as="section" i={8}>
           <SectionHead label="Outgoing · Wise" count={`${wiseOut.length} transfer${wiseOut.length === 1 ? '' : 's'}`} />
           {wiseOut.length === 0 ? (
             <div className="rounded-lg-t border border-os-border bg-os-surface px-4 py-3 font-mono text-[11px] text-os-dim">
@@ -284,7 +337,7 @@ export default async function FinancesPage() {
               {wiseOut.map((t, i) => (
                 <li
                   key={`${t.created}-${i}`}
-                  className="hoverable flex items-center gap-3.5 rounded-lg-t border border-os-border bg-os-surface px-4 py-3"
+                  data-lens="r" className="pressable is-row flex items-center gap-3.5 rounded-lg-t border border-os-border bg-os-surface px-4 py-3"
                 >
                   <Send className="h-[15px] w-[15px] shrink-0 text-os-err" strokeWidth={1.8} />
                   <span className="font-mono text-[15px] font-semibold text-os-err">
@@ -296,27 +349,9 @@ export default async function FinancesPage() {
               ))}
             </ul>
           )}
-        </Rise>
+      </Rise>
       )}
 
-      {/* Recent income — real Stripe charges */}
-      {stripeLive && recent.length > 0 && (
-        <Rise as="section" i={8}>
-          <SectionHead label="Recent income" count="Stripe · live" />
-          <ul className="space-y-1.5">
-            {recent.map((c, i) => (
-              <li
-                key={`${c.created}-${i}`}
-                className="hoverable flex items-center gap-3.5 rounded-lg-t border border-os-border bg-os-surface px-4 py-3"
-              >
-                <span className="font-mono text-[15px] font-semibold text-os-ok">+{usd(c.amount / 100, true)}</span>
-                <span className="min-w-0 flex-1 truncate text-[12.5px] text-os-muted">{c.description}</span>
-                <span className="shrink-0 font-mono text-[11px] text-os-dim">{ago(c.created)}</span>
-              </li>
-            ))}
-          </ul>
-        </Rise>
-      )}
     </div>
   );
 }

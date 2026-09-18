@@ -82,7 +82,7 @@ describe('buildBrainDocs', () => {
     const docs = docsFor(seeded());
     const clients = docs.find((x) => x.path === 'org/pillar-clients.md')!.content;
     expect(clients).toContain('[[client-roster]]');
-    expect(clients).toContain('[[person-rae]]');
+    expect(clients).toContain('[[person-sasha]]');
     expect(clients).toContain('[[sop-client-onboarding]]');
   });
 

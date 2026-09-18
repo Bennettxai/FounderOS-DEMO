@@ -43,12 +43,13 @@ function NavGroup({
                 : undefined
             }
             onMouseLeave={() => (collapsed ? onTip(null) : undefined)}
-            className={`group relative flex items-center rounded-sm-t border text-[13.5px] font-medium transition-colors ${
+            data-lens="r"
+            className={`pressable is-dark group relative flex items-center rounded-ctl border text-[13.5px] font-medium hover:translate-x-[2px] ${
               collapsed ? 'justify-center px-0 py-[9px]' : 'gap-2.5 px-2.5 py-[7px]'
             } ${
               active
                 ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-                : 'border-transparent text-os-muted hover:bg-os-surface2 hover:text-os-text'
+                : 'border-transparent text-os-muted hover:text-os-text'
             }`}
           >
             <Icon className="h-[15px] w-[15px] shrink-0 opacity-85" strokeWidth={1.7} />
@@ -84,8 +85,8 @@ export function Sidebar() {
     setCollapsed(localStorage.getItem('founderos.sidebar.collapsed') === '1');
   }, []);
 
-  // Where this instance actually is. Client-only: there is no location
-  // during SSR.
+  // Where this instance actually is (localhost in dev, the deployed host
+  // name in production). Client-only: there is no location during SSR.
   useEffect(() => {
     setHost(window.location.host);
   }, []);
@@ -164,9 +165,9 @@ export function Sidebar() {
           collapsed ? 'flex-col items-center gap-2 px-0' : 'items-center justify-between px-[18px]'
         }`}
       >
-        {/* Collapsed, the mark IS the identity: the wordmark is gone, so the
-            mark carries it and the toggle stacks underneath (34px plus a 28px
-            button will not sit side by side in a 56px rail). */}
+        {/* The emblem is the OS logo. Collapsed, it IS the identity — the
+            wordmark is gone, so the mark carries it and the toggle stacks
+            underneath (34px + a 28px button will not sit side by side in 56px). */}
         {collapsed ? (
           <OsMark size={30} className="shrink-0" />
         ) : (
@@ -186,7 +187,8 @@ export function Sidebar() {
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-expanded={!collapsed}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm-t border border-transparent text-os-dim transition-colors hover:border-os-border hover:bg-os-surface2 hover:text-os-text"
+          data-lens="c"
+          className="pressable is-dark flex h-7 w-7 shrink-0 items-center justify-center rounded-ctl border border-transparent text-os-dim hover:border-os-border hover:text-os-text"
         >
           <PanelLeft className="h-[15px] w-[15px]" strokeWidth={1.7} />
         </button>
@@ -208,9 +210,9 @@ export function Sidebar() {
           {!collapsed && <>{live ? `${live.up}/${live.total}` : '—/—'} systems live</>}
         </div>
         {!collapsed && (
-          // The host is read at runtime, so a deployed instance never claims to
-          // be localhost. Wraps rather than nowrap, which used to clip the line
-          // off the edge of the rail.
+          // The host is read at runtime: hardcoding localhost read as a lie the
+          // moment the OS was served from a remote host. Wraps rather than nowrap,
+          // which used to clip "real agents" off the edge of the rail.
           <div className="break-words font-mono text-[10px] leading-relaxed text-os-dim">
             {host ?? '…'} · sqlite · real agents
           </div>

@@ -3,6 +3,8 @@
  * Server-component friendly: no state, no handlers.
  */
 
+import type { ReactNode } from 'react';
+
 export type DotState = 'ok' | 'warn' | 'err' | 'off';
 
 const DOT_FOR: Record<string, DotState> = {
@@ -50,7 +52,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-sm-t border px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-[0.14em] ${BADGE_TONE[tone]} ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-[0.14em] ${BADGE_TONE[tone]} ${
         ghost ? 'border-dashed' : ''
       }`}
     >
@@ -83,11 +85,14 @@ export function SectionHead({
   count,
   link,
   href,
+  right,
 }: {
   label: string;
   count?: string | number;
   link?: string;
   href?: string;
+  /** Controls that belong to the section, sitting after the hairline. */
+  right?: ReactNode;
 }) {
   return (
     <div className="rise mb-3 flex items-baseline justify-between gap-3">
@@ -97,10 +102,11 @@ export function SectionHead({
         </Label>
       </div>
       {link && href && (
-        <a href={href} className="shrink-0 font-mono text-[11px] text-os-dim transition-colors hover:text-os-accent">
+        <a href={href} className="shrink-0 font-mono text-[11px] text-os-dim linky">
           {link} →
         </a>
       )}
+      {right}
     </div>
   );
 }
@@ -114,6 +120,35 @@ export function Kbd({ children }: { children: React.ReactNode }) {
 }
 
 /** Accent sparkline with a 10%-opacity fill. */
+/**
+ * The pulse-tile foot from mock 3a: one flex cell per sample, heights on the
+ * artboard's own formula (`h = 3 + 15 * v/max`, floor 3px so an empty day is
+ * still a mark rather than a gap), muted grey, growing on the lens clock.
+ *
+ * This is a BAR spark, not the line `Spark` below it. The artboard uses bars
+ * on Agents live and Communications; the line reads as a trend claim, and
+ * seven days of run counts is a tally.
+ */
+export function SparkBars({ data, height = 18 }: { data: number[]; height?: number }) {
+  if (data.length === 0) return null;
+  const max = Math.max(...data, 1);
+  return (
+    <div className="flex items-end gap-[2px]" style={{ height }} aria-hidden="true">
+      {data.map((v, i) => (
+        <span
+          key={i}
+          className="flex-1"
+          style={{
+            height: `${3 + 15 * (v / max)}px`,
+            background: 'var(--muted)',
+            transition: 'height var(--dur-lens) var(--ease-lens)',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function Spark({ data, w = 72, h = 22 }: { data: number[]; w?: number; h?: number }) {
   if (data.length < 2) return null;
   const min = Math.min(...data);

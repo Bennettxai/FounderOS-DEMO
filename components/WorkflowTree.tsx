@@ -1,19 +1,27 @@
 'use client';
 
 /**
- * Workflows as a grid of trees. Collapsed: a card with a compact horizontal
- * mini-tree fingerprint. Click it and it expands in place into the full
- * vertical tree: one node per step (icon in a tinted circle, owner avatar +
- * name, the automation/tool row, a tone-colored status hairline), hairline
- * connectors, and real forks: a step whose `branch` field names a prior
- * step's id fans out beside its siblings with the branch condition labeled
- * on the connector. Clicking a step node opens its full detail in a side
- * drawer within the expanded card. Only one workflow is expanded at a time;
- * Esc, the close button, or a click outside the expanded card collapses it.
+ * Workflows as a grid of trees (replaces the horizontal-scroll * WorkflowLines chain: the operator: "hard to read and cluttered... maybe like a * really nice tree for each of these and then we can click into them to * kind of expand them"). Upgraded for real branching, an openable
+ * step-detail drawer, and a workflow builder (CRUD + a drafting chat) -
+ * the operator: "the actual workflows look extremely lackluster... some of them
+ * might have flow charts, not all of them are linear... you need to be able
+ * to open these and view them in more detail... this has to actually work."
+ *
+ * Collapsed: a glass card with a compact horizontal mini-tree fingerprint.
+ * Click it and it expands in place into the full vertical tree: one richer
+ * glass node per step (icon in a tinted circle, owner avatar + name, the
+ * automation/tool row, a tone-colored status hairline), hairline connectors,
+ * and real forks: a step whose `branch` field names a prior step's id fans
+ * out beside its siblings with the branch condition labeled on the
+ * connector. Clicking a step node opens its full detail in a side drawer
+ * within the expanded card. Only one workflow is expanded at a time; Esc,
+ * the close button, or a click outside the expanded card collapses it.
  *
  * Honest: every figure comes from the workflow rows (workflowStats) and the
- * tree structure comes straight from `buildWorkflowTree` + `workflowStepParent`:
- * no invented steps, no invented branches.
+ * tree structure comes straight from `buildWorkflowTree` + `workflowStepParent`
+ *: no invented steps, no invented branches. Two seeded workflows carry a
+ * real fork today (see lib/seed.ts); this component makes no assumption
+ * that every workflow is a straight spine.
  */
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
@@ -120,7 +128,7 @@ export function WorkflowTree({
         <span className="text-[12.5px] text-os-dim">
           {workflows.length} workflow{workflows.length === 1 ? '' : 's'} mapped
         </span>
-        <button type="button" onClick={() => setBuilderTarget('new')} className="c-btn c-btn-primary">
+        <button type="button" onClick={() => setBuilderTarget('new')} className="pressable c-btn c-btn-primary">
           <Plus className="h-[13px] w-[13px]" strokeWidth={2} /> New workflow
         </button>
       </div>
@@ -159,12 +167,12 @@ export function WorkflowTree({
       <style
         dangerouslySetInnerHTML={{
           __html: `
-.wft-line { display: block; width: 1px; height: 16px; margin: 3px auto; background: var(--border); }
+.wft-line { display: block; width: 1px; height: 16px; margin: 3px auto; background: rgba(255,255,255,0.12); }
 .wft-fan { display: flex; align-items: flex-start; gap: 16px; }
 .wft-fan-branch { position: relative; min-width: 0; flex: 1; }
 .wft-node {
   position: relative;
-  border-radius: 0;
+  border-radius: 14px;
   border: 1px solid color-mix(in oklab, var(--text) 10%, transparent);
   background: var(--wft-node-bg);
   backdrop-filter: blur(10px);
@@ -177,15 +185,7 @@ export function WorkflowTree({
 .wft-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .wft-expand { animation: wft-in 0.26s var(--ease, ease-out) both; }
 @keyframes wft-in { from { opacity: 0; transform: translateY(-6px); } }
-@media (prefers-reduced-motion: reduce) { .wft-expand { animation: none; } }
-.glass-panel { border: 1px solid var(--border); background: var(--surface); }
-.glass-panel-violet { border: 1px solid var(--border); background: var(--wft-node-bg); }
-.glass-chip { border: 1px solid var(--border); background: color-mix(in oklab, var(--surface-2) 70%, transparent); }
-.glass-label { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-3); }
-.c-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-strong); background: var(--surface); padding: 6px 12px; font-size: 12px; color: var(--text-2); transition: border-color 0.15s ease, color 0.15s ease; }
-.c-btn:hover:not(:disabled) { border-color: var(--text-2); color: var(--text); }
-.c-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.c-btn-primary { border-color: var(--accent-line); background: var(--accent-soft); color: var(--accent); }`,
+@media (prefers-reduced-motion: reduce) { .wft-expand { animation: none; } }`,
         }}
       />
     </div>
@@ -230,7 +230,7 @@ function WorkflowCard({
     <div
       ref={cardRef}
       data-workflow-card
-      className={`group glass-panel relative flex flex-col overflow-hidden ${expanded ? 'col-span-full' : 'hoverable cursor-pointer'}`}
+      className={`group glass-panel relative flex flex-col overflow-hidden ${expanded ? 'col-span-full' : 'pressable is-row cursor-pointer'}`}
       onClick={expanded ? undefined : onOpen}
       role={expanded ? undefined : 'button'}
       tabIndex={expanded ? undefined : 0}
@@ -257,7 +257,7 @@ function WorkflowCard({
               e.stopPropagation();
               onEdit();
             }}
-            className={`glass-chip grid h-7 w-7 place-items-center text-os-dim transition-opacity hover:text-os-text ${
+            className={`pressable glass-chip grid h-7 w-7 place-items-center text-os-dim transition-opacity hover:text-os-text ${
               expanded ? '' : 'opacity-0 focus-visible:opacity-100 group-hover:opacity-100'
             }`}
             aria-label={`Edit ${wf.name}`}
@@ -270,7 +270,7 @@ function WorkflowCard({
                 e.stopPropagation();
                 onClose();
               }}
-              className="glass-chip grid h-7 w-7 place-items-center text-os-dim hover:text-os-text"
+              className="pressable glass-chip grid h-7 w-7 place-items-center text-os-dim hover:text-os-text"
               aria-label="Collapse workflow"
             >
               <X className="h-3.5 w-3.5" strokeWidth={1.8} />
@@ -370,7 +370,7 @@ function MiniTree({ steps }: { steps: WorkflowStep[] }) {
         const size = i === 0 ? 9 : 6;
         return (
           <div key={step.id} className="flex items-center">
-            {i > 0 && <span className="h-px w-[14px] shrink-0" style={{ background: 'var(--border)' }} />}
+            {i > 0 && <span className="h-px w-[14px] shrink-0" style={{ background: 'rgba(255,255,255,0.12)' }} />}
             <span
               className="shrink-0 rounded-full"
               title={step.title}
@@ -451,7 +451,7 @@ function TreeBranch({
         onClick={() => onSelectStep(selected ? null : step.id)}
         aria-pressed={selected}
         aria-label={`${step.title}: view step detail`}
-        className="wft-node flex w-full items-start gap-3 px-3.5 py-3 text-left"
+        className="pressable wft-node flex w-full items-start gap-3 px-3.5 py-3 text-left"
         style={selected ? { borderColor: tone.color } : undefined}
       >
         <span
@@ -583,7 +583,7 @@ function StepDetailPanel({
         <button
           onClick={onClose}
           aria-label="Close step detail"
-          className="glass-chip grid h-6 w-6 shrink-0 place-items-center text-os-dim hover:text-os-text"
+          className="pressable glass-chip grid h-6 w-6 shrink-0 place-items-center text-os-dim hover:text-os-text"
         >
           <X className="h-3 w-3" strokeWidth={1.8} />
         </button>

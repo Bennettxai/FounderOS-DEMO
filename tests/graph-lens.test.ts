@@ -31,8 +31,8 @@ describe('graph lenses — Alex taxonomy (2026-07-12)', () => {
   });
 
   test('entity lenses match by node kind against the real seeded graph', () => {
-    expect(lensNodeSet('ent-people', ctx).size).toBe(5);
-    expect(lensNodeSet('ent-subagents', ctx).size).toBe(30);
+    expect(lensNodeSet('ent-people', ctx).size).toBe(5); // seeded roster
+    expect(lensNodeSet('ent-subagents', ctx).size).toBe(32); // -notion-sync retired, +brand-deal and newsletter agents
     expect(lensNodeSet('ent-departments', ctx).size).toBe(6);
     expect(lensNodeSet('ent-sops', ctx).size).toBeGreaterThan(20);
     expect(lensNodeSet('ent-tools', ctx).size).toBeGreaterThan(20);
@@ -55,11 +55,11 @@ describe('graph lenses — Alex taxonomy (2026-07-12)', () => {
   });
 
   test('venture team lenses light their rosters', () => {
-    const mer = lensNodeSet('fn-vantage', ctx);
-    expect(mer.has('emp:vantage-sales')).toBe(true);
-    expect(mer.has('emp:vantage-paykit')).toBe(true);
-    const aa = lensNodeSet('fn-launchpad-cohort', ctx);
-    expect(aa.has('emp:launchpad-cohort-sales')).toBe(true);
+    const van = lensNodeSet('fn-vantage', ctx);
+    expect(van.has('emp:vantage-sales')).toBe(true);
+    expect(van.has('emp:vantage-paykit')).toBe(true);
+    const lc = lensNodeSet('fn-launchpad-cohort', ctx);
+    expect(lc.has('emp:launchpad-cohort-sales')).toBe(true);
   });
 
   test('every action lens resolves to real seeded agents', () => {

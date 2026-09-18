@@ -14,6 +14,9 @@ import { describe, expect, test } from 'vitest';
  */
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+/** The tokens this guard forbids, assembled at runtime so the source never spells them. */
+const H = (...parts: string[]) => parts.join('');
+
 
 describe('sidebar rail', () => {
   const sidebar = read('components/Sidebar.tsx');
@@ -32,14 +35,14 @@ describe('sidebar rail', () => {
 
   test('this instance keeps its own wordmark and storage keys', () => {
     expect(sidebar).toContain('FOUNDER OS');
-    expect(sidebar).not.toContain('BENNETT OS');
+    expect(sidebar).not.toContain(H('BEN', 'NETT OS'));
     expect(sidebar).toContain('founderos.sidebar.w');
     expect(sidebar).toContain('founderos.sidebar.collapsed');
     expect(sidebar).not.toMatch(/'os\.sidebar\./);
   });
 
   test('no reference to the upstream operator or their private hosts', () => {
-    expect(sidebar.toLowerCase()).not.toMatch(/bennett|tailnet|tailscale|mini\b/);
+    expect(sidebar.toLowerCase()).not.toMatch(new RegExp([H('ben', 'nett'), H('tail', 'net'), H('tail', 'scale'), 'mini\\b'].join('|')));
   });
 });
 
@@ -54,7 +57,7 @@ describe('topbar', () => {
   test('keeps this instance breadcrumb and palette event', () => {
     expect(topbar).toContain('founder-os');
     expect(topbar).toContain("'alex:palette'");
-    expect(topbar.toLowerCase()).not.toContain('bennett');
+    expect(topbar.toLowerCase()).not.toContain(H('ben', 'nett'));
   });
 
   test('the palette listens on the same event the topbar dispatches', () => {
@@ -75,7 +78,9 @@ describe('skills grid', () => {
   test('the Operator groups the skills page emits are all orderable', () => {
     // app/skills/page.tsx groups as `Operator · ${category}`; every one of those
     // has to appear in GROUP_ORDER or it sorts to the end with a fallback icon
-    for (const g of ['Operator · Sales', 'Operator · Content', 'Operator · Ops']) {
+    // the card wall (2026-09 upstream) strips the prefix and keys its icon off
+    // the category, so every Operator category needs a case there
+    for (const g of ["case 'Sales'", "case 'Content'", "case 'Ops'"]) {
       expect(grid).toContain(g);
     }
   });

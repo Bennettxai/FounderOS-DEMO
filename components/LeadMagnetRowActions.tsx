@@ -7,7 +7,8 @@ import type { LeadMagnet } from '@/lib/schemas';
 
 /**
  * Per-row controls for the lead magnet register: retire a page or drop the row
- * without leaving the table. Append-only was half a tool.
+ * without leaving the table. Append-only was half a tool: rounding out the
+ * lead magnet creation panel meant giving it a way to retire and delete too.
  *
  * Delete asks once, inline, because these rows carry the live URL of a page
  * that may already be in a caption somewhere.
@@ -53,13 +54,13 @@ export function LeadMagnetRowActions({ id, status }: { id: string; status: LeadM
           <button
             onClick={() => call({ method: 'DELETE' })}
             disabled={busy}
-            className="rounded-sm-t border border-os-border px-1.5 py-1 font-mono text-[10px] uppercase tracking-widest text-os-err transition-colors hover:border-os-border-strong disabled:opacity-40"
+            className="pressable rounded-sm-t border border-os-border px-1.5 py-1 font-mono text-[10px] uppercase tracking-widest text-os-err hover:border-os-border-strong disabled:opacity-40"
           >
             sure?
           </button>
           <button
             onClick={() => setConfirming(false)}
-            className="font-mono text-[10px] uppercase tracking-widest text-os-dim transition-colors hover:text-os-text"
+            className="pressable font-mono text-[10px] uppercase tracking-widest text-os-dim hover:text-os-text"
           >
             no
           </button>
@@ -69,7 +70,7 @@ export function LeadMagnetRowActions({ id, status }: { id: string; status: LeadM
           onClick={() => setConfirming(true)}
           aria-label="Delete lead magnet"
           title="Delete"
-          className="text-os-dim opacity-0 transition-opacity hover:text-os-err group-hover:opacity-100"
+          className="pressable text-os-dim opacity-0 transition-opacity hover:text-os-err group-hover:opacity-100"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>

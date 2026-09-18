@@ -1,8 +1,8 @@
 import type { BrainGraphEdge, BrainGraphNode } from '@/lib/schemas';
 
 /**
- * The Notes-style memory core at the center of the /brain knowledge graph:
- * Alex rendered as the constellation of his actual brain-store notes.
+ * The Obsidian-style memory core at the center of the /brain knowledge graph:
+ * the operator rendered as the constellation of their actual brain-store notes.
  *
  * `distillMemoryGraph` shrinks the full BrainGraph (hundreds of pages, 64-dim
  * vectors) into a readable mini constellation — the most-linked notes, their
@@ -24,7 +24,7 @@ export type MemoryNode = {
   chunks: number;
   vx: number; // layout coords in the unit disc
   vy: number;
-  /** link community (0 = largest); drives the Notes-style cluster color */
+  /** link community (0 = largest); drives the Obsidian-style cluster color */
   cluster: number;
   /** degree among kept nodes (wikilink + similar); 0 = orphan on the rim halo */
   links: number;
@@ -34,10 +34,70 @@ export type MemoryEdge = { source: string; target: string; type: BrainGraphEdge[
 
 export type MemoryGraph = { nodes: MemoryNode[]; edges: MemoryEdge[] };
 
+/**
+ * A generated stand-in constellation for environments with no brain-store on
+ * disk (e.g. the Vercel demo). Deterministic, zero personal data — generic
+ * knowledge domains so the core still reads as a living second brain. Local dev
+ * always prefers the real distilled store; this is only the empty-store fallback.
+ */
+export function demoMemoryGraph(): MemoryGraph {
+  const rnd = (s: string, i: number): number => {
+    let h = 2166136261 ^ i;
+    for (let k = 0; k < s.length; k++) {
+      h ^= s.charCodeAt(k);
+      h = Math.imul(h, 16777619);
+    }
+    return ((h >>> 0) % 100000) / 100000;
+  };
+  const domains: { folder: string; titles: string[] }[] = [
+    { folder: 'Sales Playbooks', titles: ['Cold Outreach Framework', 'Discovery Call Script', 'Objection Handling', 'Pricing & Packaging', 'Follow-up Cadence', 'Proposal Template', 'Closing Checklist', 'ICP Definition', 'Negotiation Notes', 'Win/Loss Review', 'Referral Program', 'Case Study Bank', 'Sales Deck', 'Territory Plan', 'Commission Structure'] },
+    { folder: 'Growth & Marketing', titles: ['Content Engine', 'Paid Ads Playbook', 'Hook Library', 'Funnel Map', 'SEO Notes', 'Brand Voice', 'Launch Plan', 'Email Sequences', 'UGC Briefs', 'Analytics Notes', 'Landing Pages', 'Webinar Playbook', 'Influencer List', 'Retargeting', 'Newsletter Ops'] },
+    { folder: 'Product', titles: ['Roadmap', 'Feature Specs', 'User Research', 'Onboarding Flow', 'Changelog', 'Design System', 'API Notes', 'Bug Triage', 'Release Process', 'Product Metrics', 'Feature Flags', 'Analytics Events', 'Support Macros', 'Beta Program', 'Integrations'] },
+    { folder: 'Operations', titles: ['SOP Library', 'Hiring Playbook', 'Team Rituals', 'Vendor List', 'Tooling Stack', 'Incident Runbook', 'Weekly Cadence', 'Access & Security', 'Docs Index', 'Onboarding Kit', 'Payroll SOP', 'Legal Templates', 'Meeting Notes', 'OKRs', 'Vendor Contracts'] },
+    { folder: 'Finance', titles: ['Unit Economics', 'Cash Flow Model', 'Pricing Model', 'Invoicing SOP', 'Runway Tracker', 'Expense Policy', 'Revenue Report', 'Forecast', 'Payment Processors', 'Bookkeeping', 'Tax Notes', 'Budget', 'Investor Updates', 'Chargebacks', 'Financial Model'] },
+    { folder: 'Client Delivery', titles: ['Kickoff Template', 'Scope of Work', 'Weekly Report', 'QBR Deck', 'Retention Playbook', 'Escalation Path', 'Deliverables Tracker', 'Health Scores', 'Renewal Motion', 'Case Studies', 'Onboarding Checklist', 'SLA Terms', 'Feedback Loop', 'Upsell Paths', 'Offboarding'] },
+    { folder: 'Research', titles: ['Market Landscape', 'Competitor Teardown', 'Customer Interviews', 'Trends', 'Positioning', 'Whitepaper Notes', 'Data Sources', 'Survey Results', 'Experiment Log', 'Insights', 'Pricing Study', 'Persona Docs', 'Jobs to be Done', 'Churn Analysis', 'Benchmark Report'] },
+    { folder: 'Automation', titles: ['Agent Registry', 'Workflow Map', 'Prompt Library', 'Integration Notes', 'Trigger Rules', 'Eval Harness', 'Guardrails', 'Agent Runbook', 'Model Notes', 'Cost Tracking', 'Webhook Map', 'Retry Logic', 'Data Pipeline', 'Alerting Rules', 'Access Scopes'] },
+  ];
+  const nodes: MemoryNode[] = [];
+  const edges: MemoryEdge[] = [];
+  // Seed positions are only a starting scatter near the center; the real
+  // forceLayout below organically re-places everything, so the field looks
+  // exactly like the distilled vault (organic blobs filling the disc, not a
+  // ring), not the geometric pattern a fixed radial layout produced.
+  const seed = (id: string) => ({ vx: (rnd(id, 8) - 0.5) * 0.4, vy: (rnd(id, 9) - 0.5) * 0.4 });
+  domains.forEach((d, di) => {
+    nodes.push({ id: `folder:${d.folder}`, type: 'folder', label: d.folder, folder: d.folder, excerpt: '', wordCount: 0, chunks: 0, ...seed(d.folder), cluster: di, links: d.titles.length });
+    d.titles.forEach((t) => {
+      const id = `page:${d.folder}/${t}`;
+      nodes.push({ id, type: 'page', label: t, folder: d.folder, excerpt: `${t} — a ${d.folder} reference note in the knowledge base.`, wordCount: 200 + Math.floor(rnd(id, 3) * 1400), chunks: 1 + Math.floor(rnd(id, 4) * 5), ...seed(id), cluster: di, links: 0 });
+      edges.push({ source: `folder:${d.folder}`, target: id, type: 'member' });
+    });
+  });
+  const pages = nodes.filter((x) => x.type === 'page');
+  pages.forEach((p) => {
+    // 4–6 links each: with incoming links too, every note clears the memNodeR
+    // cap and renders at full size (like the real vault, median ~7 links, nodes
+    // at the ~1.4 max radius). Links also drive the spring layout's clustering.
+    const k = 4 + Math.floor(rnd(p.id, 5) * 3);
+    for (let j = 0; j < k; j++) {
+      const target = pages[Math.floor(rnd(p.id, 11 + j) * pages.length)];
+      if (target && target.id !== p.id) {
+        edges.push({ source: p.id, target: target.id, type: 'wikilink' });
+        p.links += 1;
+        target.links += 1;
+      }
+    }
+  });
+  // organic force-directed placement — the SAME layout the distilled vault uses,
+  // so the demo core reads identically (blobs, filled centre, no empty middle).
+  return { nodes: forceLayout(nodes, edges), edges };
+}
+
 type BrainGraphSlice = { nodes: BrainGraphNode[]; edges: BrainGraphEdge[] };
 
-// Open-graph density. Deliberately LOW: smoothness beats richness (Alex:
-// "remove a lot of the nodes to the point where it's no longer buggy"). Every
+// Open-graph density. Deliberately LOW: smoothness beats richness, since a
+// dense graph got visibly buggy under the animation load. Every
 // element here repaints on every camera frame while zoomed in fullscreen.
 const DEFAULT_MAX_PAGES = 120;
 
@@ -45,7 +105,7 @@ const DEFAULT_MAX_PAGES = 120;
  * Cap the brain graph to its most-linked pages (wikilink degree, then word
  * count, then id — fully deterministic), keep folder hubs that still have a
  * kept member, drop every edge that lost an endpoint, detect the link
- * communities that become the Notes cluster colors, lay the clusters out
+ * communities that become the Obsidian cluster colors, lay the clusters out
  * as organic blobs (orphans ringing the rim), and strip the heavy embedding
  * fields the constellation doesn't draw.
  */
@@ -73,9 +133,9 @@ export function distillMemoryGraph(
         a.id.localeCompare(b.id),
     );
   let pages = ranked.slice(0, maxPages);
-  // centerFolder quota: the spotlighted folder (Alex: "populate Claude
-  // Archive") is guaranteed a slice of the cap even though its notes are
-  // weakly wikilinked — the lowest-ranked outsiders make room.
+  // centerFolder quota: the spotlighted folder is guaranteed a slice of the
+  // cap even though its notes are weakly wikilinked; the lowest-ranked
+  // outsiders make room.
   if (centerFolder) {
     const kept = pages.filter((p) => p.folder === centerFolder).length;
     if (kept < centerQuota) {
@@ -181,7 +241,7 @@ function assignLinkClusters(nodes: MemoryNode[], edges: MemoryEdge[]): MemoryNod
 }
 
 // The PCA projection routinely piles many notes onto one spot; the
-// constellation must read as an Notes graph, not a smear. A deterministic
+// constellation must read as an Obsidian graph, not a smear. A deterministic
 // pairwise relaxation seeded by the projection: coincident/near pairs push
 // apart (coincident ones split along a golden-angle direction so the result
 // is stable), everything stays clamped to the unit disc.
@@ -192,8 +252,8 @@ function assignLinkClusters(nodes: MemoryNode[], edges: MemoryEdge[]): MemoryNod
 const FORCE_ITERS = 260;
 const D_MIN = 0.056;
 // linked mass reaches past unit 1.0 to hug the drawn disc border (which sits
-// at (R_CORE + 10) / R_CORE ≈ 1.19 units) — Alex: notes very close to the
-// end of the circle. The orphan halo rings just outside the mass.
+// at (R_CORE + 10) / R_CORE ≈ 1.19 units), keeping notes from crowding right
+// at the edge of the circle. The orphan halo rings just outside the mass.
 const BLOB_FILL = 1.05;
 const COMPONENT_RING = 0.6;
 const GOLDEN_ANGLE = 2.399963229728653;
@@ -215,7 +275,7 @@ const hashId = (s: string) => {
 };
 
 /**
- * A deterministic mini force-directed layout — the real Notes-vault look:
+ * A deterministic mini force-directed layout — the real Obsidian-vault look:
  * springs over the actual edges give hub-fans, chains and tendrils; pairwise
  * separation keeps it readable; disconnected components anchor at golden-angle
  * spots so nothing drifts away. Orphans (no content links) halo the rim.
@@ -417,9 +477,9 @@ function forceLayout(nodes: MemoryNode[], edges: MemoryEdge[], centerId?: string
 }
 
 /**
- * The mini-Notes subset shown while the core is collapsed: folder hubs
+ * The host-Obsidian subset shown while the core is collapsed: folder hubs
  * always, then linked pages sampled ROUND-ROBIN across 12 angular sectors
- * (best-linked first within each sector) so the mini graph covers the whole
+ * (best-linked first within each sector) so the host graph covers the whole
  * disc instead of clumping where the big communities sit, plus every 3rd
  * orphan for the rim halo. The full graph renders once the core is clicked
  * open. Pure + deterministic.
@@ -478,7 +538,7 @@ export type ViewSize = { w: number; h: number };
 export type CameraState = {
   /** a department tree is focused (frames the whole canvas — the tree fills it) */
   focusedTeam: boolean;
-  /** the Alex memory core is expanded */
+  /** the operator memory core is expanded */
   coreExpanded: boolean;
   /** live position of the core (the self anchor moves in tree mode) */
   coreCenter: { x: number; y: number };
@@ -489,11 +549,17 @@ export type CameraState = {
 };
 
 // zoom widths as a fraction of the canvas: org-node close-up, core dive,
-// memory-note close-up (each keeps the canvas aspect ratio). The core dive
-// stays at half-canvas so the constellation breathes and the pillar gateways
-// sit clear of the dots.
-const ZOOM_NODE = 0.55;
-const ZOOM_CORE = 0.5;
+// memory-note close-up (each keeps the canvas aspect ratio).
+// The node dive read as a tad too zoomed in when clicked, so it breathed
+// out a touch (0.55 → 0.62) to keep the neighbours in frame.
+const ZOOM_NODE = 0.62;
+// Inside a focused tree a node click should NOT crop the tree to a fragment,
+// but the operator still wants a slight zoom on whatever is being looked at,
+// centered on screen, so a gentle zoom that recentres the clicked node on screen.
+const ZOOM_NODE_SOFT = 0.8;
+// Core dive. Less zoom on the middle Obsidian core reads better
+// (a 25% reduction), so the 2x dive (0.5) eased to 1.5x (0.667).
+const ZOOM_CORE = 0.667;
 const ZOOM_NOTE = 0.22;
 
 const round2 = (n: number): number => {
@@ -515,8 +581,8 @@ function frameOn(view: ViewSize, c: { x: number; y: number }, frac: number): Rec
  * out: a selected memory note beats the core dive, the core dive beats an org
  * selection, an org selection beats the resting/tree full frame.
  */
-// the resting/tree frame breathes out a touch beyond the canvas (Alex,
-// 2026-07-12: "a bit more zoomed out") — it also reveals the flank trees'
+// The resting/tree frame breathes out a touch beyond the canvas at the
+// operator's request for a bit more zoomed out; it also reveals the flank trees'
 // off-canvas sweep, so the wheel reads bigger than the frame
 const ZOOM_OUT_PAD = 0.06;
 
@@ -525,7 +591,17 @@ export function cameraRect(view: ViewSize, s: CameraState): Rect {
     if (s.memorySelectedPos) return frameOn(view, s.memorySelectedPos, ZOOM_NOTE);
     return frameOn(view, s.coreCenter, ZOOM_CORE);
   }
-  if (s.selectedNodePos) return frameOn(view, s.selectedNodePos, ZOOM_NODE);
+  // A node click zooms onto it. On the home wheel that's the full clamped dive.
+  // Inside a focused tree, panning the camera onto the clicked node swung the
+  // frame off-canvas near the tree edges and visibly glitched.
+  // So a tree click gives a gentle zoom held on the SCREEN CENTER (no pan): the
+  // tree stays put and just breathes in a touch, and the card + selection ring
+  // carry the feedback.
+  if (s.selectedNodePos) {
+    return s.focusedTeam
+      ? frameOn(view, { x: view.w / 2, y: view.h / 2 }, ZOOM_NODE_SOFT)
+      : frameOn(view, s.selectedNodePos, ZOOM_NODE);
+  }
   return {
     x: round2(-view.w * ZOOM_OUT_PAD),
     y: round2(-view.h * ZOOM_OUT_PAD),
@@ -554,64 +630,4 @@ export function lerpRect(cur: Rect, target: Rect, t: number): Rect {
     w: cur.w + (target.w - cur.w) * t,
     h: cur.h + (target.h - cur.h) * t,
   };
-}
-
-/**
- * A generated stand-in constellation for environments with no brain-store on
- * disk (e.g. a fresh fork or a hosted demo). Deterministic, zero personal data — generic
- * knowledge domains so the core still reads as a living second brain. Local dev
- * always prefers the real distilled store; this is only the empty-store fallback.
- */
-export function demoMemoryGraph(): MemoryGraph {
-  const rnd = (s: string, i: number): number => {
-    let h = 2166136261 ^ i;
-    for (let k = 0; k < s.length; k++) {
-      h ^= s.charCodeAt(k);
-      h = Math.imul(h, 16777619);
-    }
-    return ((h >>> 0) % 100000) / 100000;
-  };
-  const domains: { folder: string; titles: string[] }[] = [
-    { folder: 'Sales Playbooks', titles: ['Cold Outreach Framework', 'Discovery Call Script', 'Objection Handling', 'Pricing & Packaging', 'Follow-up Cadence', 'Proposal Template', 'Closing Checklist', 'ICP Definition', 'Negotiation Notes', 'Win/Loss Review', 'Referral Program', 'Case Study Bank', 'Sales Deck', 'Territory Plan', 'Commission Structure'] },
-    { folder: 'Growth & Marketing', titles: ['Content Engine', 'Paid Ads Playbook', 'Hook Library', 'Funnel Map', 'SEO Notes', 'Brand Voice', 'Launch Plan', 'Email Sequences', 'UGC Briefs', 'Analytics Notes', 'Landing Pages', 'Webinar Playbook', 'Influencer List', 'Retargeting', 'Newsletter Ops'] },
-    { folder: 'Product', titles: ['Roadmap', 'Feature Specs', 'User Research', 'Onboarding Flow', 'Changelog', 'Design System', 'API Notes', 'Bug Triage', 'Release Process', 'Product Metrics', 'Feature Flags', 'Analytics Events', 'Support Macros', 'Beta Program', 'Integrations'] },
-    { folder: 'Operations', titles: ['SOP Library', 'Hiring Playbook', 'Team Rituals', 'Vendor List', 'Tooling Stack', 'Incident Runbook', 'Weekly Cadence', 'Access & Security', 'Docs Index', 'Onboarding Kit', 'Payroll SOP', 'Legal Templates', 'Meeting Notes', 'OKRs', 'Vendor Contracts'] },
-    { folder: 'Finance', titles: ['Unit Economics', 'Cash Flow Model', 'Pricing Model', 'Invoicing SOP', 'Runway Tracker', 'Expense Policy', 'Revenue Report', 'Forecast', 'Payment Processors', 'Bookkeeping', 'Tax Notes', 'Budget', 'Investor Updates', 'Chargebacks', 'Financial Model'] },
-    { folder: 'Client Delivery', titles: ['Kickoff Template', 'Scope of Work', 'Weekly Report', 'QBR Deck', 'Retention Playbook', 'Escalation Path', 'Deliverables Tracker', 'Health Scores', 'Renewal Motion', 'Case Studies', 'Onboarding Checklist', 'SLA Terms', 'Feedback Loop', 'Upsell Paths', 'Offboarding'] },
-    { folder: 'Research', titles: ['Market Landscape', 'Competitor Teardown', 'Customer Interviews', 'Trends', 'Positioning', 'Whitepaper Notes', 'Data Sources', 'Survey Results', 'Experiment Log', 'Insights', 'Pricing Study', 'Persona Docs', 'Jobs to be Done', 'Churn Analysis', 'Benchmark Report'] },
-    { folder: 'Automation', titles: ['Agent Registry', 'Workflow Map', 'Prompt Library', 'Integration Notes', 'Trigger Rules', 'Eval Harness', 'Guardrails', 'Agent Runbook', 'Model Notes', 'Cost Tracking', 'Webhook Map', 'Retry Logic', 'Data Pipeline', 'Alerting Rules', 'Access Scopes'] },
-  ];
-  const nodes: MemoryNode[] = [];
-  const edges: MemoryEdge[] = [];
-  // Seed positions are only a starting scatter near the center; the real
-  // forceLayout below organically re-places everything, so the field looks
-  // exactly like the distilled vault (organic blobs filling the disc, not a
-  // ring), not the geometric pattern a fixed radial layout produced.
-  const seed = (id: string) => ({ vx: (rnd(id, 8) - 0.5) * 0.4, vy: (rnd(id, 9) - 0.5) * 0.4 });
-  domains.forEach((d, di) => {
-    nodes.push({ id: `folder:${d.folder}`, type: 'folder', label: d.folder, folder: d.folder, excerpt: '', wordCount: 0, chunks: 0, ...seed(d.folder), cluster: di, links: d.titles.length });
-    d.titles.forEach((t) => {
-      const id = `page:${d.folder}/${t}`;
-      nodes.push({ id, type: 'page', label: t, folder: d.folder, excerpt: `${t} — a ${d.folder} reference note in the knowledge base.`, wordCount: 200 + Math.floor(rnd(id, 3) * 1400), chunks: 1 + Math.floor(rnd(id, 4) * 5), ...seed(id), cluster: di, links: 0 });
-      edges.push({ source: `folder:${d.folder}`, target: id, type: 'member' });
-    });
-  });
-  const pages = nodes.filter((x) => x.type === 'page');
-  pages.forEach((p) => {
-    // 4–6 links each: with incoming links too, every note clears the memNodeR
-    // cap and renders at full size (like the real vault, median ~7 links, nodes
-    // at the ~1.4 max radius). Links also drive the spring layout's clustering.
-    const k = 4 + Math.floor(rnd(p.id, 5) * 3);
-    for (let j = 0; j < k; j++) {
-      const target = pages[Math.floor(rnd(p.id, 11 + j) * pages.length)];
-      if (target && target.id !== p.id) {
-        edges.push({ source: p.id, target: target.id, type: 'wikilink' });
-        p.links += 1;
-        target.links += 1;
-      }
-    }
-  });
-  // organic force-directed placement — the SAME layout the distilled vault uses,
-  // so the demo core reads identically (blobs, filled centre, no empty middle).
-  return { nodes: forceLayout(nodes, edges), edges };
 }

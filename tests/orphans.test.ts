@@ -4,7 +4,21 @@ import path from 'node:path';
 
 // Every component must be imported somewhere — no dead files. If a component is
 // intentionally kept unused (rare), add its basename here with a reason.
-const KNOWN_ORPHANS: string[] = [];
+const KNOWN_ORPHANS: string[] = [
+  // The old unified /comms feed, superseded by the per-source lane board
+  // (CommsBoard + SlackClientBoard). Kept for a one-line revert until the board
+  // is proven out; delete both this entry and the file once it is.
+  'CommsGravity',
+  // The per-source lane board, superseded by the three-pane messaging view
+  // (CommsThreePane — interaction rebrand step 3). Kept for a one-line revert
+  // until the panes are proven out; delete both this entry and the file then.
+  'CommsBoard',
+  // The combined audience graph left the home console in the interaction
+  // rebrand (Needs You / Interject / Done today took the fold). /social still
+  // covers the data; kept for a one-line revert until the operator signs off on the
+  // new home, then delete both this entry and the file.
+  'HomeSocialGraph',
+];
 
 const ROOT = process.cwd();
 

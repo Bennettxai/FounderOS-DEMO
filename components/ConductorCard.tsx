@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Agent, Broadcast } from '@/lib/schemas';
+import { AsyncButton } from '@/components/AsyncButton';
 import { ConductorEmblem } from '@/components/ConductorEmblem';
 
 /**
@@ -48,7 +49,7 @@ export function ConductorCard({
   }
 
   return (
-    <div className="hoverable group w-[340px] rounded-2xl border border-os-border-bright bg-os-surface p-4">
+    <div data-lens="r" className="pressable is-row group w-[340px] rounded-tile border border-os-border-bright bg-os-surface p-4">
       <div className="text-center text-[10px] uppercase tracking-[0.25em] text-os-dim">AI Head</div>
 
       {/* Living core — breathes and orbits while the Conductor is broadcasting */}
@@ -70,13 +71,17 @@ export function ConductorCard({
           className="min-w-0 flex-1 rounded-full border border-os-border bg-os-bg px-3 py-1.5 text-xs text-os-text placeholder:text-os-dim focus:border-os-border-bright focus:outline-none"
           disabled={sending}
         />
-        <button
-          onClick={send}
-          disabled={sending || !message.trim()}
-          className="shrink-0 rounded-full bg-os-text px-3.5 py-1.5 text-xs font-semibold text-os-bg transition-opacity disabled:opacity-40"
+        {/* three-state broadcast control: Send → spinner → ✓ (✗ if it threw) */}
+        <AsyncButton
+          run={send}
+          disabled={!message.trim()}
+          failed={error !== null}
+          doneLabel=""
+          failLabel=""
+          className="!rounded-full shrink-0"
         >
-          {sending ? '…' : 'Send'}
-        </button>
+          Send
+        </AsyncButton>
       </div>
       {error && <p className="mt-1.5 text-[11px] text-os-muted">⚠ {error}</p>}
 
@@ -106,15 +111,16 @@ export function ConductorCard({
         <div className="mt-3 border-t border-os-border pt-2">
           <button
             onClick={() => setShowReplies((v) => !v)}
-            className="flex w-full items-baseline justify-between gap-2 text-left"
+            className="pressable flex w-full items-baseline justify-between gap-2 text-left"
           >
             <span className="truncate text-[11px] text-os-muted">«{broadcast.message}»</span>
-            <span className="shrink-0 text-[10px] text-os-dim">
-              {broadcast.replies.filter((r) => r.ok).length}/{broadcast.replies.length} ok {showReplies ? '▾' : '▸'}
+            <span className="shrink-0 text-[10px] text-os-ok">
+              {broadcast.replies.filter((r) => r.ok).length}/{broadcast.replies.length} ok{' '}
+              <span className="text-os-dim">{showReplies ? '▾' : '▸'}</span>
             </span>
           </button>
           {showReplies && (
-            <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
+            <ul className="animate-enter mt-2 max-h-56 space-y-1 overflow-y-auto pr-1">
               {broadcast.replies.map((reply) => (
                 <li key={reply.id} className="flex items-start gap-1.5 rounded-md bg-os-raised px-2 py-1.5">
                   <span

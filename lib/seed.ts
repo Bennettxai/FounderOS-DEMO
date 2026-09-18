@@ -1,7 +1,10 @@
 import type { FounderDb } from '@/lib/db';
 import { PERSONAS } from '@/lib/personas-seed';
+import { runCostUsd } from '@/lib/agent-costs';
 import type {
+  AgentCron,
   Agent,
+  AgentRun,
   AgentTask,
   Department,
   Domain,
@@ -12,7 +15,6 @@ import type {
   Person,
   Phase,
   RoadmapItem,
-  LeadMagnet,
   SopTask,
   Workflow,
   Skill,
@@ -23,6 +25,11 @@ import type {
   SocialPost,
   SocialSnapshot,
   Tool,
+  LeadMagnet,
+  TradingAccountSnapshot,
+  TradingPosition,
+  TradeActivity,
+  Proposal,
 } from '@/lib/schemas';
 
 // Monochrome palette — the UI is strict black & white; "color" fields carry
@@ -35,7 +42,7 @@ const GRAY = {
   dark: '#525252',
 };
 
-// Alex's five operating pillars (2026-06-12 directive).
+// The five operating pillars of the seeded organisation.
 const departments: Department[] = [
   { id: 'dept-sales', name: 'Sales', slug: 'sales', tagline: 'Pipeline and deals.', color: GRAY.white, order: 1 },
   { id: 'dept-marketing-growth', name: 'Marketing/Growth', slug: 'marketing-growth', tagline: 'Publishing, content, attention.', color: GRAY.light, order: 2 },
@@ -46,7 +53,7 @@ const departments: Department[] = [
 ];
 
 // The roster IS the runtime — every row here maps 1:1 to a RuntimeAgent in
-// lib/agents/real.ts (enforced by tests/seed.test.ts). No larp agents.
+// lib/agents/real.ts (enforced by tests/seed.test.ts). No demo agents.
 //
 // Shape: top-level agents (parentId null) are INSTANCE slots — each one is
 // what becomes its own Clawline / Claude Code process on a dedicated host
@@ -69,6 +76,20 @@ const agents: Agent[] = [
     instance: 'builtin',
   },
   // ── Communications: one instance, three channel workers feeding /comms ────────
+  {
+    id: 'comms-digest',
+    departmentId: 'dept-comms',
+    name: 'Comms Digest',
+    role: 'Morning Report · 09:00 daily',
+    status: 'active',
+    tier: 'lead',
+    description:
+      'Scrapes the last 24h across all four inboxes, WhatsApp and Slack and ranks who needs a reply: calls first, then clients, community members, brand deals, group chats, companies last. Also lists what to unsubscribe from.',
+    model: 'rules + connectors',
+    tools: ['comms-feed', 'calendar', 'ledger'],
+    parentId: null,
+    instance: 'builtin',
+  },
   {
     id: 'comms-agent',
     departmentId: 'dept-comms',
@@ -136,13 +157,41 @@ const agents: Agent[] = [
     instance: 'builtin',
   },
   {
+    id: 'brand-deal-agent',
+    departmentId: 'dept-sales',
+    name: 'Brand Deal Agent',
+    role: 'Vera · brand deal manager',
+    status: 'active',
+    tier: 'worker',
+    description:
+      'Negotiates as Vera, Alex\u2019s brand deal manager: qualifies inbound, anchors and counters, chases unpaid invoices, and bumps stalled threads. A tested contact governor decides whether a thread may be touched at all (five bumps maximum, one revival per brand per six months). Drafts only, never sends.',
+    model: 'rules + gateway',
+    tools: ['ledger', 'imap'],
+    parentId: 'sales-agent',
+    instance: 'builtin',
+  },
+  {
+    id: 'newsletter-agent',
+    departmentId: 'dept-marketing-growth',
+    name: 'Newsletter Agent',
+    role: 'Issue drafting',
+    status: 'active',
+    tier: 'worker',
+    description:
+      'Reads newsletter send performance, builds a brief that is honest about how thin the history is, and drafts the next issue against the skill file. Drafts only, never schedules or sends.',
+    model: 'rules + gateway',
+    tools: ['newsletter'],
+    parentId: 'social-agent',
+    instance: 'builtin',
+  },
+  {
     id: 'postly-publisher',
     departmentId: 'dept-marketing-growth',
     name: 'Postly Publisher',
     role: 'Six-Platform Publishing',
     status: 'active',
     tier: 'worker',
-    description: 'Publishes and monitors six platforms under @founderos.ai via Postly. Key already on this machine — works today.',
+    description: 'Publishes and monitors six platforms under @founderos.ai via Postly. Live once the Postly key is set.',
     model: 'postly api',
     tools: ['postly'],
     parentId: 'social-agent',
@@ -155,7 +204,7 @@ const agents: Agent[] = [
     role: 'UGC Ad Generation',
     status: 'active',
     tier: 'worker',
-    description: 'Generates UGC ads for Vantage (Veo/Sora/Kling) via the Adsmith API. Auth on this machine — works today.',
+    description: 'Generates UGC ads for Vantage (Veo/Sora/Kling) via the Adsmith API. Live once Adsmith auth is set.',
     model: 'adsmith api',
     tools: ['adsmith'],
     parentId: 'social-agent',
@@ -192,7 +241,9 @@ const agents: Agent[] = [
     departmentId: 'dept-marketing-growth',
     name: 'DMFlow MCP',
     role: 'DM Automation',
-    status: 'planned',
+    // live: the MCP server is registered user-scope and the
+    // connector authenticates against the real Instagram Pro account
+    status: 'active',
     tier: 'worker',
     description: 'DMFlow MCP/API lane for social DM automations, keyword flows, and lead capture.',
     model: 'dmflow api',
@@ -209,7 +260,7 @@ const agents: Agent[] = [
     tier: 'lead',
     description: 'Owns the sales pillar. Aggregates CRM Pulse and reports the live Ledger deals pipeline.',
     model: 'aggregate of workers',
-    tools: ['ledger', 'paykit', 'stripe', 'flexpay', 'recall'],
+    tools: ['ledger', 'paykit', 'stripe', 'flexpay', 'recall', 'plaud'],
     parentId: null,
     instance: 'builtin',
   },
@@ -311,9 +362,9 @@ const agents: Agent[] = [
     role: 'Call Intelligence',
     status: 'planned',
     tier: 'worker',
-    description: 'Sales calls data lane for recordings, notes, outcomes, and follow-up context.',
-    model: 'recall + crm',
-    tools: ['recall', 'ledger'],
+    description: 'Sales calls data lane for recordings, notes, outcomes, and follow-up context: Recall on the calls, Plaud in the room.',
+    model: 'recall + plaud + crm',
+    tools: ['recall', 'plaud', 'ledger'],
     parentId: 'sales-agent',
     instance: 'builtin',
   },
@@ -327,7 +378,7 @@ const agents: Agent[] = [
     tier: 'lead',
     description: 'Bound to the G-Brain instance: analyzes markdown + vector storage health and surfaces ideas. Answers broadcasts by querying the brain.',
     model: 'gbrain CLI',
-    tools: ['gbrain', 'brain-store', 'zeroentropy', 'supabase'],
+    tools: ['gbrain', 'brain-store', 'ollama', 'supabase'],
     parentId: null,
     instance: 'builtin',
   },
@@ -338,8 +389,8 @@ const agents: Agent[] = [
     role: 'brain-store Health',
     status: 'active',
     tier: 'worker',
-    description: 'Walks the markdown brain-store: page counts per folder, strays at the root, empty folders. Works today.',
-    model: 'fs walk',
+    description: 'Audits the knowledge base: broken wikilinks, orphan pages, duplicate titles, and whether the index search reads still matches the store on disk.',
+    model: 'link audit',
     tools: ['brain-store'],
     parentId: 'data-agent',
     instance: 'builtin',
@@ -353,20 +404,7 @@ const agents: Agent[] = [
     tier: 'worker',
     description: 'Runs gbrain doctor: connection to Supabase pgvector, embedding checks, health score. Works today.',
     model: 'gbrain doctor',
-    tools: ['supabase', 'zeroentropy'],
-    parentId: 'data-agent',
-    instance: 'builtin',
-  },
-  {
-    id: 'notion-sync',
-    departmentId: 'dept-tech',
-    name: 'Notion Sync',
-    role: 'Workspace Reader',
-    status: 'planned',
-    tier: 'specialist',
-    description: 'Recently edited pages shared with the integration. Needs NOTION_API_KEY.',
-    model: '@notionhq/client',
-    tools: ['notion'],
+    tools: ['supabase', 'ollama'],
     parentId: 'data-agent',
     instance: 'builtin',
   },
@@ -433,8 +471,8 @@ const agents: Agent[] = [
     status: 'planned',
     tier: 'worker',
     description: 'Runs the onboarding SOP end to end when a deal closes: welcome pack, workspace setup, kickoff booked, handoff notes.',
-    model: 'ledger + slack + notion',
-    tools: ['ledger', 'slack', 'notion'],
+    model: 'ledger + slack',
+    tools: ['ledger', 'slack'],
     parentId: 'client-roster',
     instance: 'builtin',
   },
@@ -445,24 +483,24 @@ const agents: Agent[] = [
     role: 'Service & Renewals',
     status: 'planned',
     tier: 'worker',
-    description: 'Keeps active clients served: check-in cadence, deliverable tracking from call notes, renewal and upsell flags.',
-    model: 'recall + slack',
-    tools: ['recall', 'slack'],
+    description: 'Keeps active clients served: check-in cadence, deliverable tracking from call notes (Recall) and in-person meeting recordings (Plaud), renewal and upsell flags.',
+    model: 'recall + plaud + slack',
+    tools: ['recall', 'plaud', 'slack'],
     parentId: 'client-roster',
     instance: 'builtin',
   },
 ];
 
 // ── Humans in the process ─────────────────────────────────────────────────────
-// Real heads (Marco, Nadia) plus larp-first seeds for the roles Alex will hire
-// into (rename when the real person lands). Tools use the agents' slug
+// Named heads plus demo-first seeds for the roles an operator hires
+// into (rename when a real person lands). Tools use the agents' slug
 // namespace so the graph chain still ends in tools for humans too.
 const people: Person[] = [
   { id: 'person-marco', departmentId: 'dept-sales', name: 'Marco', role: 'Head of Sales', tools: ['recall', 'ledger'] },
   { id: 'person-nadia', departmentId: 'dept-marketing-growth', name: 'Nadia', role: 'Head of Growth & Marketing', tools: ['postly', 'dmflow'] },
   { id: 'person-mia', departmentId: 'dept-comms', name: 'Mia Torres', role: 'Executive Assistant', tools: ['imap', 'slack'] },
   { id: 'person-dana', departmentId: 'dept-finance', name: 'Dana Whitfield', role: 'Bookkeeper', tools: ['stripe', 'paykit'] },
-  { id: 'person-rae', departmentId: 'dept-clients', name: 'Rae Winters', role: 'Account Manager', tools: ['ledger', 'recall'] },
+  { id: 'person-sasha', departmentId: 'dept-clients', name: 'Sasha Bell', role: 'Account Manager', tools: ['ledger', 'recall'] },
 ];
 
 // ── SOP tasks — every department role's job, written out ─────────────────────
@@ -559,19 +597,7 @@ const sopTasks: SopTask[] = [
       'Wake the database and wait until it accepts queries before comparing',
       'Compare pgvector chunk counts against brain-store files',
       'Flag drift and paused-tier warnings on the /brain doctor card',
-      'Trigger ZeroEntropy re-embeds for drifted documents and verify counts after',
-    ],
-  },
-  {
-    id: 'sop-notion-sync', departmentId: 'dept-tech', assigneeKind: 'agent', assigneeId: 'notion-sync',
-    title: 'Mirror the Notion workspace',
-    summary: 'Shared pages flow into the knowledge core.',
-    steps: [
-      'List pages shared with the integration token',
-      'Diff each page against the last synced version',
-      'Pull changed blocks and normalize to markdown',
-      'Index the fresh content into the knowledge core',
-      'Record the sync watermark so the next run only pulls deltas',
+      'Trigger bge-m3 re-embeds for drifted documents and verify counts after',
     ],
   },
   {
@@ -579,8 +605,8 @@ const sopTasks: SopTask[] = [
     title: 'Watch the local stack',
     summary: 'Honest status for every port, session and binary.',
     steps: [
-      'Probe ports 4000 / 3789 / 11434 / 18789',
-      'Check tmux sessions and required brew binaries',
+      'Probe the command center :3100 and the worker gateway :8642',
+      'Check the brew binaries the agents shell out to (ffmpeg, pdftotext, whisper, gh) and the gbrain CLI',
       'Record honest ConnectorStatus, never fake connected',
       'Compare against the last sweep to catch flapping services',
       'Alert the console when something that was up goes down',
@@ -588,6 +614,18 @@ const sopTasks: SopTask[] = [
   },
 
   // COMMUNICATIONS
+  {
+    id: 'sop-comms-digest', departmentId: 'dept-comms', assigneeKind: 'agent', assigneeId: 'comms-digest',
+    title: 'Run the 09:00 comms report',
+    summary: 'Every morning: 24h of email, WhatsApp and Slack, ranked by who needs a reply.',
+    steps: [
+      'Pull the trailing 24 hours from all four inboxes, WhatsApp and Slack (one guarded call each — a dead channel degrades the report, it never cancels it)',
+      'Load the ranking context: calendar titles for upcoming calls, the Ledger roster for clients, contact tags for community members',
+      'Rank every message: calls first, then clients and proposal replies, then community questions, then brand deals, then group chats, companies and software last',
+      'Collect the automated senders into an unsubscribe worklist, noisiest first',
+      'Store the report so /comms renders it instantly, and log the run against the schedule',
+    ],
+  },
   {
     id: 'sop-comms-agent', departmentId: 'dept-comms', assigneeKind: 'agent', assigneeId: 'comms-agent',
     title: 'Compose the unified comms feed',
@@ -637,18 +675,6 @@ const sopTasks: SopTask[] = [
       'Push the digest into the unified feed',
     ],
   },
-  {
-    id: 'sop-mia', departmentId: 'dept-comms', assigneeKind: 'person', assigneeId: 'person-mia',
-    title: 'Handle escalations & VIP replies',
-    summary: 'The human hands on the threads that need judgment.',
-    steps: [
-      'Review the escalation queue the workers built overnight',
-      'Draft replies in Alex’s voice for VIP threads',
-      'Send what is cleared, file the rest for Alex’s approval',
-      'Chase any thread waiting on us for more than 24 hours',
-      'Close the loop in /comms so nothing dangles',
-    ],
-  },
 
   // MARKETING / GROWTH
   {
@@ -662,6 +688,18 @@ const sopTasks: SopTask[] = [
       'Reject anything off-brand with a one-line reason so the fix is fast',
       'Queue approved posts for the Postly publisher with per-platform captions',
       'Log what shipped to the calendar so tomorrow’s brief starts warm',
+    ],
+  },
+  {
+    id: 'sop-newsletter-agent', departmentId: 'dept-marketing-growth', assigneeKind: 'agent', assigneeId: 'newsletter-agent',
+    title: 'Draft the next newsletter issue',
+    summary: 'Aim the draft at what the list actually opened and clicked.',
+    steps: [
+      'Pull the newsletter send history and build the performance brief',
+      'Say plainly when the history is too thin to call a pattern',
+      'Write three subject lines and the issue against the skill file',
+      'Avoid repeating the angle of any recent issue in the brief',
+      'Hand the draft over unsent, and never state a metric that was not measured',
     ],
   },
   {
@@ -790,9 +828,10 @@ const sopTasks: SopTask[] = [
   {
     id: 'sop-sales-calls-data', departmentId: 'dept-sales', assigneeKind: 'agent', assigneeId: 'sales-calls-data',
     title: 'Mine sales-call recordings',
-    summary: 'Every Recall call becomes CRM intelligence.',
+    summary: 'Every Recall call and Plaud recording becomes CRM intelligence.',
     steps: [
       'Ingest Recall notes after each recorded call',
+      'Ingest Plaud transcripts + AI notes after each in-person meeting or site walk',
       'Extract objections, commitments and next steps',
       'Write the extract back to the Ledger record',
       'Tag calls where pricing or competitors came up',
@@ -809,6 +848,18 @@ const sopTasks: SopTask[] = [
       'Merge duplicates and backfill whatever can be backfilled safely',
       'Nudge lane owners on records gone stale',
       'Snapshot pipeline metrics for the dashboard',
+    ],
+  },
+  {
+    id: 'sop-brand-deal-agent', departmentId: 'dept-sales', assigneeKind: 'agent', assigneeId: 'brand-deal-agent',
+    title: 'Work the brand deal pipeline as Vera',
+    summary: 'Qualify, quote, chase and bump, without ever sending.',
+    steps: [
+      'Read the OS brand deal store and rank what needs answering today',
+      'Check the contact governor before touching any thread, and respect a refusal',
+      'Draft the reply, counter or bump as Vera, speaking about Alex in third person',
+      'Escalate anything below floor, equity shaped, or asking for a call',
+      'Leave every draft for Alex to send, and never claim one went out',
     ],
   },
   {
@@ -885,18 +936,6 @@ const sopTasks: SopTask[] = [
       'Keep the uptime history for the analytics view',
     ],
   },
-  {
-    id: 'sop-dana', departmentId: 'dept-finance', assigneeKind: 'person', assigneeId: 'person-dana',
-    title: 'Close the books monthly',
-    summary: 'The human sign-off on every month’s numbers.',
-    steps: [
-      'Import bank and processor statements for the month by the 3rd',
-      'Categorize transactions using the statement’s own categories',
-      'Reconcile against the income the agents recorded and chase every gap',
-      'Confirm refunds and disputes are reflected in the venture totals',
-      'Deliver the month-end P&L to Alex with three lines of commentary',
-    ],
-  },
 
   // CLIENTS
   {
@@ -920,7 +959,6 @@ const sopTasks: SopTask[] = [
       'Verify payment landed with Processor Confirm before anything ships',
       'Send the welcome pack and countersigned agreement within 24 hours',
       'Create their Slack channel, invite the client team, pin the scope doc',
-      'Spin up the Notion workspace from the client template',
       'Book the kickoff call inside 5 business days and confirm attendance',
       'Collect access and assets (logins, brand kit, tracking) in one request',
       'Hand to Client Success with full context notes and the risk flags',
@@ -935,11 +973,35 @@ const sopTasks: SopTask[] = [
       'Track deliverables against the sold scope and flag slippage early',
       'Log Recall call notes back to the client record the same day',
       'Score account health monthly: green, watch, or at risk with a reason',
-      'Raise renewals and upsell openings 30 days out to Rae and Sales',
+      'Raise renewals and upsell openings 30 days out to Sasha and Sales',
     ],
   },
   {
-    id: 'sop-rae', departmentId: 'dept-clients', assigneeKind: 'person', assigneeId: 'person-rae',
+    id: 'sop-mia', departmentId: 'dept-comms', assigneeKind: 'person', assigneeId: 'person-mia',
+    title: 'Handle escalations & VIP replies',
+    summary: 'The human hands on the threads that need judgment.',
+    steps: [
+      'Review the escalation queue the workers built overnight',
+      'Draft replies in Alex’s voice for VIP threads',
+      'Send what is cleared, file the rest for Alex’s approval',
+      'Chase any thread waiting on us for more than 24 hours',
+      'Close the loop in /comms so nothing dangles',
+    ],
+  },
+  {
+    id: 'sop-dana', departmentId: 'dept-finance', assigneeKind: 'person', assigneeId: 'person-dana',
+    title: 'Close the books monthly',
+    summary: 'The human sign-off on every month’s numbers.',
+    steps: [
+      'Import bank and processor statements for the month by the 3rd',
+      'Categorize transactions using the statement’s own categories',
+      'Reconcile against the income the agents recorded and chase every gap',
+      'Confirm refunds and disputes are reflected in the venture totals',
+      'Deliver the month-end P&L to Alex with three lines of commentary',
+    ],
+  },
+  {
+    id: 'sop-sasha', departmentId: 'dept-clients', assigneeKind: 'person', assigneeId: 'person-sasha',
     title: 'Own the client relationships',
     summary: 'The human accountable for every account.',
     steps: [
@@ -952,69 +1014,80 @@ const sopTasks: SopTask[] = [
   },
 ];
 
-// Curated from a full-filesystem discovery sweep.
-// status reflects what was VERIFIED on this machine: connected = creds/binary
-// exist and worked; available = installed/configured but needs a key or start.
+// The tool registry behind /reference and the graph. `status` is honest about
+// what the host can actually reach: connected = credentials or binary present
+// and working; available = implemented but waiting on a key or a running service.
 const tools: Tool[] = [
   // Knowledge
-  { id: 'tool-gbrain', name: 'G-Brain (gbrain CLI)', category: 'Knowledge', status: 'connected', color: GRAY.white, description: 'v0.41 · brain-store markdown + Supabase + ZeroEntropy embeddings. Live.' },
-  { id: 'tool-brain-store', name: 'brain-store/', category: 'Knowledge', status: 'connected', color: GRAY.light, description: 'Local markdown knowledge base at knowledge/brain-store.' },
-  { id: 'tool-zeroentropy', name: 'ZeroEntropy', category: 'Knowledge', status: 'connected', color: GRAY.mid, description: 'Vector embeddings behind gbrain hybrid search. Key in ~/.config/knowledge/config.json.' },
-  { id: 'tool-supabase', name: 'Supabase (Second Brain)', category: 'Knowledge', status: 'available', color: GRAY.mid, description: '1240 pages / 15k chunks. Free tier pauses on idle — unpause from dashboard when queries fail.' },
+  { id: 'tool-gbrain', name: 'G-Brain (gbrain CLI)', category: 'Knowledge', status: 'connected', color: GRAY.white, description: 'Markdown brain-store plus a hosted vector backend and local embeddings.' },
+  { id: 'tool-brain-store', name: 'brain-store/', category: 'Knowledge', status: 'connected', color: GRAY.light, description: 'Local markdown knowledge base on disk.' },
+  { id: 'tool-ollama', name: 'Ollama (bge-m3)', category: 'Knowledge', status: 'connected', color: GRAY.mid, description: 'Local 1024d embeddings behind gbrain hybrid search, plus the local rerank pass. No key, no vendor.' },
+  { id: 'tool-supabase', name: 'Supabase (Second Brain)', category: 'Knowledge', status: 'available', color: GRAY.mid, description: 'Roughly a thousand pages of chunked knowledge. A free tier pauses on idle: unpause from the dashboard when queries fail.' },
   { id: 'tool-obsidian', name: 'Notes Vault', category: 'Knowledge', status: 'connected', color: GRAY.light, description: 'Local notes vault. Direct filesystem access.' },
-  { id: 'tool-notion', name: 'Notion', category: 'Knowledge', status: 'available', color: GRAY.dim, description: 'Client implemented. Set NOTION_API_KEY and share pages with the integration.' },
   // Social & growth
-  { id: 'tool-postly', name: 'Postly', category: 'Social', status: 'connected', color: GRAY.white, description: '6 platforms under @founderos.ai (IG, TikTok, X…). Key at ~/.config/social/.env — live.' },
-  { id: 'tool-dmflow', name: 'DMFlow', category: 'Social', status: 'available', color: GRAY.dim, description: 'DM automation. Endpoint map fully documented in shared-config; needs DMFLOW_API_KEY.' },
+  { id: 'tool-postly', name: 'Postly', category: 'Social', status: 'connected', color: GRAY.white, description: 'Six platforms behind one publishing account (IG, TikTok, X…). Key comes from the environment.' },
+  { id: 'tool-dmflow', name: 'DMFlow', category: 'Social', status: 'connected', color: GRAY.white, description: 'DM automation, live via the standalone DMFlow MCP. Keyword flows are still authored in the DMFlow UI: the public API has no flow authoring.' },
   { id: 'tool-skool', name: 'Skool (via Playwright)', category: 'Social', status: 'connected', color: GRAY.mid, description: 'launchpad-cohort community, driven by the documented Playwright workflow.' },
   // CRM & revenue
-  { id: 'tool-ledger', name: 'Ledger', category: 'CRM & Revenue', status: 'connected', color: GRAY.white, description: 'Vantage + LC deals. Key reused from MCP config (read-scoped: query records, not lists).' },
+  { id: 'tool-ledger', name: 'Ledger', category: 'CRM & Revenue', status: 'connected', color: GRAY.white, description: 'Vantage and Launchpad Cohort deals, read-scoped (query records, not lists).' },
   { id: 'tool-paykit', name: 'PayKit', category: 'CRM & Revenue', status: 'planned', color: GRAY.light, description: 'Offer/payment/customer context for Sales, including the Vantage PayKit lane.' },
   { id: 'tool-flexpay', name: 'FlexPay', category: 'CRM & Revenue', status: 'planned', color: GRAY.mid, description: 'Financing options for sales offers and payment-plan context.' },
   { id: 'tool-stripe', name: 'Stripe', category: 'CRM & Revenue', status: 'available', color: GRAY.light, description: 'Full client implemented — balance + charges live once STRIPE_SECRET_KEY is set.' },
-  { id: 'tool-ghl', name: 'GoHighLevel', category: 'CRM & Revenue', status: 'planned', color: GRAY.dark, description: 'CLI wrapper scaffolded in knowledge/scripts; keys never added.' },
-  { id: 'tool-recall', name: 'Recall', category: 'CRM & Revenue', status: 'available', color: GRAY.mid, description: 'AI meeting notetaker, used daily. Needs RECALL_API_KEY from settings for API access.' },
-  { id: 'tool-webinarjam', name: 'WebinarJam', category: 'CRM & Revenue', status: 'available', color: GRAY.light, description: 'Launchpad Cohort webinar funnel — registrants & attendees are leads. Client implemented; set WEBINARJAM_API_KEY (account-wide).' },
+  { id: 'tool-ghl', name: 'GoHighLevel', category: 'CRM & Revenue', status: 'planned', color: GRAY.dark, description: 'CLI wrapper scaffolded; no keys configured.' },
+  { id: 'tool-recall', name: 'Recall', category: 'CRM & Revenue', status: 'available', color: GRAY.mid, description: 'AI meeting notetaker. Needs RECALL_API_KEY for API access.' },
+  { id: 'tool-plaud', name: 'Plaud', category: 'CRM & Revenue', status: 'connected', color: GRAY.light, description: 'Pocket voice recorder for the room: in-person client meetings, site walks, memos. Transcripts + AI notes over its API; pairs with Recall on the Recordings tab.' },
   { id: 'tool-trakyo', name: 'Trakyo', category: 'CRM & Revenue', status: 'planned', color: GRAY.dim, description: 'Revenue attribution for Launchpad Cohort: content → booked calls → payments. Status-only until Trakyo ships a public API (TRAKYO_API_KEY).' },
   // Creative studio
-  { id: 'tool-reelkit', name: 'Reelkit Pipeline', category: 'Creative', status: 'connected', color: GRAY.white, description: 'Local reelkit pipeline · LC + Vantage themes · 7 skills.' },
-  { id: 'tool-renderly', name: 'Renderly CLI', category: 'Creative', status: 'connected', color: GRAY.light, description: 'v0.1.40, auth in keychain. generate / product-photoshoot / marketing-studio / soul-id.' },
+  { id: 'tool-reelkit', name: 'Reelkit Pipeline', category: 'Creative', status: 'connected', color: GRAY.white, description: 'Local render pipeline with per-brand themes and a skill library.' },
+  { id: 'tool-renderly', name: 'Renderly CLI', category: 'Creative', status: 'connected', color: GRAY.light, description: 'Authenticated CLI: generate / product-photoshoot / marketing-studio / soul-id.' },
   { id: 'tool-adsmith', name: 'Adsmith', category: 'Creative', status: 'connected', color: GRAY.mid, description: 'UGC ads for Vantage (Veo/Sora/Kling). Basic auth from env.' },
-  { id: 'tool-whisper', name: 'Whisper (local)', category: 'Creative', status: 'connected', color: GRAY.dim, description: 'whisper-cli + ffmpeg via brew. Local transcription, nothing leaves the machine.' },
-  { id: 'tool-miro', name: 'Miro', category: 'Creative', status: 'connected', color: GRAY.mid, description: 'REST API with token from knowledge/.env.agents. GBrain architecture board exists.' },
-  { id: 'tool-canva-figma', name: 'Canva + Figma', category: 'Creative', status: 'available', color: GRAY.dark, description: 'Connected as Claude MCPs (session-scoped). Standalone API needs separate keys.' },
+  { id: 'tool-whisper', name: 'Whisper (local)', category: 'Creative', status: 'connected', color: GRAY.dim, description: 'Local transcription CLI plus ffmpeg. Nothing leaves the host.' },
+  { id: 'tool-miro', name: 'Miro', category: 'Creative', status: 'connected', color: GRAY.mid, description: 'REST API with a token from the environment. Architecture boards live here.' },
+  { id: 'tool-canva-figma', name: 'Canva + Figma', category: 'Creative', status: 'available', color: GRAY.dark, description: 'Connected as session-scoped MCPs. A standalone API needs separate keys.' },
   // Comms
   { id: 'tool-imap', name: 'Email (4 IMAP slots)', category: 'Comms', status: 'available', color: GRAY.light, description: 'Client implemented for 4 inboxes — set INBOX_1..4_HOST/_USER/_PASS.' },
   { id: 'tool-slack', name: 'Slack', category: 'Comms', status: 'available', color: GRAY.mid, description: 'Client implemented. Needs a bot token with channels:read/history scopes.' },
-  { id: 'tool-dictate', name: 'Dictate Flow', category: 'Comms', status: 'connected', color: GRAY.white, description: 'Voice dictation — heaviest daily-use tool found. Local flow.sqlite read live.' },
+  { id: 'tool-dictate', name: 'Dictate Flow', category: 'Comms', status: 'connected', color: GRAY.white, description: 'Voice dictation. Its local SQLite history is read live.' },
   { id: 'tool-whatsapp', name: 'WhatsApp', category: 'Comms', status: 'connected', color: GRAY.white, description: 'Desktop app local ChatStorage.sqlite, read-only: local team chats.' },
   // Orchestration & infra
-  { id: 'tool-command-center', name: 'Command Center (:4000)', category: 'Orchestration', status: 'available', color: GRAY.light, description: 'command-center: kanban, brand deals, sales calls, SOPs, dispatch. Start with npm run dev.' },
-  { id: 'tool-clawline', name: 'Clawline Gateway', category: 'Orchestration', status: 'available', color: GRAY.dim, description: 'Dormant — gateway offline, token missing. Needs repair/reinstall.' },
-  { id: 'tool-tmux', name: 'tmux', category: 'Orchestration', status: 'connected', color: GRAY.mid, description: 'Multi-Claude session orchestration. Dashboard reads live session list.' },
-  { id: 'tool-ollama', name: 'Ollama', category: 'Orchestration', status: 'connected', color: GRAY.light, description: 'Local LLM server :11434, no auth. Pull a model to enable free local inference.' },
-  { id: 'tool-vercel', name: 'Vercel CLI', category: 'Orchestration', status: 'connected', color: GRAY.mid, description: 'v50, authenticated. Deploy target when FOUNDER OS goes public.' },
-  { id: 'tool-gh', name: 'GitHub CLI', category: 'Orchestration', status: 'connected', color: GRAY.dim, description: 'gh 2.89, authenticated.' },
+  { id: 'tool-command-center', name: 'Command Center (:4000)', category: 'Orchestration', status: 'available', color: GRAY.light, description: 'Kanban, brand deals, sales calls, SOPs and dispatch. Start it with npm run dev.' },
+  { id: 'tool-clawline', name: 'Clawline Gateway', category: 'Orchestration', status: 'available', color: GRAY.dim, description: 'Dormant: gateway offline and token missing. Needs a reinstall.' },
+  { id: 'tool-tmux', name: 'tmux', category: 'Orchestration', status: 'connected', color: GRAY.mid, description: 'Multi-session orchestration. The dashboard reads the live session list.' },
+  { id: 'tool-ollama', name: 'Ollama', category: 'Orchestration', status: 'available', color: GRAY.mid, description: 'Local LLM server :11434, no auth. Start it to enable free local inference.' },
+  { id: 'tool-vercel', name: 'Vercel CLI', category: 'Orchestration', status: 'connected', color: GRAY.mid, description: 'Authenticated CLI. The deploy target for a public build.' },
+  { id: 'tool-gh', name: 'GitHub CLI', category: 'Orchestration', status: 'connected', color: GRAY.dim, description: 'Authenticated CLI for repos, issues and releases.' },
   // Payments (registry awaiting keys)
   { id: 'tool-paypal', name: 'PayPal', category: 'Payments', status: 'planned', color: GRAY.mid, description: 'Registered in the processor registry; client lands when keys do.' },
   { id: 'tool-square', name: 'Square', category: 'Payments', status: 'planned', color: GRAY.dim, description: 'Registered in the processor registry; client lands when keys do.' },
   { id: 'tool-whop', name: 'Whop', category: 'Payments', status: 'planned', color: GRAY.dark, description: 'Registered in the processor registry; client lands when keys do.' },
 ];
 
+// Every row names the phase it advances: the phase cards on /roadmap read
+// their bar as done/total of the rows they own, so a row without a phase
+// would quietly shrink a percentage instead of showing up in it.
 const roadmap: RoadmapItem[] = [
-  { id: 'rm-v1', title: 'FOUNDER OS v1 baseline', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'Six views, SQLite repos, 32 tests.' },
-  { id: 'rm-mono', title: 'Monochrome rebuild + real connectors', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'Black & white theme; IMAP, Slack, Stripe, Notion, gbrain wired.' },
-  { id: 'rm-gbrain', title: 'G-Brain provider live', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'gbrain CLI doctor/query + brain-store local fallback.' },
-  { id: 'rm-creds-email', title: 'Connect 4 email inboxes', quarter: '2026-Q2', status: 'now', departmentId: 'dept-comms', description: 'App passwords / IMAP creds into .env.local slots 1-4.' },
-  { id: 'rm-creds-slack', title: 'Connect Slack workspace', quarter: '2026-Q2', status: 'now', departmentId: 'dept-comms', description: 'Bot token with channels:read, channels:history.' },
-  { id: 'rm-creds-payments', title: 'Connect payment processors', quarter: '2026-Q2', status: 'now', departmentId: 'dept-finance', description: 'Stripe first; PayPal/Square/Whop as keys land.' },
-  { id: 'rm-creds-notion', title: 'Connect Notion workspace', quarter: '2026-Q2', status: 'now', departmentId: 'dept-tech', description: 'Internal integration secret + page shares.' },
-  { id: 'rm-supabase', title: 'Revive Supabase Second Brain', quarter: '2026-Q2', status: 'now', departmentId: 'dept-tech', description: 'Unpause free-tier project so gbrain hybrid queries resolve again.' },
-  { id: 'rm-scheduler', title: 'Agent scheduler (cron runs)', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Recurring agent runs with run history and failure alerts.' },
-  { id: 'rm-llm', title: 'LLM summarization layer', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Claude API digests over inbox/Slack/payments data.' },
-  { id: 'rm-host', title: 'Migrate to a dedicated host', quarter: '2026-Q3', status: 'next', departmentId: 'dept-tech', description: 'Host app + gbrain + agents on the host; Supabase stays managed.' },
-  { id: 'rm-ui', title: 'UI design pass', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: 'Alex-led redesign once all integrations are live.' },
-  { id: 'rm-auth', title: 'Auth + remote access', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: 'Reach FOUNDER OS on the host from anywhere, safely.' },
+  { id: 'rm-v1', title: 'FOUNDER OS v1 baseline', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'Six views, SQLite repos, 32 tests.', phaseId: 'phase-2' },
+  { id: 'rm-mono', title: 'Monochrome rebuild + real connectors', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'Black & white theme; IMAP, Slack, Stripe, gbrain wired.', phaseId: 'phase-1' },
+  { id: 'rm-gbrain', title: 'G-Brain provider live', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'gbrain CLI doctor/query + brain-store local fallback.', phaseId: 'phase-1' },
+  { id: 'rm-creds-email', title: 'Connect 4 email inboxes', quarter: '2026-Q2', status: 'done', departmentId: 'dept-comms', description: 'Four Gmail IMAP slots live on app passwords, feeding /comms.', phaseId: 'phase-1' },
+  { id: 'rm-creds-slack', title: 'Connect Slack workspace', quarter: '2026-Q2', status: 'done', departmentId: 'dept-comms', description: 'Bot token reads channels + history for the per-client board.', phaseId: 'phase-1' },
+  { id: 'rm-creds-payments', title: 'Connect payment processors', quarter: '2026-Q2', status: 'done', departmentId: 'dept-finance', description: 'Stripe live; PayKit, PayPal and Square in the registry.', phaseId: 'phase-1' },
+  { id: 'rm-supabase', title: 'Revive Supabase Second Brain', quarter: '2026-Q2', status: 'done', departmentId: 'dept-tech', description: 'Free-tier project unpaused; gbrain hybrid queries resolve again.', phaseId: 'phase-1' },
+  { id: 'rm-scheduler', title: 'Agent scheduler (cron runs)', quarter: '2026-Q3', status: 'done', departmentId: 'dept-tech', description: 'Seven schedules on a 60s tick with cron_runs history and catch-up.', phaseId: 'phase-3' },
+  { id: 'rm-llm', title: 'LLM summarization layer', quarter: '2026-Q3', status: 'done', departmentId: 'dept-tech', description: 'Agent chat and digests through the AI Gateway, with model failover.', phaseId: 'phase-3' },
+  { id: 'rm-host', title: 'Migrate to a dedicated host', quarter: '2026-Q3', status: 'done', departmentId: 'dept-tech', description: 'App, gbrain and agents run on the host; Supabase stays managed.', phaseId: 'phase-4' },
+  { id: 'rm-embeddings', title: 'Own the embedding stack', quarter: '2026-Q3', status: 'done', departmentId: 'dept-tech', description: 'Brain moved onto local embeddings before the hosted vendor went away.', phaseId: 'phase-1' },
+  { id: 'rm-call-archive', title: 'Archive every sales call', quarter: '2026-Q3', status: 'done', departmentId: 'dept-sales', description: 'CRM and notetaker transcripts exported into brain-store as one page each.', phaseId: 'phase-2' },
+  { id: 'rm-recorders', title: 'Voice recorders into the brain', quarter: '2026-Q3', status: 'done', departmentId: 'dept-sales', description: 'Pocket recorder and Recall on /comms; transcripts file themselves into G-Brain.', phaseId: 'phase-2' },
+  { id: 'rm-trading', title: 'Trading board', quarter: '2026-Q3', status: 'done', departmentId: 'dept-finance', description: 'Robinhood and Phantom sleeves, agent reasoning, orders and trade log.', phaseId: 'phase-2' },
+  { id: 'rm-usage', title: 'Token burn board', quarter: '2026-Q3', status: 'done', departmentId: 'dept-tech', description: 'Live seat-by-seat spend after the August burn; other boxes push in.', phaseId: 'phase-2' },
+  { id: 'rm-workers', title: 'Worker pool on the host', quarter: '2026-Q3', status: 'now', departmentId: 'dept-tech', description: 'Cheap model seats behind the Conductor. Hardening and gateway install left.', phaseId: 'phase-3' },
+  { id: 'rm-statements', title: 'Statement ingestion', quarter: '2026-Q3', status: 'now', departmentId: 'dept-finance', description: 'Card and bank statements parsed into /finances instead of hand entry.', phaseId: 'phase-1' },
+  { id: 'rm-railway', title: 'Move hosting to Railway', quarter: '2026-Q3', status: 'now', departmentId: 'dept-tech', description: 'Every app moving to one platform; the gated OS demo went first as the pilot.', phaseId: 'phase-4' },
+  { id: 'rm-ui', title: 'Interaction rebrand', quarter: '2026-Q3', status: 'now', departmentId: 'dept-tech', description: 'Alex-led design pass over the whole OS now the integrations are live.', phaseId: 'phase-2' },
+  { id: 'rm-auth', title: 'Auth + remote access', quarter: '2026-Q4', status: 'next', departmentId: 'dept-tech', description: 'Reach FOUNDER OS on the host from anywhere, safely.', phaseId: 'phase-4' },
+  { id: 'rm-postiz', title: 'Replace Postly with Postiz', quarter: '2026-Q4', status: 'next', departmentId: 'dept-clients', description: 'Self-hosted scheduler with ungated post and channel analytics.', phaseId: 'phase-1' },
+  { id: 'rm-board-embed', title: 'Board fully inside the OS', quarter: '2026-Q4', status: 'later', departmentId: 'dept-tech', description: 'Conductor and 40+ agents driven from the OS, SOPs running as real skills.', phaseId: 'phase-3' },
 ];
 
 // Honest zeros — these flip to live numbers as connectors come online.
@@ -1030,14 +1103,14 @@ const domains: Domain[] = [
   { id: 'brm-2', number: 2, title: 'Email Operations', color: GRAY.light, items: ['Four IMAP inboxes', 'Unread triage', 'Per-inbox health', 'Digest (planned)'] },
   { id: 'brm-3', number: 3, title: 'Team Comms', color: GRAY.light, items: ['Slack channels', 'Message digests', 'Mention tracking (planned)'] },
   { id: 'brm-4', number: 4, title: 'Payments & Revenue', color: GRAY.mid, items: ['Stripe balance + charges', 'PayPal / Square / Whop registry', 'Reconciliation (planned)'] },
-  { id: 'brm-5', number: 5, title: 'Knowledge & Docs', color: GRAY.mid, items: ['Notion workspace', 'ZeroEntropy embeddings', 'Supabase Second Brain'] },
+  { id: 'brm-5', number: 5, title: 'Knowledge & Docs', color: GRAY.mid, items: ['Notes vault', 'Local embeddings', 'Supabase Second Brain'] },
   { id: 'brm-6', number: 6, title: 'Agent Runtime', color: GRAY.dim, items: ['Registry + run()', 'Persisted run log', 'Honest failure states'] },
   { id: 'brm-7', number: 7, title: 'Infrastructure', color: GRAY.dim, items: ['Current host', 'dedicated host (next)', 'SQLite local', 'Supabase managed'] },
   { id: 'brm-8', number: 8, title: 'Security', color: GRAY.dark, items: ['.env.local secrets (gitignored)', 'Read-only connector scopes', 'No keys in repo'] },
 ];
 
 const phases: Phase[] = [
-  { id: 'phase-1', number: 1, title: 'Real Connections', items: ['4 email inboxes', 'Slack', 'Payment processors', 'Notion', 'G-Brain'] },
+  { id: 'phase-1', number: 1, title: 'Real Connections', items: ['4 email inboxes', 'Slack', 'Payment processors', 'G-Brain'] },
   { id: 'phase-2', number: 2, title: 'Real Agents', items: ['Runtime + run log', 'Honest status board', 'On-demand runs'] },
   { id: 'phase-3', number: 3, title: 'Autonomy', items: ['Scheduled runs', 'LLM digests', 'Failure alerts'] },
   { id: 'phase-4', number: 4, title: 'Dedicated Host', items: ['Migrate compute', 'Remote access + auth', '24/7 uptime'] },
@@ -1110,8 +1183,8 @@ const socialBaseline: SocialSnapshot[] = FOLLOWER_TARGETS.flatMap((t, ti) =>
   })),
 );
 
-// Email list — demo Beehiiv snapshot. Beehiiv's stats endpoint exposes only
-// current + all-time aggregates, not a daily series, so we seed the honest
+// Email list — demo newsletter snapshot. The provider's stats endpoint exposes
+// only current + all-time aggregates, not a daily series, so we seed the honest
 // shape: the list exists from a single import date and sits essentially flat
 // over the window. Once BEEHIIV_API_KEY lands, syncBeehiivEmail overwrites
 // today's point with the live count.
@@ -1127,11 +1200,11 @@ const emailListBaseline: EmailListSnapshot[] = emailListDates.map((capturedAt, i
 
 // DM counts — DUMMY until a DMFlow/Postly source is wired. Current totals…
 const DM_TARGETS: { platform: SocialDm['platform']; start: number; end: number }[] = [
-  { platform: 'instagram', start: 820, end: 1240 },
-  { platform: 'tiktok', start: 210, end: 386 },
-  { platform: 'twitter', start: 120, end: 214 },
-  { platform: 'youtube', start: 26, end: 58 },
-  { platform: 'linkedin', start: 44, end: 92 },
+  { platform: 'instagram', start: 800, end: 1200 },
+  { platform: 'tiktok', start: 200, end: 400 },
+  { platform: 'twitter', start: 120, end: 200 },
+  { platform: 'youtube', start: 25, end: 60 },
+  { platform: 'linkedin', start: 45, end: 90 },
 ];
 const socialDms: SocialDm[] = DM_TARGETS.map((t) => ({
   platform: t.platform,
@@ -1241,7 +1314,7 @@ const FUNNEL_JOURNEYS: SeededJourney[] = [
     touches: [
       ['first_touch', 'ads', 'Meta ad: "Agency owners — install AI in 30 days"', 'meta-ads', 45],
       ['engaged', 'ads', 'Watched VSL to 80% — retarget pool', 'meta-ads', 45],
-      ['opted_in', 'webinar', 'Registered + attended WebinarJam training', 'manual', 42],
+      ['opted_in', 'webinar', 'Registered + attended the live training', 'manual', 42],
       ['converted', 'checkout', 'First of 3 payments — PayKit', 'manual', 40],
     ],
   },
@@ -1265,7 +1338,7 @@ const FUNNEL_JOURNEYS: SeededJourney[] = [
       ['first_touch', 'organic', 'YT long-form: "how I\'d start an agency in 2026"', 'trakyo', 31],
       ['engaged', 'email', 'Joined newsletter from YT description', 'manual', 30],
       ['nurtured', 'email', 'Newsletter: pricing-psychology issue clicked', 'manual', 26],
-      ['opted_in', 'webinar', 'Attended WebinarJam training, stayed for offer', 'manual', 23],
+      ['opted_in', 'webinar', 'Attended the live training, stayed for offer', 'manual', 23],
       ['converted', 'checkout', 'First of 3 payments — PayKit', 'manual', 22],
     ],
   },
@@ -1431,6 +1504,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-1',
         title: 'Run outbound campaigns',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
         owner: 'Postly Publisher',
         hoursPerWeek: 6,
@@ -1442,6 +1517,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-2',
         title: 'Qualify replies',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
         owner: 'Comms Agent',
         hoursPerWeek: 9,
@@ -1453,6 +1530,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-3',
         title: 'Book demos',
+        detail: '',
+        branch: null,
         ownerKind: 'human',
         owner: 'Alex · Founder',
         hoursPerWeek: 4,
@@ -1464,10 +1543,12 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-4',
         title: 'Sales call',
+        detail: '',
+        branch: null,
         ownerKind: 'human',
         owner: 'Alex · Founder',
         hoursPerWeek: 10,
-        tools: ['webinarjam', 'ledger'],
+        tools: ['ledger'],
         edgeLabel: 'proposal',
         leakUsd: null,
         automation: null,
@@ -1475,6 +1556,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-5',
         title: 'Proposal & follow-up',
+        detail: '',
+        branch: null,
         ownerKind: 'human',
         owner: 'Alex · Founder',
         hoursPerWeek: 5,
@@ -1486,10 +1569,12 @@ const workflows: Workflow[] = [
       {
         id: 'wf-mer-6',
         title: 'Onboard & deliver',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
         owner: 'Onboarding Agent',
         hoursPerWeek: 3,
-        tools: ['ledger', 'slack', 'notion'],
+        tools: ['ledger', 'slack'],
         edgeLabel: null,
         leakUsd: null,
         automation: { title: 'Onboarding rails', state: 'live', recoveredUsd: 3000 },
@@ -1506,10 +1591,12 @@ const workflows: Workflow[] = [
       {
         id: 'wf-lc-1',
         title: 'Capture webinar leads',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
-        owner: 'WebinarJam',
+        owner: 'GoHighLevel',
         hoursPerWeek: 2,
-        tools: ['webinarjam', 'ghl'],
+        tools: ['ghl'],
         edgeLabel: 'registered',
         leakUsd: null,
         automation: { title: 'Webinar to GHL sync', state: 'live', recoveredUsd: 2500 },
@@ -1517,6 +1604,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-lc-2',
         title: 'Nurture in GHL',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
         owner: 'GoHighLevel',
         hoursPerWeek: 3,
@@ -1528,6 +1617,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-lc-3',
         title: 'Strategy call',
+        detail: '',
+        branch: null,
         ownerKind: 'human',
         owner: 'Alex · Founder',
         hoursPerWeek: 8,
@@ -1539,10 +1630,12 @@ const workflows: Workflow[] = [
       {
         id: 'wf-lc-4',
         title: 'Deliver program',
+        detail: '',
+        branch: null,
         ownerKind: 'human',
         owner: 'LC Team',
         hoursPerWeek: 12,
-        tools: ['skool', 'notion'],
+        tools: ['skool'],
         edgeLabel: 'retained',
         leakUsd: 5000,
         automation: { title: 'Skool community ops', state: 'suggested', recoveredUsd: 4000 },
@@ -1550,6 +1643,8 @@ const workflows: Workflow[] = [
       {
         id: 'wf-lc-5',
         title: 'Track attribution',
+        detail: '',
+        branch: null,
         ownerKind: 'agent',
         owner: 'Trakyo',
         hoursPerWeek: 1,
@@ -1624,8 +1719,224 @@ const skills: Omit<Skill, 'markdown'>[] = [
   { id: 'skill-attribution', name: 'Revenue attribution', category: 'Ops', description: 'Ties content and calls to closed revenue via Trakyo.', ownerAgentId: null, status: 'planned', tools: ['trakyo', 'ghl'], order: 11 },
 ];
 
+// A deterministic xorshift stream seeded from a string (no Math.random), so the
+// seeded run history is stable across re-seeds.
+function seedRand(str: string): () => number {
+  let h = 2166136261 >>> 0;
+  for (const c of str) {
+    h ^= c.charCodeAt(0);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return () => {
+    h ^= h << 13; h >>>= 0;
+    h ^= h >> 17;
+    h ^= h << 5; h >>>= 0;
+    return (h >>> 0) / 4294967295;
+  };
+}
+
+// Leads/specialists run on the bigger model, workers on the cheaper one, so the
+// cost analysis has real spread. About a third of agents are pure-connector and
+// carry no token cost.
+const RUN_MODEL_BY_TIER: Record<string, string> = {
+  lead: 'claude-sonnet-5',
+  specialist: 'claude-sonnet-5',
+  worker: 'claude-haiku-4.5',
+};
+
+/**
+ * Seeded agent-run history so /agents shows live runtimes and estimated spend
+ * out of the box (demo-first). Stable ids (`seed-run-*`) keep re-seeds
+ * idempotent and let the operator's own real runs coexist. Real token usage
+ * flows in through lib/agents/runtime as agents actually run.
+ */
+function seededAgentRuns(agentList: Agent[]): AgentRun[] {
+  const now = Date.now();
+  const runs: AgentRun[] = [];
+  for (const a of agentList) {
+    const rnd = seedRand(`runs:${a.id}`);
+    const count = 5 + Math.floor(rnd() * 10); // 5..14 runs each
+    const usesModel = rnd() > 0.3; // ~2/3 of agents bill an LLM
+    const model = RUN_MODEL_BY_TIER[a.tier] ?? 'claude-sonnet-5';
+    for (let i = 0; i < count; i++) {
+      const startedAt = new Date(now - rnd() * 20 * 86_400_000).toISOString(); // within ~3 weeks
+      const durMs = 400 + Math.floor(rnd() * 7000);
+      const finishedAt = new Date(Date.parse(startedAt) + durMs).toISOString();
+      const ok = rnd() > 0.08;
+      let tokensIn: number | null = null;
+      let tokensOut: number | null = null;
+      let runModel: string | null = null;
+      let costUsd: number | null = null;
+      if (usesModel) {
+        tokensIn = 800 + Math.floor(rnd() * 14000);
+        tokensOut = 200 + Math.floor(rnd() * 4000);
+        runModel = model;
+        costUsd = Math.round(runCostUsd(tokensIn, tokensOut, runModel) * 1e6) / 1e6;
+      }
+      runs.push({
+        id: `seed-run-${a.id}-${i}`,
+        agentId: a.id,
+        startedAt,
+        finishedAt,
+        ok,
+        summary: ok ? `${a.name} completed a run.` : `${a.name} run failed and was retried.`,
+        model: runModel,
+        tokensIn,
+        tokensOut,
+        costUsd,
+      });
+    }
+  }
+  return runs;
+}
+
+// --- Trading (Robinhood agentic account) -------------------------------------
+// Seeded snapshot so /trading is alive before a real agent feeds it. Source
+// 'seed' marks it as dummy; a live push (source 'robinhood') supersedes it.
+const TRADING_AT = '2026-08-13T15:00:00.000Z';
+const INDIV = { accountId: 'individual', accountLabel: 'Individual' };
+const AGENTIC = { accountId: 'agentic', accountLabel: 'Agentic' };
+
+const tradingSnapshots: TradingAccountSnapshot[] = [
+  { ...INDIV, capturedAt: TRADING_AT, accountValueUsd: 10250.0, buyingPowerUsd: 2960.0, cashUsd: 2960.0, dayPnlUsd: 130.0, totalPnlUsd: 250.0, source: 'seed' },
+  { ...AGENTIC, capturedAt: TRADING_AT, accountValueUsd: 1040.0, buyingPowerUsd: 420.0, cashUsd: 420.0, dayPnlUsd: 12.0, totalPnlUsd: 40.0, source: 'seed' },
+];
+// A few hours of agentic account value so the graph has a shape before a real
+// agent has fed anything. Source 'seed' marks the whole series as dummy.
+const tradingHistory: TradingAccountSnapshot[] = [
+  { ...AGENTIC, capturedAt: '2026-08-13T11:00:00.000Z', accountValueUsd: 1000.0, buyingPowerUsd: 1000.0, cashUsd: 1000.0, dayPnlUsd: 0, totalPnlUsd: 0, source: 'seed' },
+  { ...AGENTIC, capturedAt: '2026-08-13T12:00:00.000Z', accountValueUsd: 1004.7, buyingPowerUsd: 604.7, cashUsd: 604.7, dayPnlUsd: 4.7, totalPnlUsd: 4.7, source: 'seed' },
+  { ...AGENTIC, capturedAt: '2026-08-13T13:00:00.000Z', accountValueUsd: 1021.9, buyingPowerUsd: 418.5, cashUsd: 418.5, dayPnlUsd: 21.9, totalPnlUsd: 21.9, source: 'seed' },
+  { ...AGENTIC, capturedAt: '2026-08-13T14:00:00.000Z', accountValueUsd: 1016.4, buyingPowerUsd: 418.5, cashUsd: 418.5, dayPnlUsd: 16.4, totalPnlUsd: 16.4, source: 'seed' },
+];
+const tradingPositions: TradingPosition[] = [
+  { ...INDIV, capturedAt: TRADING_AT, symbol: 'NVDA', quantity: 4, avgCostUsd: 902.1, marketValueUsd: 3812.6, unrealizedPnlUsd: 204.2 },
+  { ...INDIV, capturedAt: TRADING_AT, symbol: 'AAPL', quantity: 8, avgCostUsd: 214.35, marketValueUsd: 1760.4, unrealizedPnlUsd: 45.6 },
+  { ...INDIV, capturedAt: TRADING_AT, symbol: 'MSFT', quantity: 3, avgCostUsd: 428.0, marketValueUsd: 1301.7, unrealizedPnlUsd: 17.7 },
+  { ...INDIV, capturedAt: TRADING_AT, symbol: 'VOO', quantity: 5, avgCostUsd: 82.9, marketValueUsd: 413.79, unrealizedPnlUsd: -1.71 },
+];
+const agenticPositions: TradingPosition[] = [
+  { ...AGENTIC, capturedAt: TRADING_AT, symbol: 'SPY', quantity: 1, avgCostUsd: 601.4, marketValueUsd: 624.7, unrealizedPnlUsd: 23.3 },
+];
+const tradingActivity: TradeActivity[] = [
+  { id: 'tr-seed-5', at: '2026-08-13T14:58:00.000Z', ...AGENTIC, agent: 'Markets Agent', action: 'buy', symbol: 'SPY', quantity: 1, priceUsd: 601.4, rationale: 'Parking idle buying power in the index sleeve.', status: 'filled' },
+  { id: 'tr-seed-4', at: '2026-08-13T13:20:00.000Z', ...AGENTIC, agent: 'Markets Agent', action: 'sell', symbol: 'TSLA', quantity: 2, priceUsd: 240.8, rationale: 'Trimming into strength; thesis played out, rotating to cash.', status: 'filled' },
+  { id: 'tr-seed-3', at: '2026-08-12T18:05:00.000Z', ...INDIV, agent: 'Operator (manual)', action: 'buy', symbol: 'AAPL', quantity: 4, priceUsd: 213.9, rationale: 'Dollar-cost tranche into the core holding.', status: 'filled' },
+  { id: 'tr-seed-2', at: '2026-08-12T15:41:00.000Z', ...AGENTIC, agent: 'Markets Agent', action: 'buy', symbol: 'VOO', quantity: 5, priceUsd: 83.02, rationale: 'Parking idle buying power in the index sleeve.', status: 'filled' },
+  { id: 'tr-seed-1', at: '2026-08-11T16:12:00.000Z', ...INDIV, agent: 'Operator (manual)', action: 'buy', symbol: 'MSFT', quantity: 3, priceUsd: 428.0, rationale: 'Initiating position per the approved watchlist.', status: 'filled' },
+];
+
+
+// --- Proposals -----------------------------------------------------------
+// Client proposals are the one table this demo ships EMPTY on purpose: a real
+// row carries a client's name, the deal size, and the share code that opens
+// the page. Create them from the OS instead (they land with origin 'os', which
+// a re-seed leaves alone). The export and its type stay so every reader of the
+// Deliverables folder keeps compiling.
+export const SEEDED_PROPOSALS: Proposal[] = [];
+
+/**
+ * Proposals, re-applied on every boot rather than only when the table is empty.
+ *
+ * getDb()'s guard fires when a table has NO rows, which back-fills a new table
+ * but never propagates an EDIT to an existing one. So correcting a client name
+ * or adding a proposal would land on a fresh clone and silently never reach the
+ * host, whose database already has the old rows. Re-syncing here is cheap (a
+ * handful of rows) and safe: seeded rows are replaced by id, and anything
+ * Alex adds through the OS carries origin 'os' and is left alone.
+ */
+export function syncSeededProposals(db: FounderDb): void {
+  for (const p of SEEDED_PROPOSALS) db.proposals.insert(p);
+  db.proposals.deleteSeededNotIn(SEEDED_PROPOSALS.map((p) => p.id));
+}
+
+/**
+ * Scheduled jobs that ship with the OS, starting with a 9am sweep of every
+ * inbox, WhatsApp and Slack that lands as one ranked report. Seeded rather than
+ * hand-created so they survive a fresh database and appear on every install; the runner is the tick in
+ * instrumentation.ts -> POST /api/cron/tick.
+ */
+export const seededCrons: AgentCron[] = [
+  {
+    id: 'cron-comms-digest-0900',
+    agentId: 'comms-digest',
+    schedule: '0 9 * * *',
+    description: 'Morning comms report: 24h of email, WhatsApp and Slack, ranked by who needs a reply',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+  {
+    id: 'cron-plaud-ingest-30m',
+    agentId: 'sales-calls-data',
+    schedule: '*/30 * * * *',
+    description: 'File every newly transcribed Plaud recording into G-Brain (summary + transcript) and its action items into the claim store; no LLM, pure code',
+    enabled: true,
+    createdAt: '2026-08-26T00:00:00.000Z',
+  },
+  // Every cron below maps onto an agent whose run genuinely does the described
+  // check. Each description says what that agent ACTUALLY does, not the job it
+  // was proposed for: a cron fires the agent, it does not carry its own
+  // instructions. Jobs with no agent behind them (nightly green check, offsite
+  // backup, model-usage posture) belong in the host's own routine runner, so
+  // they are deliberately absent rather than seeded as rows that would never
+  // work.
+  {
+    id: 'cron-stack-monitor-0700',
+    agentId: 'stack-monitor',
+    schedule: '0 7 * * *',
+    description: 'Local stack check: the command center, the worker pool, G-Brain and the CLIs the OS shells out to',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+  {
+    id: 'cron-payments-pulse-0800',
+    agentId: 'payments-pulse',
+    schedule: '0 8 * * *',
+    description: 'Payment processors reachable, plus Stripe balance and recent charges',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+  {
+    id: 'cron-client-onboarding-0830',
+    agentId: 'client-onboarding',
+    schedule: '30 8 * * *',
+    description: 'Onboarding SOP readiness: the Ledger trigger and the Slack workspace it provisions',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+  {
+    id: 'cron-crm-pulse-0900',
+    agentId: 'crm-pulse',
+    schedule: '0 9 * * 1-5',
+    description: 'Ledger deals pipeline across Vantage and Launchpad Cohort',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+  {
+    id: 'cron-social-agent-1800',
+    agentId: 'social-agent',
+    schedule: '0 18 * * *',
+    description: 'Postly publishing and Adsmith ad generation, checked before the evening',
+    enabled: true,
+    createdAt: '2026-08-18T00:00:00.000Z',
+  },
+];
+
+/**
+ * Bump this whenever the seed's CONTENT changes in a way production must see,
+ * above all a removal.
+ *
+ * getDb() otherwise only seeds when a table is empty, so on a long-lived
+ * install — where every table has been full for months — the seed would never
+ * run at all: rows deleted from this file went on being served in production
+ * because nothing ever re-ran the seed. The stamp forces exactly one re-seed
+ * per change.
+ */
+export const SEED_VERSION = '2026-09-18-ui-port';
+
 export function seedDatabase(db: FounderDb): void {
   // INSERT OR REPLACE in every repo makes re-seeding idempotent by id.
+  for (const c of seededCrons) db.agentCrons.insert(c);
   for (const d of departments) db.departments.insert(d);
   for (const a of agents) db.agents.insert(a);
   // The roster IS the runtime: rows that left the roster leave the DB too,
@@ -1638,13 +1949,20 @@ export function seedDatabase(db: FounderDb): void {
   db.leadMagnets.deleteWhereIdNotIn(leadMagnets.map((m) => m.id));
   for (const t of sopTasks) db.sopTasks.insert(t);
   db.sopTasks.deleteWhereIdNotIn(sopTasks.map((t) => t.id));
+  db.tools.deleteWhereIdNotIn(tools.map((t) => t.id));
   for (const w of workflows) db.workflows.insert(w);
   db.workflows.deleteWhereIdNotIn(workflows.map((w) => w.id));
   for (const s of skills) db.skills.insert({ ...s, markdown: skillDoc(s) });
   db.skills.deleteWhereIdNotIn(skills.map((s) => s.id));
   for (const t of agentTasks) db.agentTasks.insert(t); // insert-by-id; user tasks coexist
+  // Seeded run history (idempotent by id) so /agents shows runtimes + spend; the
+  // operator's own real runs (uuid ids) coexist and add real token cost over time.
+  for (const r of seededAgentRuns(agents)) db.agentRuns.insert(r);
   for (const t of tools) db.tools.insert(t);
   for (const r of roadmap) db.roadmap.insert(r);
+  // A row that left the seed left the plan: prune it so retired work cannot
+  // outlive its removal on a long-lived install.
+  db.roadmap.deleteWhereIdNotIn(roadmap.map((r) => r.id));
   for (const m of metrics) db.metrics.insert(m);
   for (const d of domains) db.domains.insert(d);
   for (const p of PERSONAS) db.personas.insert(p);
@@ -1654,11 +1972,29 @@ export function seedDatabase(db: FounderDb): void {
   for (const d of socialDms) db.social.upsertDm(d);
   for (const s of socialDmSnapshots) db.social.insertDmSnapshot(s);
   for (const m of socialDmMessages) db.social.upsertDmMessage(m);
-  // Retired dummy email history leaves the DB on re-seed; the real Beehiiv
+  // Retired dummy email history leaves the DB on re-seed; the seeded
   // baseline is authoritative. Live-synced snapshots survive.
   db.emailList.deleteSeeded();
   for (const s of emailListBaseline) db.emailList.insertSnapshot(s);
   for (const p of socialPosts) db.socialPosts.enqueue(p);
   for (const c of funnelContacts) db.funnel.insertContact(c);
   for (const t of funnelTouches) db.funnel.insertTouch(t);
+  syncSeededProposals(db);
+  // Trading is the one seeded island that a re-seed must NOT touch once it is
+  // real. /trading is fed by the Markets agent through
+  // POST /api/trading/*, and the seeded placeholder trades were deliberately
+  // evicted from that log. A SEED_VERSION bump re-runs this whole function, so
+  // without this guard every retirement would drag the fake trades back in.
+  // NB latestSnapshot() sorts by account VALUE, not recency, so it cannot
+  // answer "is this real?" — ask whether ANY account has a non-seed source.
+  const liveTrading = db.trading.latestSnapshots().some((t) => t.source !== 'seed');
+  if (!liveTrading) {
+    for (const h of tradingHistory) db.trading.recordSnapshot(h, []);
+    db.trading.recordSnapshot(tradingSnapshots[0], tradingPositions);
+    db.trading.recordSnapshot(tradingSnapshots[1], agenticPositions);
+    for (const a of tradingActivity) db.trading.recordActivity(a);
+  }
+
+  // Last: a half-finished seed must not claim to be up to date.
+  db.meta.set('seed_version', SEED_VERSION);
 }

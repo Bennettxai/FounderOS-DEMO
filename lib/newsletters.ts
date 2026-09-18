@@ -23,7 +23,7 @@ export const NewsletterSchema = z.object({
 });
 
 /**
- * Seeded newsletters — larp-first fallback so `/social/beehiiv` is alive
+ * Seeded newsletters — demo-first fallback so `/social/beehiiv` is alive
  * without a Beehiiv key. Replaced 1:1 by live posts when the connector has
  * data. Newest first, plausible ramp of a growing list.
  */

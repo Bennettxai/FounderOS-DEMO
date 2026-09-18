@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "FOUNDER OS — personal operating system and AI agent command center",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev -p 4100",
     "build": "next build",

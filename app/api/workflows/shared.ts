@@ -92,7 +92,7 @@ export function workflowToInput(workflow: Workflow): WorkflowInput {
     subtitle: workflow.subtitle,
     steps: workflow.steps.map((s) => ({
       title: s.title,
-      detail: s.detail ?? '',
+      detail: s.detail,
       ownerKind: s.ownerKind,
       owner: s.owner,
       hoursPerWeek: s.hoursPerWeek,

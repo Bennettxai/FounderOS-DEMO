@@ -32,9 +32,9 @@ describe('people + sopTasks repos', () => {
   test('round-trips a person including their tools array', () => {
     const d = withSalesDept();
     const person = {
-      id: 'person-marco',
+      id: 'person-lee',
       departmentId: 'dept-sales',
-      name: 'Marco',
+      name: 'Lee',
       role: 'Head of Sales',
       tools: ['fathom', 'attio'],
     };
@@ -51,7 +51,7 @@ describe('people + sopTasks repos', () => {
       summary: 'Live sales calls from booked to closed-won.',
       steps: ['Review the lead in Attio', 'Run the discovery script', 'Log outcome + next step'],
       assigneeKind: 'person' as const,
-      assigneeId: 'person-marco',
+      assigneeId: 'person-lee',
     };
     d.sopTasks.insert(task);
     expect(d.sopTasks.all()).toEqual([task]);

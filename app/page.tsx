@@ -1,21 +1,17 @@
 import Link from 'next/link';
-import { ArrowUpRight, Zap } from 'lucide-react';
 import { getDb } from '@/lib/data';
 import { allConnectorStatuses } from '@/lib/connectors';
 import { createGBrainProvider } from '@/lib/connectors/gbrain';
-import { audienceSeries, PLATFORM_COLORS, PLATFORM_LABELS } from '@/lib/social';
-import { syncFromZernioLive } from '@/lib/social-live';
-import { zernioPostDays } from '@/lib/connectors/zernio';
-import { postSeriesFromDays } from '@/lib/posting-activity';
-import type { SocialPlatform } from '@/lib/schemas';
+import { stripeSnapshot } from '@/lib/connectors/payments';
 import { gatherCommsFeed } from '@/lib/comms-feed';
 import { inboundLast24h } from '@/lib/comms';
-import { groupRoadmapByQuarter } from '@/lib/roadmap';
+import { collapseRuns } from '@/lib/agents/run-digest';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
 import { CountUp } from '@/components/CountUp';
-import { HomeSocialGraph } from '@/components/HomeSocialGraph';
-import { Badge, Dot, Kbd, Label, SectionHead, Spark } from '@/components/terminal';
+import { Rise } from '@/components/motion';
+import { HomeNeedsYou } from '@/components/HomeNeedsYou';
+import { InterjectComposer } from '@/components/InterjectComposer';
+import { Kbd, Label, SparkBars } from '@/components/terminal';
 import { runsPerDay, inboundPerDay, stateOfWorld, type Tone } from '@/lib/pulse-history';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
@@ -52,18 +48,28 @@ function ConnectorBars({ connections }: { connections: ConnectorStatus[] }) {
 }
 
 /** Real health meter — fills to the current score. No fabricated trend line. */
+/** Ten fixed cells, lit while `i < score/10` — the artboard's G-Brain foot.
+    A continuous rail reads as a percentage bar; the score is a graded check,
+    and ten cells say so. Unlit cells stay on --border so the track is legible
+    without competing with the lit run. */
 function HealthMeter({ value }: { value: number | null }) {
-  const w = 72;
-  const h = 22;
-  const barH = 5;
-  const y = (h - barH) / 2;
-  const pct = value == null ? 0 : Math.max(0, Math.min(100, value)) / 100;
+  const CELLS = 10;
+  const lit = value == null ? 0 : Math.round(Math.max(0, Math.min(100, value)) / CELLS);
   const color = value == null ? 'var(--dim)' : value >= 70 ? 'var(--accent)' : value >= 40 ? 'var(--warn)' : 'var(--err)';
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
-      <rect x="0" y={y} width={w} height={barH} fill="var(--border-strong)" />
-      <rect x="0" y={y} width={(w * pct).toFixed(1)} height={barH} fill={color} />
-    </svg>
+    <div className="flex items-end gap-[2px]" style={{ height: 18 }} aria-hidden="true">
+      {Array.from({ length: CELLS }, (_, i) => (
+        <span
+          key={i}
+          className="flex-1"
+          style={{
+            height: 5,
+            background: i < lit ? color : 'var(--border)',
+            transition: 'background-color var(--dur-lens) var(--ease-lens)',
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -105,11 +111,16 @@ function StatTile({
   return (
     <Link
       href={href}
-      className="hoverable group flex flex-col gap-2 rounded-lg-t border border-os-border bg-os-surface px-[18px] py-4"
+      data-lens="r" className="pressable is-row group flex flex-col gap-2 rounded-tile border border-os-border bg-os-surface px-[18px] py-4"
     >
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
-        <ArrowUpRight className="h-3.5 w-3.5 text-os-dim opacity-0 transition-opacity group-hover:opacity-100" />
+        {/* the artboard keeps this visible at rest in #5c5c5c — it is the
+            tile's "this opens something" tell, and a tell you only see once
+            you are already hovering has told you nothing */}
+        <span aria-hidden="true" className="lens-child font-mono text-[11px] leading-none text-os-dim group-hover:text-os-text">
+          ↗
+        </span>
       </div>
       <div className={`flex items-baseline gap-[7px] font-mono text-[26px] font-semibold tracking-[-0.02em] ${valueClass}`}>
         {value}
@@ -120,35 +131,29 @@ function StatTile({
   );
 }
 
+type DoneItem = { key: string; time: number; head: string; headClass: string; body: string; when: string };
+
 export default async function HomePage() {
   const db = getDb();
-  // Live follower sync from Zernio/Late (falls back to static config on API
-  // failure) — parity with /social so the home figures are real-time too.
-  // It rides the same Promise.all as the other fetches: it still finishes
-  // before the db reads below, but a cold render costs max(fetches) instead
-  // of sync + max(fetches) — the paused-Supabase doctor alone was pushing the
-  // console past 20s.
-  const [connections, overview, feed, postDays] = await Promise.all([
+  const [connections, overview, feed, stripe] = await Promise.all([
     allConnectorStatuses(),
     createGBrainProvider().overview(),
     gatherCommsFeed(),
-    zernioPostDays(),
-    syncFromZernioLive(db),
-  ]).then(([c, o, f, p]) => [c, o, f, p] as const);
+    // Fail-soft: no key (or a Stripe outage) means no charges row, never a 500.
+    stripeSnapshot().catch(() => null),
+  ]);
 
   const agents = db.agents.all();
-  const departments = new Map(db.departments.all().map((d) => [d.id, d.name]));
   const recentRuns = db.agentRuns.recent(40);
   // Wider pull just for the runs/day sparkline — 40 may not span a week.
   const runsForSpark = db.agentRuns.recent(400);
-  const lastRunByAgent = new Map<string, (typeof recentRuns)[number]>();
-  for (const r of recentRuns) if (!lastRunByAgent.has(r.agentId)) lastRunByAgent.set(r.agentId, r);
 
   const connected = connections.filter((c) => c.state === 'connected').length;
+  // "Down" = genuinely erroring only; not_configured means no key set, not broken.
+  const connectorsDown = connections.filter((c) => c.state === 'error').length;
   const activeAgents = agents.filter((a) => a.status === 'active').length;
   const health = overview.doctor.healthScore;
   const inbound = inboundLast24h(feed);
-  const runCount = recentRuns.length;
   const failedRuns = recentRuns.filter((r) => !r.ok).length;
   // Real sparkline series from actual history — no synthetic arrays.
   const agentsSpark = runsPerDay(runsForSpark, 7);
@@ -156,45 +161,47 @@ export default async function HomePage() {
   const hero = stateOfWorld({
     activeAgents,
     totalAgents: agents.length,
-    connected,
-    totalConnectors: connections.length,
+    connectorsDown,
     inbound,
     health: health ?? null,
     brainConnected: overview.doctor.connected,
     failedRuns,
   });
-  const { channels, all } = audienceSeries(db);
-  // Real per-platform posting from Zernio history (cross-posts counted per
-  // platform), decorated with the brand palette HomeSocialGraph expects.
-  const TRACKED: SocialPlatform[] = ['instagram', 'tiktok', 'twitter', 'youtube', 'linkedin'];
-  const today = new Date().toISOString().slice(0, 10);
-  const posting = postSeriesFromDays(postDays, today, 90, TRACKED).map((s) => ({
-    ...s,
-    label: PLATFORM_LABELS[s.key as SocialPlatform],
-    color: PLATFORM_COLORS[s.key as SocialPlatform],
-  }));
 
-  const nowQuarter = groupRoadmapByQuarter(db.roadmap.all())[0];
-  const nowItems = nowQuarter?.items.slice(0, 5) ?? [];
-
-  // Ticker line items — newest agent runs, honest OK / FAIL.
-  const ticker = recentRuns.slice(0, 8);
+  // Done today — what the OS actually finished since local midnight: agent
+  // runs that ended OK (collapsed so the 30-minute crons cost one line) plus
+  // Stripe charges that landed today. Newest first, honest and small.
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+  const doneRuns: DoneItem[] = collapseRuns(recentRuns)
+    .filter((r) => r.ok && new Date(r.finishedAt).getTime() >= dayStart.getTime())
+    .map((r) => ({
+      key: `run-${r.id}`,
+      time: new Date(r.finishedAt).getTime(),
+      head: '✓',
+      headClass: 'text-os-ok',
+      body: `${r.agentId} · ${r.summary}${r.repeat > 1 ? ` ×${r.repeat}` : ''}`,
+      when: relativeTime(r.finishedAt),
+    }));
+  const doneCharges: DoneItem[] = (stripe?.recentCharges ?? [])
+    .filter((c) => c.created * 1000 >= dayStart.getTime())
+    .map((c) => ({
+      key: `charge-${c.created}-${c.amount}`,
+      time: c.created * 1000,
+      // the artboard's ledger reads "$  Stripe  Vantage LLC paid $6,000 ·
+      // August retainer": the glyph is the column, the money is in the line
+      head: '$',
+      headClass: 'text-os-accent',
+      body: `${(c.amount / 100).toLocaleString('en-US', { style: 'currency', currency: c.currency.toUpperCase(), maximumFractionDigits: 0 })} · ${c.description || 'charge'}`,
+      when: relativeTime(new Date(c.created * 1000).toISOString()),
+    }));
+  const doneToday = [...doneCharges, ...doneRuns].sort((a, b) => b.time - a.time).slice(0, 8);
 
   return (
     <div>
-      {/* self-contained marquee — no globals.css dependency */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-@keyframes os-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.os-ticker-track { display: flex; width: max-content; animation: os-ticker 38s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .os-ticker-track { animation: none; } }`,
-        }}
-      />
-
       <PageHeader
-        eyebrow="operator console"
-        title={`${greeting()}, Alex`}
+        eyebrow="command center"
+        title={greeting()}
         caret
         right={<Kbd>⌘K</Kbd>}
       />
@@ -210,7 +217,7 @@ export default async function HomePage() {
       </Rise>
 
       {/* Pulse row */}
-      <Rise as="section" i={2} className="mb-[18px] grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
+      <Rise as="section" i={2} className="mb-[22px] grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
         <StatTile
           href="/integrations"
           label="Systems"
@@ -223,14 +230,14 @@ export default async function HomePage() {
           label="Agents live"
           value={<CountUp value={activeAgents} />}
           unit={`/ ${agents.length} roster`}
-          foot={<Spark data={agentsSpark} />}
+          foot={<SparkBars data={agentsSpark} />}
         />
         <StatTile
           href="/comms"
           label="Communications"
           value={<CountUp value={inbound} />}
           unit="inbound · 24h"
-          foot={<Spark data={commsSpark} />}
+          foot={<SparkBars data={commsSpark} />}
         />
         <StatTile
           href="/brain"
@@ -242,147 +249,40 @@ export default async function HomePage() {
         />
       </Rise>
 
-      {/* Live ticker */}
-      <Rise as="section" i={3} className="mb-[22px] relative overflow-hidden rounded-md-t border border-os-border bg-os-surface">
-        <div className="absolute inset-y-0 left-0 z-[2] flex items-center gap-[7px] border-r border-os-border bg-os-surface px-3.5 font-mono text-[9.5px] uppercase tracking-[0.18em] text-os-dim">
-          <Dot state="connected" pulse /> live
-        </div>
-        <div className="os-ticker-track py-[9px] pl-[90px]">
-          {[0, 1].map((copy) => (
-            <div key={copy} className="flex shrink-0 gap-[26px] pr-[26px]">
-              {ticker.map((r) => (
-                <span key={copy + r.id} className="inline-flex items-center gap-2 whitespace-nowrap font-mono text-[11px]">
-                  <b className={r.ok ? 'text-os-ok' : 'text-os-err'}>{r.ok ? 'OK' : 'FAIL'}</b>
-                  <span className="text-os-muted">{r.agentId}</span>
-                  <span className="text-os-dim">{r.summary}</span>
-                  <span className="text-os-border-strong">·</span>
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </Rise>
-
-      {/* Connections strip */}
-      <Rise as="section" i={4} className="mb-[22px]">
-        <SectionHead label="Connections" count={`${connected}/${connections.length}`} link="Open board" href="/integrations" />
-        <div className="grid grid-cols-4 gap-3 max-[1100px]:grid-cols-2">
-          {connections.slice(0, 12).map((c) => (
-            <Link
-              key={c.id}
-              href="/integrations"
-              className="hoverable flex min-w-0 items-center gap-[9px] rounded-lg-t border border-os-border bg-os-surface px-3 py-[9px]"
-            >
-              <Dot state={c.state} pulse={c.state === 'connected'} />
-              <span className="flex-1 truncate text-[12.5px] font-semibold">{c.name}</span>
-              <ArrowUpRight className="h-3 w-3 shrink-0 text-os-dim" />
-            </Link>
-          ))}
-        </div>
-      </Rise>
-
-      {/* Social media — combined audience over time (under Connections,
-          above the agents / recent-runs row) */}
-      <Rise as="section" i={5} className="mb-[22px]">
-        <SectionHead label="Social media" count="audience over time" link="Open Social" href="/social" />
-        <HomeSocialGraph series={[all, ...channels]} posting={posting} />
-      </Rise>
-
-      {/* Main grid */}
+      {/* Main grid: what needs the operator, the interject line, what got done */}
       <div className="grid grid-cols-[1.05fr_0.95fr] items-start gap-6 max-[1100px]:grid-cols-1">
-        {/* Agents */}
-        <Rise as="section" i={6} className="min-w-0">
-          <SectionHead label="Agents" count={`${activeAgents} live`} link="Full roster" href="/agents" />
-          <div className="flex flex-col gap-2">
-            {agents.map((a) => {
-              const last = lastRunByAgent.get(a.id);
-              return (
-                <Link
-                  key={a.id}
-                  href="/agents"
-                  className="hoverable flex items-center gap-3 rounded-lg-t border border-os-border bg-os-surface px-3.5 py-[11px]"
-                >
-                  <Dot state={a.status} pulse={a.status === 'active'} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="whitespace-nowrap text-[13.5px] font-semibold">{a.name}</span>
-                      {a.tier === 'lead' && <Badge>lead</Badge>}
-                    </div>
-                    <div className="mt-0.5 truncate font-mono text-[10.5px] text-os-dim">
-                      {departments.get(a.departmentId) ?? '—'} ·{' '}
-                      {last ? `last run ${last.ok ? 'OK' : 'FAILED'} · ${relativeTime(last.finishedAt)} ago` : 'never run'}
-                    </div>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-sm-t border px-2.5 py-[3px] font-mono text-[11px] font-semibold ${
-                      a.status === 'active'
-                        ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-                        : 'border-os-border text-os-dim'
-                    }`}
-                  >
-                    {a.status === 'active' ? 'Run' : 'no creds'}
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+        <Rise as="section" i={3} className="min-w-0">
+          <HomeNeedsYou boardUrl={process.env.PAPERCLIP_API_URL ?? null} />
         </Rise>
 
-        {/* Activity + focus */}
-        <Rise as="section" i={7} className="flex min-w-0 flex-col gap-[22px]">
-          <div>
-            <SectionHead label="Recent runs" count={recentRuns.length} />
-            <ul className="flex flex-col gap-1.5">
-              {recentRuns.slice(0, 6).map((r) => (
-                <li
-                  key={r.id}
-                  className="flex items-baseline gap-2.5 rounded-sm-t border border-os-border bg-os-surface px-3 py-2 font-mono text-[11px]"
-                >
-                  <span className={`shrink-0 font-bold ${r.ok ? 'text-os-ok' : 'text-os-err'}`}>{r.ok ? 'OK' : 'FAIL'}</span>
-                  <span className="shrink-0 text-os-muted">{r.agentId}</span>
-                  <span className="min-w-0 flex-1 truncate text-os-dim">{r.summary}</span>
-                  <span className="shrink-0 text-os-dim">{relativeTime(r.finishedAt)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <Rise as="section" i={4} className="flex min-w-0 flex-col gap-[22px]">
+          <InterjectComposer />
 
-          {nowItems.length > 0 && (
-            <div>
-              <SectionHead label={`Now · ${nowQuarter?.quarter ?? 'roadmap'}`} link="Roadmap" href="/roadmap" />
-              <ul className="flex flex-col gap-1.5">
-                {nowItems.map((it) => (
+          <div className="relative overflow-hidden rounded-panel border border-os-border bg-os-surface">
+            <div className="flex items-center gap-3 border-b border-os-border px-4 py-2.5">
+              <Label>Done today</Label>
+              <span className="font-mono text-[10px] text-os-dim">{doneToday.length} since midnight</span>
+              <Link href="/agents" className="ml-auto font-mono text-[10px] text-os-dim linky">
+                runs →
+              </Link>
+            </div>
+            {doneToday.length === 0 ? (
+              <div className="px-4 py-5 font-mono text-[11px] text-os-dim">nothing finished yet today</div>
+            ) : (
+              <ul className="flex flex-col">
+                {doneToday.map((d) => (
                   <li
-                    key={it.id}
-                    className="flex items-center gap-2.5 rounded-sm-t border border-os-border bg-os-surface px-3 py-[9px]"
+                    key={d.key}
+                    className="flex items-baseline gap-2.5 border-b border-os-hairline px-4 py-2 font-mono text-[11px] last:border-b-0"
                   >
-                    <span className="shrink-0 font-mono font-bold text-os-accent">›</span>
-                    <span className="min-w-0 flex-1 truncate text-[12.5px] text-os-muted">{it.title}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-os-dim">
-                      {it.departmentId ? departments.get(it.departmentId) ?? '' : ''}
-                    </span>
+                    <span className={`shrink-0 font-bold ${d.headClass}`}>{d.head}</span>
+                    <span className="min-w-0 flex-1 truncate text-os-dim">{d.body}</span>
+                    <span className="shrink-0 text-os-dim">{d.when}</span>
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-
-          {/* G-Brain card */}
-          <Link
-            href="/brain"
-            className="hoverable flex items-center gap-3.5 rounded-lg-t border border-os-border bg-os-surface px-[18px] py-4"
-          >
-            <Zap className="h-[18px] w-[18px] shrink-0 text-os-accent" strokeWidth={1.7} />
-            <div className="min-w-0 flex-1">
-              <Label>G-Brain · knowledge core</Label>
-              <div className="mt-2 text-[13px] font-semibold">One memory across every agent</div>
-              <div className="mt-1 font-mono text-[10.5px] leading-relaxed text-os-dim">
-                {overview.store.totalFiles} pages · health {health ?? '—'}/100 · hybrid search{' '}
-                {overview.doctor.connected ? 'verified' : 'degraded'}
-              </div>
-            </div>
-            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-os-dim" />
-          </Link>
+            )}
+          </div>
         </Rise>
       </div>
     </div>

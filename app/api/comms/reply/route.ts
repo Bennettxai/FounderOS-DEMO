@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendSlackMessage } from '@/lib/connectors/slack';
-import { sendEmailReply } from '@/lib/connectors/email';
+import { sendEmailReply, invalidateEmailCache } from '@/lib/connectors/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,5 +43,7 @@ export async function POST(request: Request) {
     inReplyTo: parsed.data.inReplyTo,
     references: parsed.data.references,
   });
+  // A sent reply must not sit behind the comms cache window.
+  if (result.ok) invalidateEmailCache();
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }

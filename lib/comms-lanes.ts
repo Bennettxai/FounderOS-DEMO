@@ -1,7 +1,6 @@
 /**
  * The /comms messaging board, split by source into lanes: the four email
- * inboxes each on their own, plus WhatsApp. (The Wispr notes lane was removed
- * 2026-08-04 — dictations aren't comms.) Pure assembly in buildCommsLanes
+ * inboxes each on their own, plus WhatsApp. (The Wispr notes lane was removed * — dictations aren't comms.) Pure assembly in buildCommsLanes
  * (unit-tested); gatherCommsLanes wires the live connectors. Each lane carries
  * its own connector state so the header can read honest
  * (connected / not_configured / error) per source.

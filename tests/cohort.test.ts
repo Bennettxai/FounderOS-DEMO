@@ -17,8 +17,8 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
  * the load-bearing bits — lock them here.
  */
 describe('cohort invite constants', () => {
-  it('points at TheFounderOS.com over https', () => {
-    expect(COHORT_URL).toBe('https://thefounderos.com');
+  it('points at founderos.example.com over https', () => {
+    expect(COHORT_URL).toBe('https://founderos.example.com');
   });
 
   it('carries the exact footer CTA line', () => {
@@ -62,7 +62,7 @@ describe('wiring', () => {
     expect(layout.indexOf('{children}')).toBeLessThan(layout.indexOf('<CohortBanner'));
   });
 
-  test('the banner is a server-rendered link to TheFounderOS.com carrying the CTA', () => {
+  test('the banner is a server-rendered link to founderos.example.com carrying the CTA', () => {
     const src = read('components/CohortBanner.tsx');
     expect(src).toContain('COHORT_CTA');
     expect(src).toContain('COHORT_URL');

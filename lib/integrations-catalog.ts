@@ -6,7 +6,7 @@ import {
 } from '@/lib/schemas';
 
 /**
- * The connections marketplace catalog. Larp-first: a rich, honest catalog of
+ * The connections marketplace catalog. demo-first: a rich, honest catalog of
  * popular tools. `connectorId` ties an entry to a real connector so its live
  * "connected" state is never faked; everything else reads as "not connected"
  * with a Connect affordance. Logos resolve from `slug` via lib/brand-logos
@@ -23,13 +23,13 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'manychat', name: 'ManyChat', tagline: 'IG DM automation', category: 'Communication', connectorId: 'manychat', envKeys: ['MANYCHAT_API_KEY'] },
 
   // Productivity
-  { slug: 'notion', name: 'Notion', tagline: 'Docs & databases', category: 'Productivity', connectorId: 'notion', popular: true, envKeys: ['NOTION_API_KEY'] },
   { slug: 'airtable', name: 'Airtable', tagline: 'Bases & records', category: 'Productivity', popular: true },
   { slug: 'googlesheets', name: 'Google Sheets', tagline: 'Read & write spreadsheets', category: 'Productivity' },
   { slug: 'googledocs', name: 'Google Docs', tagline: 'Create & edit documents', category: 'Productivity' },
   { slug: 'clickup', name: 'ClickUp', tagline: 'Docs, tasks & goals', category: 'Productivity' },
   { slug: 'trello', name: 'Trello', tagline: 'Boards & cards', category: 'Productivity' },
   { slug: 'coda', name: 'Coda', tagline: 'Docs that act like apps', category: 'Productivity' },
+  { slug: 'wispr', name: 'Wispr Flow', tagline: 'Voice dictation', category: 'Productivity', connectorId: 'wispr', envKeys: [] },
 
   // CRM & Sales
   { slug: 'hubspot', name: 'HubSpot', tagline: 'Contacts & deals', category: 'CRM & Sales', popular: true },
@@ -55,6 +55,7 @@ export const INTEGRATIONS: Integration[] = [
 
   // Finance
   { slug: 'stripe', name: 'Stripe', tagline: 'Payments & invoices', category: 'Finance', connectorId: 'payments', popular: true, envKeys: ['STRIPE_SECRET_KEY'] },
+  { slug: 'stripe-vantage', name: 'Stripe · Vantage', tagline: 'Vantage payments & invoices', category: 'Finance', connectorId: 'payments', envKeys: ['STRIPE_VANTAGE_KEY'] },
   { slug: 'quickbooks', name: 'QuickBooks', tagline: 'Bookkeeping & P&L', category: 'Finance' },
   { slug: 'xero', name: 'Xero', tagline: 'Accounting & bills', category: 'Finance' },
   { slug: 'paypal', name: 'PayPal', tagline: 'Payments & payouts', category: 'Finance', envKeys: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET'] },
@@ -69,15 +70,17 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'buffer', name: 'Buffer', tagline: 'Schedule social posts', category: 'Marketing' },
   { slug: 'hootsuite', name: 'Hootsuite', tagline: 'Social management', category: 'Marketing' },
   { slug: 'zernio', name: 'Zernio', tagline: 'Cross-platform posting', category: 'Marketing', connectorId: 'zernio', envKeys: ['ZERNIO_API_KEY'] },
-  { slug: 'webinarjam', name: 'WebinarJam', tagline: 'Webinar registrants', category: 'Marketing', connectorId: 'webinarjam', envKeys: ['WEBINARJAM_API_KEY'] },
   { slug: 'trakyo', name: 'Trakyo', tagline: 'Organic attribution', category: 'Marketing', connectorId: 'trakyo', envKeys: ['TRAKYO_API_KEY'] },
+  { slug: 'fathom', name: 'Fathom', tagline: 'AI notetaker for calls', category: 'CRM & Sales', connectorId: 'fathom', envKeys: ['FATHOM_API_KEY'] },
+  { slug: 'plaud', name: 'Plaud', tagline: 'AI voice recorder for the room', category: 'CRM & Sales', connectorId: 'plaud', envKeys: ['PLAUD_REFRESH_TOKEN'] },
+  { slug: 'docusign', name: 'DocuSign', tagline: 'Contracts & e-signatures', category: 'CRM & Sales', connectorId: 'docusign', envKeys: ['DOCUSIGN_INTEGRATION_KEY', 'DOCUSIGN_USER_ID', 'DOCUSIGN_ACCOUNT_ID', 'DOCUSIGN_PRIVATE_KEY_B64'] },
 
   // Storage
   { slug: 'googledrive', name: 'Google Drive', tagline: 'Files & folders', category: 'Storage' },
   { slug: 'dropbox', name: 'Dropbox', tagline: 'Sync & share', category: 'Storage' },
   { slug: 'box', name: 'Box', tagline: 'Content cloud', category: 'Storage' },
   { slug: 'onedrive', name: 'OneDrive', tagline: 'Microsoft files', category: 'Storage' },
-  { slug: 'obsidian', name: 'Notes', tagline: 'Markdown vault', category: 'Storage', connectorId: 'obsidian', envKeys: [] },
+  { slug: 'obsidian', name: 'Obsidian', tagline: 'Markdown vault', category: 'Storage', connectorId: 'obsidian', envKeys: [] },
 
   // AI & Automation
   { slug: 'openai', name: 'OpenAI', tagline: 'GPT models & embeddings', category: 'AI & Automation' },
@@ -90,7 +93,7 @@ export const INTEGRATIONS: Integration[] = [
   { slug: 'figma', name: 'Figma', tagline: 'Design & prototypes', category: 'Creative', popular: true },
   { slug: 'canva', name: 'Canva', tagline: 'Templates & graphics', category: 'Creative' },
   { slug: 'miro', name: 'Miro', tagline: 'Whiteboards & maps', category: 'Creative', connectorId: 'miro', envKeys: ['MIRO_ACCESS_TOKEN'] },
-  { slug: 'loom', name: 'Loom', tagline: 'Screen recordings', category: 'Creative' },
+  { slug: 'loom', name: 'Loom', tagline: 'Screen recordings', category: 'Creative', connectorId: 'loom', envKeys: [] },
   { slug: 'typeform', name: 'Typeform', tagline: 'Forms & surveys', category: 'Creative' },
   { slug: 'arcads', name: 'Arcads', tagline: 'AI video ads', category: 'Creative', connectorId: 'arcads', envKeys: ['ARCADS_BASIC_AUTH'] },
 ];

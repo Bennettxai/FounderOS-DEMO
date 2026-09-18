@@ -12,14 +12,57 @@
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* Dark (phosphor terminal). */
-/* Workflow tree node surfaces. Layered translucent gradients off the
-   colorway's own surface and bg, so every theme keeps its tint. */
+/* ── Palette aliases ──────────────────────────────────────────────────────
+   The Tailwind palette maps os-muted → var(--text-2), os-dim → var(--text-3)
+   and os-surface2 → var(--surface-2), but call sites that need a raw value
+   (an SVG fill, an inline style, a gradient stop) reach for the short names.
+   Undefined they are not an error: the declaration is simply dropped and the
+   element paints transparent, which is how the Home pulse tiles shipped with
+   invisible bars and the shimmer swept from nothing to white.
+
+   Defined here on bare :root and left unset in every theme block, so custom
+   property substitution resolves them late, against whichever colorway won.
+   Pinned by tests/css-vars-defined.test.ts. */
+:root {
+  --muted: var(--text-2);
+  --dim: var(--text-3);
+  --surface2: var(--surface-2);
+}
+
+/* ── Data-ramp tokens ─────────────────────────────────────────────────────
+   Reached for by the components imported from Slab (PipelineChart, the
+   brand-deals slab). Derived from the colorway, never raw hex, so every
+   theme keeps its own hues and no ported surface can drift off-palette.
+   Pinned by tests/brand-deals-slab.test.ts. */
+:root {
+  --ramp-1: var(--brain-2);
+  --ramp-2: color-mix(in oklab, var(--brain-2) 35%, var(--text));
+  --ramp-3: var(--brain-1);
+  --ramp-4: color-mix(in oklab, var(--brain-1) 70%, var(--accent));
+  --send-activity: color-mix(in oklab, var(--brain-2) 70%, var(--text));
+  --pc-shade: color-mix(in oklab, var(--accent) 25%, var(--bg));
+  --tile-glow-a: var(--brain-1);
+  --tile-glow-b: var(--brain-2);
+  --tile-glow-c: var(--accent);
+}
+
+/* Workflow tree node surfaces (Slab import). Layered translucent gradients
+   off the colorway's own surface and bg, so every theme keeps its tint. */
 :root {
   --wft-node-bg: linear-gradient(165deg, color-mix(in oklab, var(--surface-2) 55%, transparent) 0%, color-mix(in oklab, var(--bg) 65%, transparent) 55%, color-mix(in oklab, var(--bg) 82%, transparent) 100%);
   --wft-node-bg-hover: linear-gradient(165deg, color-mix(in oklab, var(--surface-2) 70%, transparent) 0%, color-mix(in oklab, var(--bg) 75%, transparent) 55%, color-mix(in oklab, var(--bg) 90%, transparent) 100%);
 }
 
+/* Blueprint glass + elevation (Slab import). Derived from the colorway. */
+:root {
+  --glass-a: color-mix(in oklab, var(--surface-2) 70%, transparent);
+  --glass-b: color-mix(in oklab, var(--surface) 78%, transparent);
+  --glass-c: color-mix(in oklab, var(--bg) 88%, transparent);
+  --elevated: var(--surface-2);
+  --elevated-border: var(--border-strong);
+}
+
+/* Dark (phosphor terminal). */
 :root[data-theme='dark'] {
   color-scheme: dark;
   --bg: #050807;
@@ -188,9 +231,9 @@
   --kg-tool: var(--brain-2);
 }
 
-/* Mono — MONOLITH SIGNAL (design handoff 2026-07-10): white/grey structure
-   on bare black, boxes flattened, zero glow/grid, and a strict traffic-light
-   rule — color only ever means status: green good · yellow degraded · red bad. */
+/* Mono — MONOLITH SIGNAL: white/grey structure
+    on bare black, boxes flattened, zero glow/grid, and a strict traffic-light
+    rule — color only ever means status: green good · yellow degraded · red bad. */
 /* Mono (Monolith Signal) — the default identity; bare :root rides along so a
    pre-script or no-JS load already renders Monolith. */
 :root,
@@ -235,7 +278,7 @@
   --funnel-s4: var(--ok);
   --funnel-s5: #575757;
   --funnel-s6: #474747;
-  /* Alex's call (2026-07-10): tools burn red on the monolith radial. */
+  /* Design decision: tools burn red on the monolith radial. */
   --kg-tool: #ff2d3f;
 }
 
@@ -245,9 +288,9 @@
    read clearly on white. */
 :root[data-theme='mono-light'] {
   color-scheme: light;
-  /* G-Brain blue pass (2026-08-20): anchored to the inverted knowledge-graph
-     palette — the orange core inverts to steel azure (invert(#E07B39) ≈
-     #1F84C6), the ground to a cool blue-white. */
+  /* G-Brain blue pass: anchored to the inverted knowledge-graph
+      from the Zero API cover — the orange core inverts to steel azure
+      (invert(#E07B39) ≈ #1F84C6), the ground to a cool blue-white. */
   --bg: #f2f6f9; /* cool blue-white canvas — the inverted graph's ground */
   --bg-2: #e9eff5;
   --surface: #ffffff; /* cards are white, lifted off the canvas */
@@ -285,9 +328,9 @@
   --funnel-s4: #17924e;
   --funnel-s5: #c04a8a;
   --funnel-s6: #7a828c;
-  /* Knowledge graph reads inverted: cyan tools, ink agents, royal-blue
-     humans, teal memory core, and every life-area hue swapped for its
-     optical inversion (see lib/kg-colors.ts). */
+  /* Knowledge graph reads like the inverted G-Brain cover: cyan tools, ink
+     agents, royal-blue humans, teal memory core, and every life-area hue
+     swapped for its optical inversion (see lib/kg-colors.ts). */
   --kg-tool: #4cc4d0;
   --kg-person: #2f5fd0;
   --kg-employee: #16222c;
@@ -338,25 +381,348 @@ body {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 0;
+  border-radius: 999px;
   border: 3px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-3);
 }
 
-/* Terminal cards answer the mouse with a border brighten only — no lift. */
-.hoverable {
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+/* ── Interaction layer (Founder OS Interaction Rebrand) ──
+    The look stays Monolith Signal; the surface now answers the mouse: hover
+    lens (magnify + magnetic pull via useLens), press sink, spotlight, radius
+    on controls only. Colors route through theme vars so every colorway keeps
+    its own palette. */
+:root {
+  --ease-lens: cubic-bezier(0.22, 0.61, 0.36, 1); /* hover lens in + out */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* checkmark pop only */
+  --dur-press: 200ms;
+  --dur: 360ms;
+  --dur-lens: calc(var(--dur) * 1.75);
+  --dur-panel: 420ms;
+  --r-ctl: 6px; /* buttons, inputs, segmented, nav rows */
+  --r-panel: 10px; /* floating cards, toasts, composer */
+  --r-tile: 12px; /* connections tiles */
+  /* page-wide spotlight position (viewport px); useLens overwrites these on
+     :root on every pointer move and parks them off-screen on leave */
+  --px: -999px;
+  --py: -999px;
 }
-.hoverable:hover {
+/* The old border-brighten card rule, rebuilt. Pair with data-lens="c" (control) or "r" (row/card). */
+.pressable {
+  position: relative;
+  transition:
+    transform var(--dur-lens) var(--ease-lens),
+    background-color var(--dur-lens) var(--ease-lens),
+    border-color var(--dur-lens) var(--ease-lens),
+    color var(--dur-lens) var(--ease-lens),
+    box-shadow var(--dur-lens) var(--ease-lens),
+    opacity var(--dur-lens) var(--ease-lens);
+  /* radius is never animated */
+}
+/* A pressable that is placed absolutely or fixed keeps its placement. The
+    lens only needs a positioned box; forcing relative here silently dropped
+    five controls (the graph's Fullscreen tab among them) out of their frames
+    and into the clipped overflow below. */
+.pressable.absolute {
+  position: absolute;
+}
+.pressable.fixed {
+  position: fixed;
+}
+.pressable:hover {
+  z-index: 3;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  transform: perspective(700px) translate(var(--lx, 0px), var(--ly, 0px))
+    rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-1px) scale(1.05);
+}
+.pressable[data-lens='r']:hover {
+  transform: perspective(700px) translate(var(--lx, 0px), var(--ly, 0px))
+    rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-1px) scale(1.02);
+}
+.pressable.is-dark:hover {
+  color: var(--text);
+  background-color: var(--surface-2);
+  border-color: color-mix(in oklab, var(--text) 38%, var(--bg));
+}
+.pressable.is-row:hover {
+  background-color: color-mix(in oklab, var(--text) 3%, var(--bg));
+  border-color: color-mix(in oklab, var(--text) 38%, var(--bg));
+}
+.pressable.is-primary {
+  background: linear-gradient(90deg, var(--accent) 50%, var(--accent-2) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  transition:
+    background-position var(--dur-lens) var(--ease-lens),
+    transform var(--dur-lens) var(--ease-lens),
+    box-shadow var(--dur-lens) var(--ease-lens);
+}
+.pressable.is-primary:hover {
+  background-position: 0 0;
+}
+.pressable:active {
+  transition-duration: var(--dur-press);
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--text) 22%, transparent);
+  border-color: var(--text);
+}
+.pressable[data-lens='r']:active {
+  transform: scale(0.995);
+}
+.pressable.is-primary:active {
+  box-shadow:
+    inset 0 2px 0 rgba(0, 0, 0, 0.18),
+    0 0 0 3px color-mix(in oklab, var(--text) 22%, transparent);
+}
+.pressable:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--text) 8%, transparent);
+}
+[data-spot] {
+  position: relative;
+}
+.spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(
+    260px circle at var(--sx, -999px) var(--sy, -999px),
+    color-mix(in oklab, var(--text) 7%, transparent),
+    transparent 70%
+  );
+}
+.skeleton {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: om-shimmer 1.4s linear infinite;
+}
+/* Three companions to .pressable, for the surfaces that are not themselves a
+   lens. Mock 1i's rule is that hover moves TWO properties: "one property reads
+   as a bug." Tailwind's transition-colors / transition-all are the one-property
+   tell, and on a .pressable they also stomp its six-property transition, so
+   they are gone from app/ and components/ entirely (pinned by
+   tests/rebrand-acceptance-1i.test.ts). What is left routes through these. */
+
+/* A child of a lens surface (an arrow, a chevron, an icon tile) that brightens
+   under group-hover. It has to ease on the PARENT's clock, or the accent lands
+   at Tailwind's 150ms while the card is still travelling for another 480. */
+.lens-child {
+  transition:
+    color var(--dur-lens) var(--ease-lens),
+    fill var(--dur-lens) var(--ease-lens),
+    background-color var(--dur-lens) var(--ease-lens),
+    border-color var(--dur-lens) var(--ease-lens),
+    opacity var(--dur-lens) var(--ease-lens),
+    transform var(--dur-lens) var(--ease-lens);
+}
+
+/* A text link. Mock 1i bars the press vocabulary here (no ring, no sink on a
+   run of words) but names "color + nudge" as a legal pair, so the link brightens
+   to the accent and steps 1px into the reading direction. .linky owns the hover
+   colour, so a call site carries no hover:text-* of its own. */
+.linky {
+  transition:
+    color var(--dur-lens) var(--ease-lens),
+    opacity var(--dur-lens) var(--ease-lens),
+    transform var(--dur-lens) var(--ease-lens);
+}
+.linky:hover {
+  /* --accent, not --text: in Monolith Signal the accent IS the text white, and
+     the legacy Terminal colorway keeps its phosphor-green links this way. */
+  color: var(--accent);
+  transform: translateX(1px);
+}
+
+/* Not a hover: a state change the app makes on its own (drag-over, drop target,
+   focus ring, a selected row). These run on the press clock — --dur-lens is
+   630ms, which reads as lag when a file is hovering over a drop zone. */
+.state-fade {
+  transition:
+    background-color var(--dur-press) var(--ease-lens),
+    border-color var(--dur-press) var(--ease-lens),
+    color var(--dur-press) var(--ease-lens),
+    opacity var(--dur-press) var(--ease-lens);
+}
+
+@keyframes om-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+/* The Conductor dock's liveness cursor: a hard on/off blink, no fade, the way
+   a terminal caret behaves. steps(1) keeps it square. */
+@keyframes om-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes om-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes om-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes om-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -20% 0; }
+}
+.enter {
+  animation: om-in 0.3s var(--ease-lens) both;
+}
+.pop {
+  animation: om-pop 0.32s var(--ease-spring) both;
+  display: inline-block;
+}
+
+/* ── Slab motion (OS-wide) ───────────────────────────────────
+    The brand-deals slab's four moves as shared utilities, on the house ease:.rise the element rises in, staggered by --rise-i at 90ms a step.draw an SVG line draws itself (needs pathLength={1} on the path).fill a horizontal bar fills from the left.grow a vertical bar grows from the bottom.rise-card adds the slab's 1px hover lift (two properties, lens clock).
+    Reduced motion kills all of it below. */
+@keyframes os-rise {
+  from { opacity: 0; transform: translateY(10px) scale(0.992); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes os-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes os-fill {
+  from { transform: scaleX(0); }
+}
+@keyframes os-grow {
+  from { transform: scaleY(0); }
+}
+@keyframes os-sweep {
+  to { stroke-dashoffset: 0; }
+}
+:root {
+  --rise-i: 0;
+}
+.rise {
+  animation: os-rise 0.6s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms);
+}
+.rise-card {
+  transition:
+    transform var(--dur-lens) var(--ease-lens),
+    border-color var(--dur-lens) var(--ease-lens);
+}
+.rise-card:hover {
+  transform: translateY(-1px);
   border-color: var(--border-strong);
 }
-.hoverable:active {
-  transition-duration: 0.06s;
+.draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: os-draw 1.4s var(--ease) 0.3s both;
 }
+.fill {
+  transform-origin: left;
+  animation: os-fill 1.1s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms + 300ms);
+}
+.grow {
+  transform-origin: bottom;
+  animation: os-grow 0.9s var(--ease) both;
+  animation-delay: calc(var(--rise-i) * 90ms + 200ms);
+}
+/* .sweep: a donut slice that draws itself clockwise; SharePie sets the
+   per-slice duration and delay inline so the ring is one continuous hand. */
+.sweep {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .draw,
+  .fill,
+  .grow {
+    animation: none !important;
+  }
+  .sweep {
+    animation: none !important;
+    stroke-dashoffset: 0;
+  }
+  .rise-card:hover {
+    transform: none !important;
+  }
+}
+/* The page-wide glow. Same radial as the island version, but fixed to the
+   viewport and moved with a transform (compositor only, no repaint of a
+   viewport-sized gradient on every pointer move). z 35: over the sidebar (20)
+   and topbar (30), under the dock (40), palette (50) and toasts (60). */
+.spotlight.is-page {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 35;
+  background: none;
+}
+.spotlight.is-page::before {
+  content: '';
+  position: absolute;
+  left: -260px;
+  top: -260px;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle closest-side,
+    color-mix(in oklab, var(--text) 7%, transparent),
+    transparent 70%
+  );
+  transform: translate(var(--px, -999px), var(--py, -999px));
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pressable,
+  .pressable:hover,
+  .pressable:active {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+  .spotlight,
+  .skeleton,
+  .enter,
+  .pop {
+    animation: none !important;
+  }
+  /* the nudge goes, the colour stays: mock 1i keeps colour and opacity under
+     reduced motion, it only kills movement */
+  .linky:hover {
+    transform: none !important;
+  }
+}
+
+/* ── Where the handoff pack disagrees with itself, and which half won ─────
+   Earlier this block claimed four deliberate deviations from mock 1i. It was
+   wrong on all four, so it is replaced rather than kept: the tokens below
+   match design_handoff_interaction_rebrand/code/globals.additions.css
+   exactly, and nothing here departs from the pack.
+
+   The confusion is real and worth leaving a marker for, because the pack
+   states the press spec twice and the two do not agree:
+
+   - The 1i artboard PROSE says "sink 1px + scale .98 at 120ms, release at
+     240ms" and puts the lens at 420ms.
+   - The pack's own CSS (code/globals.additions.css), its README motion-token
+     table and CHANGELOG all say --dur-press: 200ms, :active scale(.97) for
+     controls (.98 only for rows), and --dur-lens = --dur * 1.75 = 630ms.
+
+   The CSS is the deliverable and the README calls those the chosen values, so
+   the code follows them. The artboard prose reads like the description of an
+   earlier pass that was not updated.
+
+   The ripple is the same story. It is not an omission taken here: CHANGELOG
+   records "1a Press & depth (1b ripple and 1c spring rejected). Ripple stays
+   off", and the artboard itself says "ripple is off by default (still a tweak
+   if you want it back)". No om-ripple keyframe and no useRipple hook is the
+   pack's decision, not a departure from it, and the acceptance test keeps a
+   half-built one from creeping back in. */
 
 /* Emblem spin/glow is dead — machinery, not mascots (Monolith lettering
    pass; applies to every colorway). */
@@ -364,7 +730,7 @@ body {
   transition: none;
 }
 .group:hover .emblem,
-.hoverable:hover .emblem {
+.pressable:hover .emblem {
   transform: none;
   filter: none;
 }
@@ -382,11 +748,11 @@ body {
   background: var(--border-strong);
 }
 
-/* ---------------- status dots (LED squares) ---------------- */
+/* ---------------- status dots (round, premium pass) ---------------- */
 .dot {
   width: 6px;
   height: 6px;
-  border-radius: 0;
+  border-radius: 50%;
   flex-shrink: 0;
   position: relative;
   display: inline-block;
@@ -513,6 +879,40 @@ body {
 @keyframes funnel-dash {
   to {
     stroke-dashoffset: -12;
+  }
+}
+/* Info neuron: a pulse gliding a department's line. pathLength is normalised to
+   1 so one segment sweeps the whole edge regardless of length. No filter/glow —
+   the graph re-lays its edges every physics frame, and a per-frame filter
+   repaint on a moving dash read as a flashing strobe. A calm, opaque-capped
+   sweep instead. */
+.kg-synapse {
+  stroke-dasharray: 0.14 0.86;
+  animation: kg-synapse-flow 5s linear infinite;
+  animation-delay: var(--kg-syn-delay, 0s);
+  opacity: 0.55;
+}
+/* the smaller neuron branching out to each SOP — shorter, fainter, a touch
+   quicker so it reads as a lighter signal than the main department line */
+.kg-synapse-sm {
+  stroke-dasharray: 0.07 0.93;
+  animation: kg-synapse-flow 4s linear infinite;
+  animation-delay: var(--kg-syn-delay, 0s);
+  opacity: 0.38;
+}
+@keyframes kg-synapse-flow {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kg-synapse,
+  .kg-synapse-sm {
+    animation: none;
+    opacity: 0.3;
   }
 }
 /* Expanding halo behind each client node — the "alive" heartbeat. */
@@ -771,49 +1171,46 @@ html.conductor-dragging .os-shell {
   transition: none;
 }
 
-/* G-Brain graph motion: flowing synapses on the edges, orbiting live agents,
-   breathing task nodes, and the synthesizing shimmer. */
-@keyframes kg-synapse-flow {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+/* Brand marks that ride on the canvas (G-Brain graph nodes, graph directory).
+   Both source PNGs are light artwork, so they are flattened to a solid shape
+   and flipped with the theme: white on the dark canvases, black on the light
+   ones. Without this the AI-agent and board-agent nodes vanish in Daylight. */
+.mark-adaptive {
+  filter: brightness(0) invert(1);
 }
-@keyframes agent-orbit {
-  to { --agent-angle: 360deg; }
+:root[data-theme='light'] .mark-adaptive,
+:root[data-theme='mono-light'] .mark-adaptive {
+  filter: brightness(0);
 }
-@keyframes task-breathe {
-  0%, 100% {
-    border-color: color-mix(in oklab, var(--ok) 30%, var(--border));
-    background-color: transparent;
-  }
-  50% {
-    border-color: var(--ok);
-    background-color: color-mix(in oklab, var(--ok) 9%, transparent);
-  }
-}
-@keyframes task-dot-flash {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
+
+/* ── Synthesizing shimmer (Claude-Code-style liveness in agent chats) ────── */
+.synth-shimmer {
+  background: linear-gradient(90deg, var(--dim) 0%, var(--text) 50%, var(--dim) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: synth-sweep 1.6s linear infinite;
 }
 @keyframes synth-sweep {
   from { background-position: 180% 0; }
   to { background-position: -20% 0; }
 }
-.kg-synapse {
-  stroke-dasharray: 0.14 0.86;
-  animation: kg-synapse-flow 5s linear infinite;
-  animation-delay: var(--kg-syn-delay, 0s);
-  opacity: 0.55;
+
+/* ── Agent liveness: a green that travels the border, not a flat state ─────
+    Design goal: a working agent should feel alive rather than
+    simply turn green. The colour ORBITS the element.
+
+    Built on a rotating conic-gradient behind the card, masked to the border
+    band so only the edge shows. @property makes the angle animatable; where it
+    is unsupported the element still gets a solid green edge from the fallback
+    border-color, so this degrades to the old look rather than to nothing. */
+@property --agent-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
 }
-.kg-synapse-sm {
-  stroke-dasharray: 0.07 0.93;
-  animation: kg-synapse-flow 4s linear infinite;
-  animation-delay: var(--kg-syn-delay, 0s);
-  opacity: 0.38;
-}
+
 .agent-live {
   position: relative;
   /* the fallback: a static green edge if the mask or @property is unsupported */
@@ -845,94 +1242,1981 @@ html.conductor-dragging .os-shell {
   animation: agent-orbit 2.4s linear infinite;
   pointer-events: none;
 }
+@keyframes agent-orbit {
+  to { --agent-angle: 360deg; }
+}
+
+/* A task actively being worked: the line itself breathes green rather than
+   sitting on a static colour. Distinct from the orbit so a glance tells you
+   whether you are looking at an agent or at the work. */
 .task-live {
   animation: task-breathe 1.5s ease-in-out infinite;
 }
+@keyframes task-breathe {
+  0%, 100% {
+    border-color: color-mix(in oklab, var(--ok) 30%, var(--border));
+    background-color: transparent;
+  }
+  50% {
+    border-color: var(--ok);
+    background-color: color-mix(in oklab, var(--ok) 9%, transparent);
+  }
+}
+
+/* The status dot on a live task, pulsing in sympathy with the line. */
 .task-live-dot {
   animation: task-dot-flash 1.5s ease-in-out infinite;
 }
-.synth-shimmer {
-  background: linear-gradient(90deg, var(--dim) 0%, var(--text) 50%, var(--dim) 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: synth-sweep 1.6s linear infinite;
+@keyframes task-dot-flash {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
 }
 
-/* ── Slab motion (OS-wide, 2026-09-17) ───────────────────────────────────
-   Four shared entry moves on the house ease:
-   .rise   the element rises in, staggered by --rise-i at 90ms a step
-   .draw   an SVG line draws itself (needs pathLength={1} on the path)
-   .fill   a horizontal bar fills from the left
-   .grow   a vertical bar grows from the bottom
-   .rise-card adds a 1px hover lift (two properties, 200ms).
-   Reduced motion kills all of it below. */
-@keyframes os-rise {
-  from { opacity: 0; transform: translateY(10px) scale(0.992); }
-  to { opacity: 1; transform: none; }
-}
-@keyframes os-draw {
-  to { stroke-dashoffset: 0; }
-}
-@keyframes os-fill {
-  from { transform: scaleX(0); }
-}
-@keyframes os-grow {
-  from { transform: scaleY(0); }
-}
-@keyframes os-sweep {
-  to { stroke-dashoffset: 0; }
-}
-:root {
-  --rise-i: 0;
-}
-.rise {
-  animation: os-rise 0.6s var(--ease) both;
-  animation-delay: calc(var(--rise-i) * 90ms);
-}
-.rise-card {
-  transition:
-    transform 200ms var(--ease),
-    border-color 200ms var(--ease);
-}
-.rise-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--border-strong);
-}
-.draw {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: os-draw 1.4s var(--ease) 0.3s both;
-}
-.fill {
-  transform-origin: left;
-  animation: os-fill 1.1s var(--ease) both;
-  animation-delay: calc(var(--rise-i) * 90ms + 300ms);
-}
-.grow {
-  transform-origin: bottom;
-  animation: os-grow 0.9s var(--ease) both;
-  animation-delay: calc(var(--rise-i) * 90ms + 200ms);
-}
-/* .sweep: a donut slice that draws itself clockwise; SharePie sets the
-   per-slice duration and delay inline so the ring is one continuous hand. */
-.sweep {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-}
 @media (prefers-reduced-motion: reduce) {
-  .rise,
-  .draw,
-  .fill,
-  .grow {
-    animation: none !important;
+  .agent-live::before { animation: none; opacity: 0.9; }
+  .task-live { animation: none; border-color: var(--ok); }
+  .task-live-dot { animation: none; opacity: 1; }
+}
+
+/* Command palette + keyboard legend (interaction rebrand step 8) */
+.kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--surface);
+}
+@keyframes om-pal {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(.98); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ── AdPilot (sanctioned red exception) ─────────────────────────────────
+   Red glass surfaces scoped to /adpilot: replaces the global teal tint of
+   .bg-os-surface, which reads green against the red page. */
+.ap-panel {
+  border: 1px solid rgba(255, 69, 87, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 69, 87, 0.055), rgba(255, 69, 87, 0.015) 42%, rgba(0, 0, 0, 0) 100%),
+    rgba(8, 5, 7, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 1px 0 rgba(255, 120, 132, 0.08);
+}
+.ap-chip {
+  border: 1px solid rgba(255, 69, 87, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 69, 87, 0.09), rgba(8, 5, 7, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+/* hatched fill for AdPilot meter bars + area chart (one hue, opacity steps) */
+.ap-hatch {
+  background-image: repeating-linear-gradient(
+    -55deg,
+    rgba(255, 69, 87, 0.85) 0 3px,
+    rgba(255, 69, 87, 0.28) 3px 6px
+  );
+}
+.ap-glow {
+  border-color: rgba(255, 69, 87, 0.3);
+  box-shadow:
+    0 0 34px rgba(255, 69, 87, 0.14),
+    inset 0 1px 0 rgba(255, 120, 132, 0.1);
+}
+
+/* frosted glass lit from the globe side (left) */
+.ap-frost {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 69, 87, 0.22);
+  border-left-color: rgba(255, 120, 132, 0.45);
+  border-radius: 14px;
+  background: rgba(10, 6, 8, 0.42);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.ap-frost::before {
+  content: '';
+  position: absolute;
+  left: -34px;
+  top: 50%;
+  width: 90px;
+  height: 120%;
+  transform: translateY(-50%);
+  background: radial-gradient(circle, rgba(255, 69, 87, 0.4), transparent 70%);
+  filter: blur(14px);
+  pointer-events: none;
+}
+/* the page's single loud element */
+.ap-bright {
+  border: 1px solid rgba(255, 130, 142, 0.55);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ff4557, #cf2537);
+  box-shadow: 0 8px 34px rgba(255, 69, 87, 0.28);
+}
+.ap-bright:hover {
+  background: linear-gradient(180deg, #ff5c6c, #d92c3e);
+}
+/* orbiting light behind frosted glass (the Ask widget) */
+@keyframes ap-spin {
+  to {
+    transform: rotate(360deg);
   }
-  .sweep {
-    animation: none !important;
-    stroke-dashoffset: 0;
+}
+.ap-orbit {
+  position: absolute;
+  inset: -45%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 250deg,
+    rgba(255, 69, 87, 0.7) 300deg,
+    rgba(255, 130, 142, 1) 322deg,
+    rgba(255, 69, 87, 0.7) 344deg,
+    transparent 360deg
+  );
+  filter: blur(20px);
+  animation: ap-spin 6s linear infinite;
+  pointer-events: none;
+}
+/* one face on this page: anything mono-classed falls back to the UI sans */
+[data-adpilot] .font-mono {
+  font-family: var(--font-mono) !important;
+  letter-spacing: normal;
+}
+
+/* ── Blueprint ── */
+/* hierarchy edition: the system as expandable buckets -
+    machines → groups → things, three disclosure levels, focus mode (click
+    anything: everything unrelated blurs, its connections light up in its
+    kind's colour), ⌘K search, kind legend, inspector, ask bar. Port of
+    slab-blueprint-concept/hierarchy. One hue per kind: this is a map, not
+    the OS chrome, so it may use the whole wheel. Perf rules: the dot grid lives in screen
+    space, will-change only on the world, blur + backdrop drop while moving. */
+:root {
+  --bh-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --bh-node-a: #172622;
+  --bh-node-b: #0d1715;
+  --bh-node-c: #0a1211;
+  --bh-tile-a: #22332e;
+  --bh-tile-b: #121e1b;
+  --bh-canvas-core: #071211;
+  --bh-canvas-edge: #030807;
+  --bh-flare: #d9fff0;
+  --bh-router-ink: #3a2400;
+  --bh-k-operator: #00ffab;
+  --bh-k-command: #00ffab;
+  --bh-k-app: #00ffab;
+  --bh-k-router: #f2b33d;
+  --bh-k-agent: #ff9e64;
+  --bh-k-department: #ff9e64;
+  --bh-k-person: #e0d6b0;
+  --bh-k-skill: #ffd166;
+  --bh-k-connector: #5fd4c4;
+  --bh-k-model: #b48cff;
+  --bh-k-store: #8fb4f6;
+  --bh-k-surface: #b9c9c4;
+  --bh-k-daemon: #3fd968;
+  --bh-k-machine: #d6e3df;
+  --bh-k-cloud: #5fd4c4;
+  --bh-k-group: #93a19d;
+}
+
+/* page chrome: full-bleed, beside the sidebar (232px) or the icon rail (64px) */
+.bh-page,
+.bh-skeleton {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 232px;
+  right: var(--conductor-w, 0px);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13.5px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+body[data-canvas='1'] .bh-page,
+body[data-canvas='1'] .bh-skeleton {
+  left: 64px;
+}
+.bh-page :where(input) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+.bh-page :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.bh-page :where(kbd) {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.bh-page :where(svg) {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.5;
+}
+.bh-top {
+  height: 64px;
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto auto 1fr;
+  align-items: center;
+  padding: 0 18px;
+  gap: 16px;
+  border-bottom: 1px solid var(--hairline);
+  position: relative;
+  z-index: 12;
+}
+.bh-h1 {
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.bh-title {
+  min-width: 0;
+}
+.bh-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.bh-btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 13px;
+  transition: all 0.18s var(--ease);
+}
+.bh-btn:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+.bh-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.bh-btn-primary {
+  color: var(--accent-ink);
+  background: linear-gradient(160deg, var(--accent-2), var(--accent));
+  border-color: transparent;
+  box-shadow: 0 0 24px color-mix(in oklab, var(--accent) 28%, transparent);
+}
+.bh-btn-primary:hover {
+  color: var(--accent-ink);
+  background: linear-gradient(160deg, var(--accent-2), var(--accent));
+  transform: translateY(-1px);
+}
+.bh-btn-primary.is-busy {
+  pointer-events: none;
+  opacity: 0.8;
+}
+.bh-levels {
+  display: flex;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.bh-lvl {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-3);
+  font-size: 12.5px;
+  transition: all 0.18s var(--ease);
+}
+.bh-lvl svg {
+  width: 14px;
+  height: 14px;
+}
+.bh-lvl:hover {
+  color: var(--text-2);
+}
+.bh-lvl.is-on {
+  background: linear-gradient(160deg, var(--accent-2), var(--accent));
+  color: var(--accent-ink);
+  box-shadow: 0 0 18px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+/* kind legend strip */
+.bh-kinds {
+  position: absolute;
+  left: 18px;
+  top: 76px;
+  z-index: 11;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  max-width: 60vw;
+}
+.bh-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-2);
+  border: 1px solid color-mix(in oklab, var(--text) 10%, transparent);
+  background: var(--glass-c);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bh-kind i.sw {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+}
+.bh-kind:hover,
+.bh-kind.is-on {
+  color: var(--text);
+  border-color: var(--c);
+}
+
+/* search */
+.bh-search {
+  position: relative;
+  width: 280px;
+  transition: width 0.38s var(--bh-spring);
+}
+.bh-search.is-open {
+  width: 620px;
+}
+.bh-search-pill {
+  width: 100%;
+  height: 36px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  color: var(--text-3);
+  font-size: 13px;
+  transition: all 0.2s var(--ease);
+}
+.bh-search-pill span {
+  flex: 1;
+  text-align: left;
+}
+.bh-search-pill:hover {
+  border-color: var(--border-strong);
+  color: var(--text-2);
+}
+.bh-search-pill svg {
+  width: 15px;
+  height: 15px;
+}
+.bh-search.is-open .bh-search-pill {
+  opacity: 0;
+  pointer-events: none;
+}
+.bh-search-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  background: linear-gradient(160deg, var(--glass-a), var(--glass-b) 50%, var(--glass-c));
+  backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow:
+    0 30px 70px rgba(0, 0, 0, 0.6),
+    0 0 60px color-mix(in oklab, var(--accent) 12%, transparent);
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  pointer-events: none;
+  transition:
+    opacity 0.22s var(--ease),
+    transform 0.3s var(--bh-spring);
+  overflow: hidden;
+}
+.bh-search.is-open .bh-search-panel {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.bh-search-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 44px;
+  border-bottom: 1px solid color-mix(in oklab, var(--text) 8%, transparent);
+}
+.bh-search-row svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+.bh-search-row input {
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+.bh-search-results {
+  max-height: 440px;
+  overflow-y: auto;
+  padding: 8px;
+}
+.bh-sr-group {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 10px 10px 4px;
+}
+.bh-sr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.bh-sr:hover,
+.bh-sr.is-active {
+  background: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+.bh-sr .bh-tile {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.bh-sr .bh-tile svg {
+  width: 15px;
+  height: 15px;
+}
+.bh-sr .t {
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-sr .s {
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-sr .k {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.bh-sr-empty {
+  padding: 20px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* stage */
+.bh-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.bh-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  outline: 0;
+  cursor: grab;
+  background: radial-gradient(1200px 700px at 50% 30%, var(--bh-canvas-core) 0%, var(--bg) 60%, var(--bh-canvas-edge) 100%);
+  transition: right 0.38s var(--ease);
+}
+.bh-canvas.is-panning {
+  cursor: grabbing;
+}
+.bh-stage.has-inspector .bh-canvas {
+  right: 352px;
+}
+.bh-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+/* grid lives in screen space: pitch and offset follow the camera, so dots stay crisp at every zoom */
+.bh-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, color-mix(in oklab, var(--text) 10%, transparent) 1.1px, transparent 1.7px);
+  background-size: var(--gs, 24px) var(--gs, 24px);
+  background-position: var(--gox, 0) var(--goy, 0);
+  opacity: var(--ga, 1);
+}
+.bh-glow-spot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 560px;
+  height: 560px;
+  margin: -280px 0 0 -280px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, color-mix(in oklab, var(--accent) 10%, transparent), color-mix(in oklab, var(--accent) 4%, transparent) 45%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.35s;
+  will-change: transform;
+}
+.bh-canvas:hover .bh-glow-spot {
+  opacity: 1;
+}
+.bh-canvas.is-moving .bh-glow-spot {
+  opacity: 0;
+}
+.bh-edges {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.bh-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.bh-edges-top {
+  z-index: 7;
+}
+.bh-labels {
+  z-index: 8;
+  pointer-events: none;
+}
+
+/* focus mode: everything unrelated blurs out */
+.bh-canvas .is-dim {
+  filter: blur(3px) saturate(0.6);
+  opacity: 0.22;
+  transition:
+    filter 0.35s var(--ease),
+    opacity 0.35s var(--ease);
+}
+.bh-canvas.is-moving .is-dim {
+  filter: none;
+}
+.bh-canvas.is-moving .bh-frame,
+.bh-canvas.is-moving .bh-container {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.bh-canvas.is-moving .bh-node,
+.bh-canvas.is-moving .bh-frame,
+.bh-canvas.is-moving .bh-container,
+.bh-canvas.is-moving .bh-pill {
+  transition: none;
+}
+.bh-node,
+.bh-frame,
+.bh-container,
+.bh-pill {
+  transition:
+    transform 0.5s var(--bh-spring),
+    opacity 0.35s var(--ease),
+    filter 0.35s var(--ease),
+    width 0.45s var(--ease),
+    height 0.45s var(--ease),
+    border-color 0.25s,
+    box-shadow 0.3s;
+}
+
+/* containers (the operator, the OS, machines, the cloud) */
+.bh-container {
+  position: absolute;
+  border-radius: 34px;
+  border: 1.5px dashed color-mix(in oklab, var(--text) 16%, transparent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--text) 3%, transparent), rgba(0, 0, 0, 0.1));
+}
+.bh-container.k-machine {
+  border-color: color-mix(in srgb, var(--bh-k-machine) 22%, transparent);
+}
+.bh-container.k-operator {
+  border: 0;
+  background: none;
+}
+.bh-container.k-app {
+  border-radius: 30px;
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  background: linear-gradient(170deg, color-mix(in oklab, var(--accent) 8%, transparent), var(--glass-b) 40%, var(--glass-c));
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--text) 7%, transparent),
+    0 30px 70px rgba(0, 0, 0, 0.45);
+}
+.bh-container.k-cloud {
+  border-color: color-mix(in srgb, var(--bh-k-cloud) 25%, transparent);
+  border-style: dotted;
+}
+.bh-container.is-selected {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--text) 5%, transparent), rgba(0, 0, 0, 0.25));
+}
+.bh-container.is-hot {
+  border-color: color-mix(in oklab, var(--text) 30%, transparent);
+}
+.bh-ch {
+  position: absolute;
+  left: 32px;
+  top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.bh-ci {
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--text) 25%, transparent);
+}
+.bh-container.k-app .bh-ci {
+  color: var(--accent);
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.bh-container.k-cloud .bh-ci {
+  color: var(--bh-k-cloud);
+  border-color: color-mix(in srgb, var(--bh-k-cloud) 40%, transparent);
+}
+.bh-ci svg {
+  width: 17px;
+  height: 17px;
+}
+.bh-ct {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.bh-cs {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-top: 2px;
+  max-width: 900px;
+}
+.bh-cf {
+  position: absolute;
+  right: 32px;
+  top: 30px;
+  display: flex;
+  gap: 6px;
+}
+.bh-cf span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* frames (expanded groups) */
+.bh-frame {
+  position: absolute;
+  border-radius: 22px;
+  --c: var(--text-2);
+  border: 1px solid color-mix(in srgb, var(--c) 32%, transparent);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 9%, var(--glass-b)), var(--glass-b) 45%, var(--glass-c));
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--text) 7%, transparent),
+    0 30px 70px rgba(0, 0, 0, 0.45);
+}
+.bh-frame.is-selected {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.bh-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse 70% 46% at 42% 0%, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%);
+  pointer-events: none;
+}
+.bh-frame.is-hot {
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent),
+    0 0 70px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.bh-frame.is-lit {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent),
+    0 0 80px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.bh-frame-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px 0 18px;
+  cursor: pointer;
+  border-radius: 22px 22px 0 0;
+}
+.bh-frame-head:hover {
+  background: color-mix(in oklab, var(--text) 4%, transparent);
+}
+.bh-fi {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
+}
+.bh-fi svg {
+  width: 15px;
+  height: 15px;
+}
+.bh-ft {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.bh-fs {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-left: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 520px;
+}
+.bh-fc {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.bh-fc .n {
+  font-family: var(--font-mono);
+}
+.bh-gb {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--text) 16%, transparent);
+}
+.bh-gb.s-live {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+}
+.bh-gb.s-configured {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+}
+.bh-fc svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(180deg);
+}
+.bh-frame-band {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 52px;
+  height: 1px;
+  background: color-mix(in oklab, var(--text) 8%, transparent);
+}
+
+/* nodes */
+.bh-node {
+  position: absolute;
+  --c: var(--text-2);
+}
+.bh-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  border: 1px solid color-mix(in srgb, var(--c) 22%, color-mix(in oklab, var(--text) 10%, transparent));
+  background: linear-gradient(155deg, var(--bh-node-a) 0%, var(--bh-node-b) 48%, var(--bh-node-c) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 16px 34px rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.18s var(--ease),
+    box-shadow 0.25s var(--ease),
+    transform 0.2s var(--ease);
+}
+.bh-card::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  pointer-events: none;
+  transition:
+    border-color 0.2s,
+    inset 0.2s var(--ease);
+}
+.bh-node:hover .bh-card {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  transform: translateY(-1px);
+}
+.bh-node:hover .bh-card::before {
+  border-color: color-mix(in srgb, var(--c) 18%, transparent);
+}
+.bh-node.is-selected {
+  z-index: 6;
+}
+.bh-node.is-selected .bh-card {
+  border-color: color-mix(in oklab, var(--text) 85%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--text) 50%, transparent),
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 60px color-mix(in srgb, var(--c) 30%, transparent);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 18%, var(--bh-node-b)), var(--bh-node-b) 60%, var(--bh-node-c));
+}
+.bh-node.is-selected .bh-card::before {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  inset: -8px;
+  box-shadow: 0 0 30px color-mix(in srgb, var(--c) 25%, transparent);
+}
+.bh-node.is-hot .bh-card {
+  border-color: color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.42),
+    0 0 34px color-mix(in srgb, var(--c) 25%, transparent);
+}
+.bh-node.is-lit .bh-card {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 30%, transparent),
+    0 0 50px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.bh-node.is-match .bh-card {
+  border-color: var(--accent);
+  box-shadow: 0 0 40px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.bh-node.is-new {
+  animation: bh-pop 0.45s var(--bh-spring) both;
+}
+@keyframes bh-pop {
+  from {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.86);
   }
-  .rise-card:hover {
-    transform: none !important;
+  to {
+    opacity: 1;
+    transform: translate(var(--tx), var(--ty)) scale(1);
   }
+}
+.bh-node.is-enter {
+  animation: bh-enter 0.6s var(--ease) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes bh-enter {
+  from {
+    opacity: 0;
+    transform: translate(var(--tx), calc(var(--ty) + 14px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(var(--tx), var(--ty));
+  }
+}
+.bh-tile {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: linear-gradient(160deg, var(--bh-tile-a), var(--bh-tile-b));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.bh-tile svg {
+  width: 20px;
+  height: 20px;
+}
+.bh-ttl {
+  min-width: 0;
+  flex: 1;
+}
+.bh-ttl .t {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-ttl .s {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-st {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 10px var(--ok);
+}
+.bh-st[data-s='configured'] {
+  background: var(--warn);
+  box-shadow: 0 0 8px var(--warn);
+}
+.bh-st[data-s='not-configured'] {
+  background: transparent;
+  border: 1px solid var(--warn);
+  box-shadow: none;
+}
+.bh-st[data-s='designed'] {
+  background: transparent;
+  border: 1px solid var(--text-3);
+  box-shadow: none;
+}
+.bh-node[data-s='designed'] .bh-card,
+.bh-node[data-s='not-configured'] .bh-card {
+  border-style: dashed;
+}
+.bh-node[data-s='designed'] .bh-tile,
+.bh-node[data-s='not-configured'] .bh-tile {
+  opacity: 0.55;
+}
+/* shapes */
+.bh-node.compact .bh-card {
+  border-radius: 12px;
+  gap: 9px;
+  padding: 0 10px;
+}
+.bh-node.compact .bh-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.bh-node.compact .bh-tile svg {
+  width: 15px;
+  height: 15px;
+}
+.bh-node.compact .bh-ttl .t {
+  font-size: 12.5px;
+}
+.bh-node.compact .bh-ttl .s {
+  font-size: 10.5px;
+  margin-top: 1px;
+}
+.bh-node.compact .bh-st {
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+}
+.bh-node.hero .bh-card {
+  border-radius: 20px;
+  padding: 0 18px;
+  gap: 14px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 20%, var(--bh-node-b)), var(--bh-node-b) 55%, var(--bh-node-c));
+  border-color: color-mix(in srgb, var(--c) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--c) 14%, transparent),
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    0 0 70px color-mix(in srgb, var(--c) 18%, transparent);
+}
+.bh-node.hero .bh-tile {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 70%, white), var(--c));
+  color: var(--accent-ink);
+  border-color: transparent;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--c) 50%, transparent);
+}
+.bh-node.hero .bh-tile svg {
+  width: 24px;
+  height: 24px;
+}
+.bh-node.hero .bh-ttl .t {
+  font-size: 16px;
+}
+.bh-node.hero .bh-ttl .s {
+  font-size: 12px;
+}
+.bh-node.start .bh-card {
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+  background: radial-gradient(circle at 40% 35%, var(--accent-2), var(--accent) 60%);
+  border-color: transparent;
+  box-shadow:
+    0 0 0 8px color-mix(in oklab, var(--accent) 12%, transparent),
+    0 0 50px color-mix(in oklab, var(--accent) 55%, transparent);
+  color: var(--accent-ink);
+}
+.bh-node.start .bh-card svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.8;
+}
+.bh-node.start .bh-card::before {
+  inset: -12px;
+  border-radius: 50%;
+  border-color: color-mix(in oklab, var(--accent) 25%, transparent);
+}
+.bh-node.start .bh-label,
+.bh-node.diamond .bh-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 12px);
+  transform: translateX(-50%);
+  text-align: center;
+  white-space: nowrap;
+  font-size: 13px;
+  max-width: 300px;
+}
+.bh-node.diamond .bh-label div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-node.start .bh-label .s,
+.bh-node.diamond .bh-label .s {
+  color: var(--text-2);
+  font-size: 11px;
+}
+.bh-node.diamond .bh-card {
+  border-radius: 16px;
+  padding: 0;
+  justify-content: center;
+  transform: rotate(45deg);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--bh-k-router) 55%, white), var(--bh-k-router));
+  border-color: transparent;
+  color: var(--bh-router-ink);
+  box-shadow:
+    0 0 34px color-mix(in srgb, var(--bh-k-router) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.bh-node.diamond .bh-card::before {
+  border-radius: 20px;
+}
+.bh-node.diamond .bh-card svg {
+  transform: rotate(-45deg);
+  width: 26px;
+  height: 26px;
+  stroke-width: 1.8;
+}
+.bh-node.diamond:hover .bh-card {
+  transform: rotate(45deg) translateY(-1px);
+}
+.bh-node.diamond.is-selected .bh-card {
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--text) 70%, transparent),
+    0 0 50px color-mix(in srgb, var(--bh-k-router) 60%, transparent);
+}
+.bh-node.external .bh-card {
+  border-radius: 14px;
+  border-style: dotted;
+  border-color: color-mix(in srgb, var(--c) 40%, transparent);
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 8%, var(--bh-node-b)), var(--bh-node-b) 48%, var(--bh-node-c));
+}
+.bh-node.external .bh-tile {
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  border-color: color-mix(in srgb, var(--c) 25%, transparent);
+}
+/* collapsed group card */
+.bh-node.group .bh-card {
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 10%, var(--bh-node-b)), var(--bh-node-b) 55%, var(--bh-node-c));
+  border-color: color-mix(in srgb, var(--c) 40%, transparent);
+}
+.bh-node.group .bh-card::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -5px;
+  height: 6px;
+  border-radius: 0 0 12px 12px;
+  border: 1px solid color-mix(in srgb, var(--c) 30%, transparent);
+  border-top: 0;
+  background: var(--bh-node-c);
+  z-index: -1;
+}
+.bh-count {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--c);
+}
+.bh-stack {
+  display: flex;
+  margin-left: auto;
+}
+.bh-stack i {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  margin-left: -6px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+}
+.bh-stack i svg {
+  width: 11px;
+  height: 11px;
+}
+.bh-chev {
+  position: absolute;
+  right: 10px;
+  bottom: 6px;
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.bh-node.group:hover .bh-chev {
+  opacity: 1;
+}
+.bh-chev svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* edges */
+.bh-edge path {
+  fill: none;
+}
+.bh-edge .glow {
+  stroke: var(--accent);
+  stroke-width: 8;
+  opacity: 0;
+  filter: blur(4px);
+  transition: opacity 0.3s;
+}
+.bh-edge .line {
+  stroke: color-mix(in oklab, var(--text) 34%, transparent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+  stroke-linecap: round;
+  transition:
+    stroke 0.25s,
+    stroke-width 0.25s,
+    opacity 0.3s;
+}
+.bh-edge .flow {
+  stroke: var(--bh-flare);
+  stroke-width: 1.6;
+  stroke-dasharray: 4 22;
+  stroke-linecap: round;
+  opacity: 0;
+}
+.bh-edge.hot .line {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+  stroke-width: 2;
+}
+.bh-edge.hot .glow {
+  opacity: 0.22;
+}
+.bh-edge.is-dim {
+  opacity: 0.25;
+  transition: opacity 0.3s;
+}
+.bh-edge.is-hot .line {
+  stroke: var(--ec, var(--accent));
+  stroke-dasharray: none;
+  stroke-width: 2.2;
+}
+.bh-edge.is-hot .glow {
+  stroke: var(--ec, var(--accent));
+  opacity: 0.3;
+}
+.bh-edge.is-hot .flow {
+  opacity: 0.9;
+  animation: bh-flow 1.1s linear infinite;
+}
+.bh-edge.is-anim .line {
+  animation: bh-draw 0.55s var(--ease) both;
+}
+@keyframes bh-draw {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.bh-edge.is-lit .line {
+  stroke: var(--accent-2);
+  stroke-dasharray: none;
+  stroke-width: 2.4;
+}
+.bh-edge.is-lit .glow {
+  opacity: 0.45;
+}
+@keyframes bh-flow {
+  to {
+    stroke-dashoffset: -26;
+  }
+}
+.bh-edge .port {
+  fill: var(--surface-2);
+  stroke: color-mix(in oklab, var(--text) 40%, transparent);
+  stroke-width: 1.2;
+}
+.bh-edge .port-plus {
+  stroke: color-mix(in oklab, var(--text) 60%, transparent);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  fill: none;
+}
+.bh-edge.hot .port,
+.bh-edge.is-lit .port {
+  fill: var(--accent);
+  stroke: var(--accent-2);
+}
+.bh-edge.hot .port-plus,
+.bh-edge.is-lit .port-plus {
+  stroke: var(--accent-ink);
+}
+.bh-edge.is-hot .port {
+  fill: var(--ec, var(--accent));
+  stroke: var(--ec, var(--accent));
+}
+.bh-edge.is-hot .port-plus {
+  stroke: var(--accent-ink);
+}
+.bh-flare {
+  fill: url(#bh-flare);
+  pointer-events: none;
+}
+.bh-pill {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--elevated);
+  border: 1px solid var(--elevated-border);
+  color: var(--text-2);
+  white-space: nowrap;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.bh-pill.is-dim {
+  opacity: 0.25;
+}
+.bh-pill.hot {
+  background: var(--accent);
+  border-color: var(--accent-2);
+  color: var(--accent-ink);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    0 0 22px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+.bh-pill.dyn {
+  background: var(--ec, var(--accent));
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+/* HUD */
+.bh-hud {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bh-hud-zoom {
+  left: 18px;
+  bottom: 18px;
+  flex-direction: column;
+}
+.bh-hud-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--glass-c);
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(12px);
+}
+.bh-hud-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--text) 30%, transparent);
+}
+.bh-hud-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.bh-hud-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  text-align: center;
+}
+.bh-crumb {
+  position: absolute;
+  left: 50%;
+  bottom: 150px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--glass-c);
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  backdrop-filter: blur(16px);
+  font-size: 12px;
+  color: var(--text-2);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    left 0.38s var(--ease);
+}
+.bh-crumb.is-on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.bh-stage.has-inspector .bh-crumb {
+  left: calc((100% - 352px) / 2);
+}
+.bh-stage.inspector-min .bh-crumb {
+  left: 50%;
+}
+.bh-crumb b {
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+}
+.bh-crumb i.sep {
+  color: var(--text-3);
+  font-style: normal;
+  margin: 0 6px;
+}
+
+/* inspector */
+.bh-inspector {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: 338px;
+  z-index: 11;
+  border-radius: 20px;
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  background: linear-gradient(170deg, var(--glass-a), var(--glass-b) 40%, var(--glass-c));
+  backdrop-filter: blur(24px) saturate(1.15);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 color-mix(in oklab, var(--text) 8%, transparent);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateX(24px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.4s var(--bh-spring),
+    opacity 0.25s var(--ease);
+}
+.bh-stage.has-inspector .bh-inspector {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+.bh-insp-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 12px 0;
+  flex: none;
+}
+.bh-insp-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+}
+.bh-insp-min {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+  border: 1px solid transparent;
+}
+.bh-insp-min:hover {
+  color: var(--text);
+  background: color-mix(in oklab, var(--text) 8%, transparent);
+  border-color: color-mix(in oklab, var(--text) 14%, transparent);
+}
+.bh-insp-min svg {
+  width: 15px;
+  height: 15px;
+}
+/* minimised: the panel slides away and a slim handle stays on the right edge */
+.bh-insp-handle {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  z-index: 11;
+  height: 36px;
+  padding: 0 12px 0 10px;
+  border-radius: 11px;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-2);
+  font-size: 12.5px;
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  background: var(--glass-c);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  transition: all 0.18s var(--ease);
+}
+.bh-insp-handle:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--text) 30%, transparent);
+  transform: translateY(-1px);
+}
+.bh-insp-handle svg {
+  width: 16px;
+  height: 16px;
+}
+.bh-insp-handle span {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-stage.inspector-min .bh-inspector {
+  transform: translateX(40px);
+  opacity: 0;
+  pointer-events: none;
+}
+.bh-stage.inspector-min .bh-canvas {
+  right: 0;
+}
+.bh-itab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 6px 0 10px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  flex: none;
+}
+.bh-itab.is-on {
+  background: color-mix(in oklab, var(--text) 8%, transparent);
+  border-color: color-mix(in oklab, var(--text) 14%, transparent);
+  color: var(--text);
+}
+.bh-itab .x {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+.bh-itab .x:hover {
+  background: color-mix(in oklab, var(--text) 10%, transparent);
+  color: var(--text);
+}
+.bh-itab .x svg {
+  width: 11px;
+  height: 11px;
+}
+.bh-insp-body {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 20px;
+}
+.bh-insp-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid color-mix(in oklab, var(--text) 8%, transparent);
+  animation: bh-rise 0.3s var(--ease);
+}
+.bh-insp-head .bh-tile {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+}
+.bh-insp-head .t {
+  font-size: 15px;
+  font-weight: 500;
+}
+.bh-insp-head .s {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bh-kchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  border: 1px solid color-mix(in srgb, var(--c) 40%, transparent);
+  color: var(--c);
+}
+.bh-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  color: var(--text-2);
+}
+.bh-badge i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+.bh-badge[data-s='configured'] i {
+  background: var(--warn);
+  box-shadow: none;
+}
+.bh-badge[data-s='not-configured'] i,
+.bh-badge[data-s='designed'] i {
+  background: transparent;
+  border: 1px solid var(--text-3);
+}
+.bh-insp-path {
+  font-size: 11.5px;
+  color: var(--text-3);
+  padding: 10px 0 0;
+  animation: bh-rise 0.3s var(--ease);
+}
+.bh-insp-path b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.bh-insp-sec {
+  margin-top: 16px;
+  animation: bh-rise 0.4s var(--ease);
+}
+.bh-insp-sec .h {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.bh-insp-what {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.bh-insp-more {
+  font-size: 11px;
+  color: var(--text-3);
+  padding-top: 6px;
+}
+.bh-kv {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 6px 10px;
+  font-size: 12px;
+}
+.bh-kv .k {
+  color: var(--text-3);
+}
+.bh-kv .v {
+  color: var(--text);
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+.bh-conn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.bh-conn:hover {
+  background: color-mix(in oklab, var(--text) 6%, transparent);
+}
+.bh-conn .bh-tile {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.bh-conn .bh-tile svg {
+  width: 14px;
+  height: 14px;
+}
+.bh-conn .t {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-conn .s {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-conn .kind {
+  margin-left: auto;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--text) 12%, transparent);
+  color: var(--text-3);
+  white-space: nowrap;
+  flex: none;
+}
+.bh-conn .kind.is-out {
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+.bh-insp-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+.bh-insp-actions .bh-btn {
+  flex: 1;
+  justify-content: center;
+  height: 34px;
+}
+@keyframes bh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ask bar (the AdPilot ask widget: frosted glass with the orbiting light) */
+.bh-ask {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(760px, calc(100% - 200px));
+  z-index: 12;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+  transition:
+    left 0.38s var(--ease),
+    border-color 0.3s;
+}
+.bh-stage.has-inspector .bh-ask {
+  left: calc((100% - 352px) / 2);
+}
+.bh-stage.inspector-min .bh-ask {
+  left: 50%;
+}
+.bh-ask.has-scope {
+  border-color: color-mix(in srgb, var(--sc, var(--accent)) 45%, transparent);
+}
+@keyframes bh-ask-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.bh-ask-orbit {
+  position: absolute;
+  inset: -45%;
+  background: conic-gradient(from 0deg, transparent 0deg 250deg, color-mix(in oklab, var(--accent) 70%, transparent) 300deg, var(--accent-2) 322deg, color-mix(in oklab, var(--accent) 70%, transparent) 344deg, transparent 360deg);
+  filter: blur(20px);
+  animation: bh-ask-spin 6s linear infinite;
+  pointer-events: none;
+}
+.bh-ask.has-scope .bh-ask-orbit {
+  background: conic-gradient(from 0deg, transparent 0deg 250deg, color-mix(in srgb, var(--sc) 70%, transparent) 300deg, color-mix(in srgb, var(--sc) 85%, white) 322deg, color-mix(in srgb, var(--sc) 70%, transparent) 344deg, transparent 360deg);
+}
+.bh-ask.is-busy .bh-ask-orbit {
+  animation-duration: 1.6s;
+}
+.bh-ask-glass {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+.bh-ask-inner {
+  position: relative;
+  padding: 12px 14px 12px 12px;
+}
+.bh-ask-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bh-ask-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-2);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, transparent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+  white-space: nowrap;
+  max-width: 260px;
+  transition: all 0.25s var(--ease);
+}
+.bh-ask-scope span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-ask-scope .sw {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  flex: none;
+}
+.bh-ask.has-scope .bh-ask-scope {
+  color: color-mix(in srgb, var(--sc) 85%, white);
+  border-color: color-mix(in srgb, var(--sc) 40%, transparent);
+  background: color-mix(in srgb, var(--sc) 12%, transparent);
+}
+.bh-ask.has-scope .bh-ask-scope .sw {
+  background: var(--sc);
+  box-shadow: 0 0 8px var(--sc);
+}
+.bh-ask-scope:hover {
+  filter: brightness(1.15);
+}
+.bh-ask-row input {
+  min-width: 0;
+  flex: 1;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+}
+.bh-ask-row input::placeholder {
+  color: var(--text-3);
+}
+.bh-ask-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  background: color-mix(in oklab, var(--text) 5%, transparent);
+  transition: all 0.18s var(--ease);
+}
+.bh-ask-send:hover {
+  color: var(--text);
+  border-color: color-mix(in oklab, var(--text) 30%, transparent);
+}
+.bh-ask-send svg {
+  width: 16px;
+  height: 16px;
+}
+.bh-ask.is-busy .bh-ask-send svg {
+  animation: bh-ask-spin 1s linear infinite;
+}
+.bh-ask-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.35s var(--ease),
+    opacity 0.25s var(--ease),
+    margin 0.25s;
+}
+.bh-ask.has-scope .bh-ask-chips,
+.bh-ask.has-chips .bh-ask-chips {
+  max-height: 80px;
+  opacity: 1;
+}
+.bh-ask-chip {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  border: 1px solid color-mix(in oklab, var(--text) 14%, transparent);
+  background: color-mix(in oklab, var(--text) 4%, transparent);
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.bh-ask-chip:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--sc, var(--accent)) 50%, transparent);
+  background: color-mix(in srgb, var(--sc, var(--accent)) 10%, transparent);
+}
+.bh-ask-answer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in oklab, var(--accent) 16%, transparent);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  animation: bh-rise 0.3s var(--ease);
+  user-select: text;
+  -webkit-user-select: text;
+}
+.bh-ask-answer .meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.bh-ask-answer .meta button {
+  color: var(--text-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bh-ask-answer .meta button:hover {
+  color: var(--text);
+}
+.bh-ask-answer .meta button svg {
+  width: 12px;
+  height: 12px;
+}
+.bh-ask-answer.is-error {
+  color: var(--err);
+}
+.bh-ask-answer.is-thinking {
+  color: var(--text-2);
+}
+
+/* the operator shell fit for the Blueprint canvas: the donor pinned the page to
+   the viewport top and a fixed 232px sidebar; here the top bar is a 52px
+   sticky strip and the sidebar is collapsible and drag-resizable, publishing
+   its width as --sidebar-w. */
+.bh-page,
+.bh-skeleton {
+  top: 52px;
+  left: var(--sidebar-w, 232px);
 }

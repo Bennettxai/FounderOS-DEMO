@@ -22,6 +22,14 @@ function fmtPct(n: number | null): string {
 function fmtNum(n: number | null): string {
   return n === null ? '—' : n.toLocaleString('en-US');
 }
+function ageOf(ms: number): string {
+  const m = Math.floor(ms / 60_000);
+  if (m < 60) return `${Math.max(m, 1)}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
 function pctClass(n: number | null): string {
   return n === null ? 'text-os-muted' : n >= 0 ? 'text-os-ok' : 'text-os-err';
 }
@@ -52,11 +60,11 @@ function RangeChips({ value, onChange }: { value: Range; onChange: (r: Range) =>
             e.stopPropagation();
             onChange(r);
           }}
-          className={`rounded-sm-t border px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] transition-colors ${
-            value === r
-              ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-              : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-          }`}
+          className={`pressable rounded-sm-t border px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.08em] ${
+ value === r
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
         >
           {RANGE_LABEL[String(r)]}
         </button>
@@ -158,7 +166,7 @@ function StatPopout({
             <h2 className="text-sm font-bold">{title}</h2>
             <RangeChips value={range} onChange={setRange} />
           </div>
-          <button onClick={onClose} className="grid h-7 w-7 place-items-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text">
+          <button onClick={onClose} className="pressable grid h-7 w-7 place-items-center rounded-sm-t border border-os-border text-os-muted hover:border-os-border-strong hover:text-os-text">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -182,9 +190,9 @@ function StatPopout({
                             return next;
                           })
                         }
-                        className={`flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] transition-colors ${
-                          on ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
-                        }`}
+                        className={`pressable flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] ${
+ on ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
+ }`}
                       >
                         <span className="h-2 w-2 rounded-full" style={{ background: on ? s.color : 'var(--text-3)' }} />
                         {s.label}
@@ -213,7 +221,7 @@ function StatPopout({
                 {shown.length === 0 && <div className="font-mono text-[11px] text-os-dim">select a series to plot</div>}
               </div>
               <p className="mt-4 font-mono text-[10px] text-os-dim">
-                {RANGE_LABEL[String(range)]} window · {metric === 'dms' ? 'DM totals are seeded dummy until a source is wired' : 'email tracks the real Beehiiv subscriber count (Alex’s Newsletter)'}
+                {RANGE_LABEL[String(range)]} window · {metric === 'dms' ? 'DM totals are seeded dummy until a source is wired' : 'email tracks the real Beehiiv subscriber count for the connected newsletter'}
               </p>
             </>
           )}
@@ -247,7 +255,7 @@ function MetricTile({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
-      className="hoverable group flex cursor-pointer flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2 text-left"
+      data-lens="r" className="pressable is-row group flex cursor-pointer flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2 text-left"
     >
       <div className="flex items-center justify-between">
         <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim">{label}</span>
@@ -286,7 +294,7 @@ function DmInboxPopout({ threads, nowMs, onClose }: { threads: DmThread[]; nowMs
           </div>
           <button
             onClick={onClose}
-            className="grid h-7 w-7 place-items-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+            className="pressable grid h-7 w-7 place-items-center rounded-sm-t border border-os-border text-os-muted hover:border-os-border-strong hover:text-os-text"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -300,25 +308,38 @@ function DmInboxPopout({ threads, nowMs, onClose }: { threads: DmThread[]; nowMs
 }
 
 /** The tile that replaces the old "Top platform" metric: DM management. Click
-    expands into the inbox popout. Headline surfaces what needs a reply. */
-function DmTile({ unreplied, total, onOpen }: { unreplied: number; total: number; onOpen: () => void }) {
+    expands into the inbox popout. Headline surfaces what needs a reply; the
+    sub names how long the oldest unanswered thread has been waiting. */
+function DmTile({
+  unreplied,
+  total,
+  oldest,
+  onOpen,
+}: {
+  unreplied: number;
+  total: number;
+  oldest: string | null;
+  onOpen: () => void;
+}) {
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onOpen()}
-      className="hoverable group flex cursor-pointer flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2 text-left"
+      data-lens="r" className="pressable is-row group flex cursor-pointer flex-col gap-1 rounded-lg-t border border-os-border bg-os-surface px-3 py-2 text-left"
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim">Instagram DMs</span>
+        <span className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim">Needs reply</span>
         <ArrowUpRight className="h-3 w-3 text-os-dim opacity-0 transition-opacity group-hover:opacity-100" />
       </div>
       <div className="flex items-baseline justify-between gap-2">
         <span className={`font-mono text-[16px] font-semibold leading-none tracking-[-0.02em] ${unreplied > 0 ? 'text-os-warn' : ''}`}>
           {unreplied > 0 ? `${unreplied} to reply` : `${total} threads`}
         </span>
-        <span className="min-w-0 truncate font-mono text-[9.5px] text-os-dim">{total} conversations</span>
+        <span className="min-w-0 truncate font-mono text-[9.5px] text-os-dim">
+          {unreplied > 0 && oldest ? `oldest ${oldest}` : `${total} conversations`}
+        </span>
       </div>
       <span className="flex items-center gap-1.5 font-mono text-[9.5px] text-os-dim">
         <MessageSquare className="h-3 w-3" /> open inbox · reply here
@@ -335,6 +356,7 @@ export function SocialStatStrip({
   platformsCount,
   dmThreads,
   nowMs,
+  growthLeader,
 }: {
   audienceTotal: number;
   audienceGrowth: SocialGrowth;
@@ -343,6 +365,7 @@ export function SocialStatStrip({
   platformsCount: number;
   dmThreads: DmThread[];
   nowMs: number;
+  growthLeader: string | null;
 }) {
   const [audRange, setAudRange] = useState<Range>(30);
   const [dmRange, setDmRange] = useState<Range>(30);
@@ -350,7 +373,10 @@ export function SocialStatStrip({
 
   const audPct = audienceGrowth[RANGE_KEY[String(audRange)]];
   const dmPct = dmGrowth[RANGE_KEY[String(dmRange)]];
-  const unreplied = dmThreads.filter((t) => t.unreplied).length;
+  const waiting = dmThreads.filter((t) => t.unreplied);
+  const unreplied = waiting.length;
+  const oldestMs = waiting.reduce((min, t) => Math.min(min, Date.parse(t.last.ts)), Infinity);
+  const oldestAge = Number.isFinite(oldestMs) && nowMs > oldestMs ? ageOf(nowMs - oldestMs) : null;
 
   return (
     <>
@@ -369,7 +395,7 @@ export function SocialStatStrip({
           label="Audience growth"
           headline={fmtPct(audPct)}
           headlineClass={pctClass(audPct)}
-          sub={`${fmtNum(audienceTotal)} total audience`}
+          sub={growthLeader ? `${growthLeader} leads · 7d` : `${fmtNum(audienceTotal)} total audience`}
           range={audRange}
           onRange={setAudRange}
           onOpen={() => setPopout('audience')}
@@ -384,7 +410,7 @@ export function SocialStatStrip({
               <span className={pctClass(dmPct)}>{fmtPct(dmPct)}</span>
               {dmPct != null &&
                 (dmPct >= 0 ? <TrendingUp className="h-3 w-3 text-os-ok" /> : <TrendingDown className="h-3 w-3 text-os-err" />)}
-              <span>· {RANGE_LABEL[String(dmRange)]}</span>
+              <span className="min-w-0 truncate">· {RANGE_LABEL[String(dmRange)]} · Instagram · ManyChat</span>
             </span>
           }
           range={dmRange}
@@ -394,7 +420,7 @@ export function SocialStatStrip({
 
         {/* Instagram DMs — replaces the retired "Top platform" tile. Click to
             expand into the inbox and answer DMs. */}
-        <DmTile unreplied={unreplied} total={dmThreads.length} onOpen={() => setPopout('inbox')} />
+        <DmTile unreplied={unreplied} total={dmThreads.length} oldest={oldestAge} onOpen={() => setPopout('inbox')} />
       </div>
 
       {(popout === 'audience' || popout === 'dms') && <StatPopout metric={popout} onClose={() => setPopout(null)} />}

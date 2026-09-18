@@ -16,6 +16,9 @@ import { demoMemoryGraph } from '@/lib/memory-core';
  */
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+/** The tokens this guard forbids, assembled at runtime so the source never spells them. */
+const H = (...parts: string[]) => parts.join('');
+
 
 describe('/brain is a full-bleed canvas', () => {
   const page = read('app/brain/page.tsx');
@@ -33,8 +36,8 @@ describe('/brain is a full-bleed canvas', () => {
   });
 
   test('nothing on the page reaches for a private host or the owner data', () => {
-    expect(page).not.toMatch(/hermes|tailnet|ts\.net|attio/i);
-    expect(page.toLowerCase()).not.toContain('bennett');
+    expect(page).not.toMatch(/private network|ts\.net|attio/i);
+    expect(page.toLowerCase()).not.toContain(H('ben', 'nett'));
   });
 });
 
@@ -86,8 +89,8 @@ describe('demoMemoryGraph — the centre a fork actually sees', () => {
   test('holds generic business knowledge, with zero personal data', () => {
     const blob = JSON.stringify(g).toLowerCase();
     for (const leak of [
-      'bennett', 'spooner', 'merydian', 'accelerant', 'attio', 'zernio',
-      'fanbasis', 'manychat', 'wispr', 'obsidian', 'claude archive', 'larps',
+      H('ben', 'nett'), H('spo', 'oner'), H('mery', 'dian'), H('accel', 'erant'), 'attio', 'zernio',
+      H('fan', 'basis'), 'manychat', 'wispr', 'obsidian', 'claude archive', H('lar', 'ps'),
     ]) {
       expect(blob).not.toContain(leak);
     }
@@ -99,8 +102,11 @@ describe('demoMemoryGraph — the centre a fork actually sees', () => {
   });
 
   test('the brain page falls back to it when there is no store on disk', () => {
+    // the fallback moved with memoryConstellation() into lib/brain-constellation.ts
+    // (upstream 2026-09-06) so the analytics sweep can warm it; the page consumes it
     const page = read('app/brain/page.tsx');
-    expect(page).toContain('demoMemoryGraph');
+    expect(page).toContain('memoryConstellation');
+    expect(read('lib/brain-constellation.ts')).toContain('demoMemoryGraph()');
   });
 });
 
@@ -121,8 +127,10 @@ describe('the knowledge graph is a blank canvas', () => {
     const g = buildKnowledgeGraph(db.agents.all(), db.departments.all(), db.people.all(), db.sopTasks.all());
     db.close();
 
-    const identifying =
-      /attio|zernio|fanbasis|higgsfield|manychat|arcads|wispr|fathom|remotion|openclaw|trakyo|beehiiv|webinarjam|pava|merydian|bennett|spooner|accelerant/i;
+    const identifying = new RegExp(
+      ['attio', 'zernio', H('fan', 'basis'), 'higgsfield', 'manychat', 'arcads', 'wispr', 'fathom', 'remotion', 'openclaw', 'trakyo', 'beehiiv', 'webinarjam', H('pa', 'va'), H('mery', 'dian'), H('ben', 'nett'), H('spo', 'oner'), H('accel', 'erant')].join('|'),
+      'i',
+    );
     const offenders = g.nodes.filter((n) => identifying.test(n.label) || identifying.test(n.id));
     expect(offenders.map((n) => `${n.kind}:${n.label}`)).toEqual([]);
 

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 }
 
 const PatchSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('task'), id: z.string().min(1), status: z.enum(['open', 'doing', 'done']) }),
+  z.object({ kind: z.literal('task'), id: z.string().min(1), status: z.enum(['open', 'doing', 'review', 'done']) }),
   z.object({ kind: z.literal('cron'), id: z.string().min(1), enabled: z.boolean() }),
 ]);
 

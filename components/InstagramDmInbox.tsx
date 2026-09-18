@@ -120,9 +120,9 @@ export function InstagramDmInbox({ threads: initial, nowMs }: { threads: DmThrea
                 <button
                   key={t.subscriberId}
                   onClick={() => setSelected(t.subscriberId)}
-                  className={`flex items-center gap-3 border-b border-os-border px-3.5 py-3 text-left transition-colors ${
-                    on ? 'bg-os-surface2' : 'hover:bg-os-surface2/50'
-                  }`}
+                  className={`pressable flex items-center gap-3 border-b border-os-border px-3.5 py-3 text-left ${
+ on ? 'bg-os-surface2' : 'hover:bg-os-surface2/50'
+ }`}
                 >
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-os-border-strong bg-os-bg font-mono text-[11px] font-bold text-os-muted">
                     {initials(t.name)}
@@ -201,7 +201,7 @@ export function InstagramDmInbox({ threads: initial, nowMs }: { threads: DmThrea
                     <button
                       onClick={() => void send()}
                       disabled={sending || !draft.trim()}
-                      className="flex h-[38px] items-center gap-1.5 rounded-md-t bg-os-accent px-3.5 font-mono text-[12px] font-semibold text-os-bg transition-opacity disabled:opacity-40"
+                      className="pressable flex h-[38px] items-center gap-1.5 rounded-md-t bg-os-accent px-3.5 font-mono text-[12px] font-semibold text-os-bg transition-opacity disabled:opacity-40"
                     >
                       <Send className="h-3.5 w-3.5" />
                       {sending ? 'Sending' : 'Send'}

@@ -168,14 +168,14 @@ export function PersonasViewer({ personas }: { personas: Persona[] }) {
           <button
             onClick={() => go(-1)}
             aria-label="Previous persona"
-            className="flex h-9 w-9 items-center justify-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+            className="pressable flex h-9 w-9 items-center justify-center rounded-sm-t border border-os-border text-os-muted hover:border-os-border-strong hover:text-os-text"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={() => go(1)}
             aria-label="Next persona"
-            className="flex h-9 w-9 items-center justify-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+            className="pressable flex h-9 w-9 items-center justify-center rounded-sm-t border border-os-border text-os-muted hover:border-os-border-strong hover:text-os-text"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -196,9 +196,9 @@ export function PersonasViewer({ personas }: { personas: Persona[] }) {
                 key={p.id}
                 onClick={() => setI(idx)}
                 title={p.name}
-                className={`flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] transition-colors ${
-                  active ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
-                }`}
+                className={`pressable flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] ${
+ active ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
+ }`}
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: active ? p.accent : 'var(--text-3)' }} />
                 {String(idx + 1).padStart(2, '0')}
@@ -210,7 +210,7 @@ export function PersonasViewer({ personas }: { personas: Persona[] }) {
 
       {/* split view: the card on the LEFT, the persona's G-Brain knowledge
           graph on the RIGHT — same constellation shape as the real /brain, built
-          from this persona's own departments + agents */}
+          from this persona's own departments + agents (the operator) */}
       <div key={current.id} className="persona-in grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)]">
         <PersonaCard p={current} cover={false} />
         <div

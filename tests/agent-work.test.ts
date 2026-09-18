@@ -64,7 +64,7 @@ describe('agentCrons repo', () => {
 
 describe('describeCron', () => {
   test('humanizes common schedules', () => {
-    expect(describeCron('0 9 * * 1-5')).toBe('at 09:00, Mon–Fri');
+    expect(describeCron('0 9 * * 1-5')).toBe('at 09:00, Mon-Fri');
     expect(describeCron('*/15 * * * *')).toBe('every 15 min');
     expect(describeCron('0 * * * *')).toBe('hourly at :00');
     expect(describeCron('0 0 * * 0')).toBe('at 00:00, Sun');

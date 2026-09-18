@@ -1,11 +1,15 @@
 # FOUNDER OS
 
-Personal OS / AI agent command center. Live web recreation of the FounderOS
-"Conducting AI" board. Runs on port **4100** (command-center owns 4000).
+Founder OS is a personal operating system for a one-person business: a web
+command center that runs a company as a set of AI-assisted departments. This
+file is the contributor guide for anyone (human or agent) working in the repo.
+
+Runs on port **4100**.
 
 ## Commands
 
 ```bash
+npm install
 npm run dev        # dev server → http://localhost:4100
 npm test           # vitest suite (must stay green)
 npm run typecheck  # tsc --noEmit
@@ -13,64 +17,59 @@ npm run seed       # re-seed data/founder-os.db (idempotent)
 npm run build && npm start
 ```
 
+Node 22 is the supported runtime.
+
 ## Stack
 
 Next.js 14 App Router (server components) + TypeScript + Tailwind +
 better-sqlite3 (`data/founder-os.db`, WAL, auto-seeded on first touch) +
 Zod + Vitest.
 
-## Architecture: larp-first, real-ready
+## Architecture: demo-first, real-ready
 
-This is the load-bearing design rule. v1 looks alive because of rich seeded
-data, but every page and API route reads through the repository layer — never
-query SQLite directly from a page or route:
+This is the load-bearing design rule. The app looks alive out of the box
+because of rich seeded data, but every page and API route reads through the
+repository layer. Never query SQLite directly from a page or route:
 
 - `lib/data.ts` — `getDb()` app singleton; seeds on first touch
 - `lib/db.ts` — `openDb()` + repos (`departments`, `agents`, `metrics`, `tools`, …)
 - `lib/seed.ts` — all seeded content lives here
 - `lib/schemas.ts` — Zod schemas validate every row on the way OUT of the DB
 
-Swapping seeded tables for live sources (Attio, Zernio, OpenClaw, MCP status)
-is a repo-level change. Keep it that way: new data = new repo method + Zod
-schema + seed entry + test.
+Swapping a seeded table for a live source is a repo-level change. Keep it that
+way: new data = new repo method + Zod schema + seed entry + test.
 
-## G-Brain — ANSWERED (2026-06-11)
+## Connectors and agents
 
-G-Brain = **GBrain v0.41** (`gbrain` CLI on PATH): markdown
-knowledge in `~/knowledge/brain-store/` + Supabase backend ("Second Brain",
-free tier — pauses on idle) + ZeroEntropy embeddings (key in
-`~/.config/knowledge/config.json`). The real provider in `lib/connectors/gbrain.ts`
-shells out to the CLI (`doctor --json --fast`, `query --no-expand`) and falls
-back to local brain-store grep when the database is unreachable. Default
-`BRAIN_PROVIDER=gbrain`; `stub` exists for tests.
+- `lib/connectors/` — one module per integration group (email over IMAP, chat,
+  payments, CRM, knowledge, social, calendar, local services). Every connector
+  returns an honest `ConnectorStatus` and never reports a fake "connected".
+  With no credentials configured they degrade to a clearly-labelled
+  disconnected state rather than failing the page.
+- `lib/creds.ts` — credential resolution. Reads `process.env` first. Never
+  commit a secret value or paste a key into the repo.
+- `lib/agents/runtime.ts` + `real.ts` — the agent registry. Every seeded agent
+  row maps 1:1 to a `RuntimeAgent` with a real `run()` (enforced by the seed
+  tests). Runs persist to `agent_runs` via `POST /api/agents/[id]/run`.
+- `/integrations` is the live connections board (`GET /api/connections`).
+- Credentials go in `.env.local` (gitignored). See `.env.example`.
 
-## Real connectors & agents (v2)
+## Knowledge core (G-Brain)
 
-Alex's directive: real integrations, not larp. Strict black & white theme
-(UI polish deferred — he'll design it himself once everything is wired).
-
-- `lib/connectors/` — 12 connector groups, all returning honest
-  `ConnectorStatus` (never fake "connected"): `email.ts` (4 IMAP slots),
-  `slack.ts`, `payments.ts` (Stripe + registry), `notion.ts`, `gbrain.ts`,
-  `zernio.ts` (key from ~/.config/social/.env — LIVE), `attio.ts` (key reused
-  from ~/.config/mcp.json mcpServers — LIVE), `arcads.ts` (local `.env` —
-  LIVE), `miro.ts` (knowledge/.env.agents — LIVE),
-  `wispr.ts` (local flow.sqlite readonly — LIVE), `obsidian.ts` (vault fs;
-  needs macOS Documents permission), `local-stack.ts` (local service ports
-  + tmux + brew binaries).
-- `lib/creds.ts` — credential resolution: process.env first, then Alex's
-  canonical files at runtime. NEVER copy secret values into this repo.
-- `lib/agents/runtime.ts` + `real.ts` — agent registry; every seeded agent row
-  maps 1:1 to a `RuntimeAgent` with a real `run()` (enforced by seed tests).
-  Runs persist to `agent_runs`. `POST /api/agents/[id]/run`.
-- `/integrations` is the live Connections board (`GET /api/connections`).
-- Credentials go in `.env.local` (gitignored) — see `.env.example`. NEVER
-  commit keys; never copy keys from `~/knowledge/.env.agents` into the repo.
+G-Brain is the knowledge layer behind `/brain`: a markdown store on disk plus
+an optional vector backend and a local embedding model. The provider in
+`lib/connectors/gbrain.ts` shells out to a CLI when one is configured and falls
+back to grepping the local store when the database is unreachable, so the page
+degrades instead of erroring. Every brain read goes through
+`lib/brain-retrieval.ts` (retrieve a pool, rerank, return the top hits) rather
+than calling `provider.search()` directly; the rerank pass is optional and
+fails soft. Provider selection is `BRAIN_PROVIDER`, with `stub` available for
+tests.
 
 ## Views
 
 `/` operator console (pulse row, connections strip, agent list, compact
-G-Brain core) · `/comms` unified feed · `/social` Zernio growth dashboard ·
+G-Brain core) · `/comms` unified feed · `/social` growth dashboard ·
 `/agents` roster with Run buttons + last-run state · `/org` hierarchy board
 (operator → Conductor super agent → 5 pillars: Sales, Marketing/Growth, TECH,
 Finances, Communications → worker pills; broadcast composer; markup frozen —
@@ -80,8 +79,8 @@ capture / life-map / pipeline / graph / query-path sections kept underneath) ·
 `/roadmap` phases + quarters · `/analytics` real connector numbers ·
 `/funnel` living client-journey flow (Vantage + Launchpad Cohort: stage
 columns left→right, one node per client, 4–5 touch markers per path; seeded
-dummy, real-ready for Trakyo organic + Meta Ads MCP paid attribution) ·
-`/reference` reference model · `/integrations` live connections board. Chrome:
+dummy, real-ready for organic + paid attribution) ·
+`/reference` reference model · `/integrations` live connections board · `/brand-deals` sponsorship slab (Deal Journeys mould: hatched funnel, meters, drawer) · `/trading` brokerage monitor slab (sleeve line, reasoning, positions, orders, trade log, limits + Autopilot switch) · `/chats` agent chat hub · `/adpilot` + `/blueprint` · `/doctor` health checks · `/usage` token-burn board. Every screen runs the interaction layer: page-wide cursor spotlight (`PageSpotlight` in the layout, `--px/--py` on `:root` from `useLens`), `.pressable` hover lens + press sink on every control, `AsyncButton` idle→busy→done, `SlidingTabs`, slab motion (`Rise`, count-ins, drawn lines). Chrome:
 fixed `Sidebar` (Operate/System groups) + sticky `Topbar` (breadcrumb + ⌘K) +
 `CommandPalette` (⌘K, digit-key view jumps). API routes mirror these under
 `app/api/*` — note `GET /api/brain?q=` runs a hybrid search; bare `GET` returns
@@ -103,44 +102,46 @@ Contract lives in `tests/cohort.test.ts`.
 ## Conventions
 
 - TDD: failing test first, then implementation. Tests live in `tests/`,
-  one file per module; use `FOUNDER_OS_DB=:memory:` pattern (see `tests/db.test.ts`).
+  one file per module; use the `FOUNDER_OS_DB=:memory:` pattern (see
+  `tests/db.test.ts`).
 - Zod-validate anything that crosses the DB or API boundary.
-- THEME: **Monolith Signal (`mono`) is the default** (2026-07-12,
-  `DEFAULT_THEME` in `lib/theme.ts`; bare `:root` in `app/globals.css` carries
-  the mono tokens). "Terminal" (`dark`) — the phosphor-green command deck on
-  near-black — stays as a pickable colorway. Tokens live in
-  `tailwind.config.ts` (`os.*` colors) AND as raw CSS vars in
-  `app/globals.css` (the brain viz SVG + `color-mix` effects need `var()`
-  access; keep the two in sync). Terminal tokens: `bg #050807`, `surface
-  #0a0f0c`, `border #18211b` / `border-strong #243029`, `text #e4efe6` /
-  `muted #8fa295` / `dim #54665b`, `accent #3df08c` (phosphor green), honest
-  status colors `ok`/`warn #ffc53d`/`err #ff6259`. G-Brain viz uses its own
-  independent violet/cyan/green palette (`--brain-1/2/3`). Lettering (Monolith pass,
-  2026-07-10): JetBrains Mono everywhere — `font-sans` and `font-mono` both
-  resolve to `--font-mono`; Space Grotesk is retired. Page titles 25px/700
-  uppercase tracking 0.06em (`PageHeader`), eyebrows 9.5px/0.32em with a `//`
-  prefix, section labels 10px/700/0.26em. Square corners (radius tokens are
-  0), square LED status dots (blink, no pulse ring), no emblem hover-spin,
-  hairline borders, no shadows on cards, 48px grid texture on the canvas
-  (mono theme flattens it). The `mono` theme is **Monolith Signal**: bare
-  black `#0a0a0a`, white accent, `--hairline #1c1c1c`, and color means
-  status only (`ok #2fd36f`/`warn #ffb000`/`err #ff2d3f`). Shared primitives in `components/terminal.tsx`
-  (`Dot`, `Badge`, `Label`, `SectionHead`, `Kbd`, `Spark`). `/org` keeps its
-  existing markup — it inherits the tokens through Tailwind classes only.
+- Never commit secrets. Credentials belong in `.env.local`, which is
+  gitignored.
+- `/org` markup is frozen; do not restructure it.
+- THEME: **Monolith Signal (`mono`) is the default** (`DEFAULT_THEME` in
+  `lib/theme.ts`; bare `:root` in `app/globals.css` carries the mono tokens).
+  "Terminal" (`dark`), the phosphor-green command deck on near-black, stays as
+  a pickable colorway. Tokens live in `tailwind.config.ts` (`os.*` colors) AND
+  as raw CSS vars in `app/globals.css` (the brain viz SVG + `color-mix`
+  effects need `var()` access; keep the two in sync). Terminal tokens: `bg
+  #050807`, `surface #0a0f0c`, `border #18211b` / `border-strong #243029`,
+  `text #e4efe6` / `muted #8fa295` / `dim #54665b`, `accent #3df08c` (phosphor
+  green), honest status colors `ok`/`warn #ffc53d`/`err #ff6259`. G-Brain viz
+  uses its own independent violet/cyan/green palette (`--brain-1/2/3`).
+  Lettering: JetBrains Mono everywhere; `font-sans` and `font-mono` both
+  resolve to `--font-mono`. Page titles 25px/700 uppercase tracking 0.06em
+  (`PageHeader`), eyebrows 9.5px/0.32em with a `//` prefix, section labels
+  10px/700/0.26em. Hairline borders, no shadows on cards, square LED status
+  dots (blink, no pulse ring), 48px grid texture on the canvas (the mono theme
+  flattens it). The `mono` theme is **Monolith Signal**: bare black `#0a0a0a`,
+  white accent, `--hairline #1c1c1c`, and color means status only (`ok
+  #2fd36f`/`warn #ffb000`/`err #ff2d3f`). Shared primitives in
+  `components/terminal.tsx` (`Dot`, `Badge`, `Label`, `SectionHead`, `Kbd`,
+  `Spark`). `/org` inherits the tokens through Tailwind classes only.
 - Env vars: `FOUNDER_OS_DB`, `BRAIN_PROVIDER`, `GBRAIN_BIN`, `GBRAIN_STORE`,
-  plus connector creds in `.env.local`.
+  plus connector credentials in `.env.local`.
 - Heavy interaction-driven visualizations load via `next/dynamic`
   (`ssr: false`) behind dimension-matched skeletons (see
   `BrainGraphView`/`AudienceConsistencyLazy`; contract in
-  `tests/code-splitting.test.ts`). Use `next/image` for any future raster
-  images — every current visual is SVG/canvas, so nothing needed a retrofit.
-- Future: migrate hosting to a dedicated host; Supabase stays managed.
+  `tests/code-splitting.test.ts`). Use `next/image` for raster images; every
+  current visual is SVG or canvas.
 
-## Multi-agent etiquette
+## Working alongside other sessions
 
-Multiple Claude Code sessions work on this repo concurrently:
+Several agent or developer sessions may share this checkout:
 
 - Commit small checkpoints often (`git log --oneline` to see where others are).
 - Run `npm test && npm run typecheck` before claiming anything done.
-- Don't kill the dev server on 4100 — another session may be using it.
-- Leave handoff notes in `docs/` if you stop mid-feature.
+- Don't kill a dev server on 4100; another session may be using it.
+- Coordinate by surface: avoid editing a file another session has uncommitted
+  changes in (`git status` shows them).

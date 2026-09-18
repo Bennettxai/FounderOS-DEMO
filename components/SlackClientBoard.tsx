@@ -5,7 +5,8 @@ import type { SlackClientCard } from '@/lib/slack-clients';
 /**
  * Slack seen through the client roster: one card per CURRENT client. A card is
  * live when a real Slack thread matched; otherwise it says plainly that no
- * channel is linked. No message, unread count, or channel is fabricated.
+ * channel is linked. The old board invented a message, an
+ * unread count and a #channel for every client and badged it demo data.
  * Heat is a status-only color; the waiting chip says whose court the ball is in.
  */
 
@@ -34,7 +35,7 @@ function ago(iso: string, nowISO: string): string {
 
 function ClientCard({ card, nowISO }: { card: SlackClientCard; nowISO: string }) {
   return (
-    <div className="flex flex-col rounded-2xl border border-os-border bg-os-surface px-3.5 py-3">
+    <div data-lens="r" className="pressable is-row flex flex-col rounded-2xl border border-os-border bg-os-surface px-3.5 py-3">
       <div className="flex items-center gap-2">
         <span
           className="h-2 w-2 shrink-0 rounded-full"

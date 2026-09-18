@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 /**
  * Meta Ads connector — paid-funnel attribution: which ads produced the touches
  * that turned into opt-ins and purchases (the /funnel ads lane). Live wiring
@@ -10,8 +11,9 @@ import type { ConnectorStatus } from '@/lib/connectors/types';
 const KEY = 'META_ADS_ACCESS_TOKEN';
 
 export async function metaAdsStatus(): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('meta-ads', 'Meta Ads', 'ads', '3 campaigns running');
   const base = { id: 'meta-ads', name: 'Meta Ads', kind: 'ads' } as const;
-  const key = resolveCred(KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  const key = resolveCred(KEY, [CRED_FILES.brainAgent, CRED_FILES.socialMedia]);
   if (!key) {
     return {
       ...base,

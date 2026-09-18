@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import { WebClient } from '@slack/web-api';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
@@ -8,6 +9,7 @@ function client(env: Record<string, string | undefined>): WebClient | null {
 }
 
 export async function slackStatus(env: Record<string, string | undefined> = process.env): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('slack', 'Slack', 'slack', 'workspace · connected');
   const slack = client(env);
   if (!slack) {
     return {
@@ -62,7 +64,7 @@ export async function sendSlackMessage(
 
 /**
  * History is one API call per channel. Widening this to 25 SEQUENTIAL calls
- * took /comms from ~10s to ~30s in production, because the Slack client backs off
+ * took /comms from 9.5s to ~28s on the host, because the Slack client backs off
  * on the ~50/min tier and each wait stacked. Fixed three ways: fewer channels,
  * fetched concurrently rather than one at a time, and the whole result cached
  * so a page view does not re-scan the workspace.

@@ -24,7 +24,7 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
     <div>
       <Link
         href="/social"
-        className="mb-4 inline-flex items-center gap-1.5 text-xs text-os-muted transition-colors hover:text-os-text"
+        className="mb-4 inline-flex items-center gap-1.5 text-xs text-os-muted linky"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All platforms
@@ -40,7 +40,8 @@ export default function SocialPlatformPage({ params }: { params: { platform: str
             href={account.url}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-os-border px-3 py-1.5 text-xs text-os-muted transition-colors hover:border-os-border-bright hover:text-os-text"
+            data-lens="c"
+            className="pressable is-dark flex items-center gap-1.5 rounded-ctl border border-os-border px-3 py-1.5 text-xs text-os-muted"
           >
             Open profile
             <ExternalLink className="h-3 w-3" />

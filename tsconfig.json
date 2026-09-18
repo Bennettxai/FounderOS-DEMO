@@ -42,7 +42,10 @@
     ".next-build/types/**/*.ts",
     ".next-verify/types/**/*.ts",
     ".next-daylight/types/**/*.ts",
-    ".next-demo/types/**/*.ts"
+    ".next-comms/types/**/*.ts",
+    ".next-radar/types/**/*.ts",
+    ".next-check/types/**/*.ts",
+    ".next-buildcheck/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

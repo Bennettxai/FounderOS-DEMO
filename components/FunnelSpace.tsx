@@ -28,7 +28,7 @@ const HUB_GAP = (W - 200) / (FUNNEL_STAGES.length - 1);
 const hubX = (i: number) => HUB_X0 + i * HUB_GAP;
 const hubR = (i: number) => (i === FUNNEL_STAGES.length - 1 ? 34 : 24);
 
-/** One hue per stage cluster — the reference is an Notes-style graph. */
+/** One hue per stage cluster — the reference is an Obsidian-style graph. */
 const SEGMENT_COLOR = ['var(--funnel-s0)', 'var(--funnel-s1)', 'var(--funnel-s2)', 'var(--funnel-s3)', 'var(--funnel-s4)'];
 
 const nodeColor = (n: FunnelSpaceNode) => decayedColor(SEGMENT_COLOR[n.currentHub], n.decay, n.state === 'converted');
@@ -185,7 +185,7 @@ export function FunnelSpace({
           else void rootRef.current?.requestFullscreen();
         }}
         aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-        className="absolute right-1 top-1 z-20 rounded-sm-t border border-os-border bg-os-surface2 p-1.5 text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
+        className="pressable absolute right-1 top-1 z-20 rounded-sm-t border border-os-border bg-os-surface2 p-1.5 text-os-dim hover:border-os-border-strong hover:text-os-text"
       >
         {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
       </button>

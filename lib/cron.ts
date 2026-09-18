@@ -17,7 +17,7 @@ function dowLabel(field: string): string | null {
   const range = field.match(/^(\d)-(\d)$/);
   if (range) {
     const [a, b] = [Number(range[1]), Number(range[2])];
-    if (a <= 6 && b <= 6) return `${DOW[a]}–${DOW[b]}`;
+    if (a <= 6 && b <= 6) return `${DOW[a]}-${DOW[b]}`;
   }
   if (/^\d$/.test(field) && Number(field) <= 6) return DOW[Number(field)];
   return field; // comma lists etc. shown raw

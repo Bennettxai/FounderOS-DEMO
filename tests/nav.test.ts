@@ -11,12 +11,10 @@ describe('shared nav config', () => {
   });
 
   test('Agents group holds the roster and the org chart', () => {
-    expect(NAV_AGENTS.map((n) => n.href)).toEqual(['/agents', '/tasks', '/skills', '/org']);
+    expect(NAV_AGENTS.map((n) => n.href)).toEqual(['/agents', '/chats', '/tasks', '/skills', '/org', '/blueprint']);
   });
 
-  test('Intelligence group holds G-Brain and its Doctor', () => {
-    // the graph tab stays a single uninterrupted canvas; the health readouts
-    // moved to /doctor rather than being dropped
+  test('Intelligence group holds G-Brain and Doctor', () => {
     expect(NAV_INTELLIGENCE.map((n) => n.href)).toEqual(['/brain', '/doctor']);
   });
 
@@ -46,7 +44,7 @@ describe('shared nav config', () => {
     }
   });
 
-  test('Funnel sits right after Comms and ahead of Social (Alex, 2026-07-02)', () => {
+  test('Funnel sits right after Comms and ahead of Social (the operator, 2026-07-02)', () => {
     const hrefs = NAV_OPERATE.map((n) => n.href);
     expect(hrefs.indexOf('/funnel')).toBe(hrefs.indexOf('/comms') + 1);
     // Social stays downstream of Funnel; a concurrent Workflows item may sit between them.

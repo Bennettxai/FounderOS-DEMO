@@ -1,14 +1,15 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import ical from 'node-ical';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 /**
- * Google Calendar via CalDAV. Reuses the IMAP inbox app passwords (INBOX_*_*):
- * a Google app password also authorizes the legacy CalDAV endpoint
- * (https://www.google.com/calendar/dav/{email}/events/) over Basic auth, so the
- * four already-configured Gmail accounts get calendars with zero extra setup.
- * Read-only: we REPORT events in a window, expand recurrences client-side
- * (Google's legacy CalDAV ignores server-side <expand>), and surface a join URL
- * (Meet / Zoom / Teams) per event.
+ * Google Calendar via CalDAV. Reuses whatever IMAP inbox app passwords are
+ * configured (INBOX_*_*): a Google app password also authorizes the legacy
+ * CalDAV endpoint (https://www.google.com/calendar/dav/{email}/events/) over
+ * Basic auth, so a configured Gmail account gets its calendar with no extra
+ * setup. Read-only: we REPORT events in a window, expand recurrences
+ * client-side (Google's legacy CalDAV ignores server-side <expand>), and
+ * surface a join URL (Meet / Zoom / Teams) per event.
  */
 
 export type CalAccount = { user: string; pass: string; name: string; color: string };
@@ -243,6 +244,7 @@ export async function upcomingEvents(
 }
 
 export async function calendarStatus(env: Record<string, string | undefined> = process.env): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('calendar', 'Calendar', 'calendar', 'Google Calendar · synced');
   const accounts = caldavAccounts(env);
   if (accounts.length === 0) {
     return {

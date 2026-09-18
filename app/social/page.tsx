@@ -1,6 +1,11 @@
 import type React from 'react';
 import Link from 'next/link';
-import { Instagram, Linkedin, Mail, Music2, Twitter, Youtube, type LucideIcon } from 'lucide-react';
+import { Instagram, Linkedin, Mail, Music2, Youtube } from 'lucide-react';
+import { XLogo } from '@/components/XLogo';
+
+/** Any icon that takes a className: the lucide set and the hand-rolled X mark
+    both satisfy it, and the map does not care which it is holding. */
+type PlatformIcon = React.ComponentType<{ className?: string }>;
 import { getDb } from '@/lib/data';
 import {
   audienceGrowth,
@@ -18,21 +23,21 @@ import { buildEmailList, syncBeehiivEmail } from '@/lib/email-list';
 import { likeToViewRatio, averageLikeToView, formatRatioPct } from '@/lib/engagement';
 import type { SocialPlatform } from '@/lib/schemas';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
-import { CountUp } from '@/components/CountUp';
 import { Badge, SectionHead } from '@/components/terminal';
 import { formatFollowers, formatPct } from '@/components/SocialStats';
 import { SocialStatStrip } from '@/components/SocialStatStrip';
 import { AudienceConsistencyLazy } from '@/components/AudienceConsistencyLazy';
 import { AudiencePie } from '@/components/AudiencePie';
 import { PostComposer } from '@/components/PostComposer';
+import { Rise } from '@/components/motion';
+import { CountUp } from '@/components/CountUp';
 
 export const dynamic = 'force-dynamic';
 
-const PLATFORM_ICONS: Record<SocialPlatform, LucideIcon> = {
+const PLATFORM_ICONS: Record<SocialPlatform, PlatformIcon> = {
   instagram: Instagram,
   tiktok: Music2,
-  twitter: Twitter,
+  twitter: XLogo,
   youtube: Youtube,
   linkedin: Linkedin,
 };
@@ -45,7 +50,7 @@ const RECENT_POSTS = [
   { tag: 'TikTok · Video', ago: '6h', caption: 'POV: your operating system has a command palette', kind: 'views', views: 8100, likes: 640 },
   { tag: 'X · Thread', ago: '1d', caption: 'How I wired 7 real connectors into one OS', kind: 'impressions', views: 1200, likes: 74 },
   { tag: 'YouTube · Long', ago: '2d', caption: 'Founder OS walkthrough — building in public #4', kind: 'views', views: 940, likes: 88 },
-  { tag: 'Instagram · Carousel', ago: '3d', caption: 'The larp-first, real-ready architecture', kind: 'reach', views: 6700, likes: 717 },
+  { tag: 'Instagram · Carousel', ago: '3d', caption: 'The demo-first, real-ready architecture', kind: 'reach', views: 6700, likes: 717 },
 ];
 
 // Human label for a raw Zernio platform string (falls back to capitalising it).
@@ -94,6 +99,14 @@ export default async function SocialPage() {
   await syncBeehiivEmail(db);
   const dash = buildSocialDashboard(db);
   const email = buildEmailList(db);
+  // The platform actually leading 7-day growth (real snapshots, null-safe);
+  // names the Audience growth card's sub-line, like the mock's "TikTok leads".
+  const growthLeader = dash.platforms
+    .filter((p) => p.growth.d7 != null)
+    .reduce<{ name: string; pct: number } | null>((best, p) => {
+      const pct = p.growth.d7 as number;
+      return best && best.pct >= pct ? best : { name: platformLabel(p.platform), pct };
+    }, null)?.name ?? null;
   const posts = db.socialPosts.all();
 
   // Real published posts straight from Zernio/Late. Engagement (likes/views) is
@@ -134,7 +147,8 @@ export default async function SocialPage() {
               key={p.platform}
               href={`/social/${p.platform}`}
               title={`${share.toFixed(0)}% of reach`}
-              className="hoverable rise group rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+              data-lens="r"
+              className="pressable is-row rise group rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
               style={{ '--rise-i': i } as React.CSSProperties}
             >
               <div className="flex items-center gap-2">
@@ -166,7 +180,8 @@ export default async function SocialPage() {
         <Link
           href="/social/beehiiv"
           title={`${total > 0 && email.subscribers != null ? ((email.subscribers / total) * 100).toFixed(0) : 0}% of reach · open Beehiiv analytics`}
-          className="hoverable rise rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
+          data-lens="r"
+          className="pressable is-row rise rounded-lg-t border border-os-border bg-os-surface px-4 py-4"
           style={{ '--rise-i': dash.platforms.length } as React.CSSProperties}
         >
           <div className="flex items-center gap-2">
@@ -184,7 +199,7 @@ export default async function SocialPage() {
           <div className="mt-3 font-mono text-[26px] font-semibold leading-none tracking-[-0.02em]">
             {email.subscribers == null ? formatFollowers(null) : <CountUp value={email.subscribers} kind="followers" />}
           </div>
-          <div className="mt-1.5 truncate font-mono text-[9.5px] text-os-dim">Beehiiv · Alex&apos;s Newsletter</div>
+          <div className="mt-1.5 truncate font-mono text-[9.5px] text-os-dim">Beehiiv · the operator&apos;s Newsletter</div>
           <div className="mt-3 h-1 overflow-hidden rounded-sm-t bg-os-surface2">
             <div
               className="fill h-full bg-os-accent opacity-60"
@@ -197,8 +212,9 @@ export default async function SocialPage() {
       {/* Summary strip — Total reach + Audience-growth + Total-DMs interactive
           tiles, and the Instagram DMs tile (click to open the inbox and reply).
           The old "Top platform" tile was retired as a dead metric. */}
-      <Rise i={dash.platforms.length + 1}>
+      <Rise i={8}>
       <SocialStatStrip
+        growthLeader={growthLeader}
         audienceTotal={total}
         audienceGrowth={audienceGrowth(db)}
         totalDms={totalDms(db)}
@@ -211,7 +227,7 @@ export default async function SocialPage() {
 
       {/* Charts left, audience-share pie riding the right of the same card;
           Recent posts live underneath as a row of boxes. */}
-      <Rise i={dash.platforms.length + 2} className="mb-6">
+      <Rise i={9} className="mb-6">
         <AudienceConsistencyLazy
           audience={audiencePoints}
           postDays={postDays}
@@ -237,7 +253,7 @@ export default async function SocialPage() {
 
       {/* Recent posts — box row, newest first; the dot strip grades recency
           (all dots lit = most recent, fading down to the oldest). */}
-      <Rise as="section" i={dash.platforms.length + 3} className="mb-6">
+      <Rise as="section" i={10} className="mb-6">
         <SectionHead
           label="Recent posts"
           count={
@@ -251,7 +267,7 @@ export default async function SocialPage() {
             ? livePosts.map((p, i) => (
                 <div
                   key={`${p.url}-${i}`}
-                  className="hoverable flex flex-col rounded-lg-t border border-os-border bg-os-surface px-3.5 py-3"
+                  data-lens="r" className="pressable is-row flex flex-col rounded-lg-t border border-os-border bg-os-surface px-3.5 py-3"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-os-accent">
@@ -277,7 +293,7 @@ export default async function SocialPage() {
                 </div>
               ))
             : RECENT_POSTS.map((p, i) => (
-                <div key={p.caption} className="hoverable flex flex-col rounded-lg-t border border-os-border bg-os-surface px-3.5 py-3">
+                <div key={p.caption} data-lens="r" className="pressable is-row flex flex-col rounded-lg-t border border-os-border bg-os-surface px-3.5 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate font-mono text-[10px] uppercase tracking-[0.1em] text-os-accent">{p.tag}</span>
                     <span className="shrink-0 font-mono text-[10px] text-os-dim">{p.ago}</span>
@@ -303,10 +319,10 @@ export default async function SocialPage() {
       </Rise>
 
       {/* Publish — compose a post that queues for the Social agent */}
-      <Rise as="section" i={dash.platforms.length + 4} className="mt-10">
+      <section className="mt-10">
         <SectionHead label="Publish" count={`${queued} queued`} link="Social agent" href="/agents" />
         <PostComposer initialPosts={posts} />
-      </Rise>
+      </section>
     </div>
   );
 }

@@ -15,6 +15,7 @@ vi.mock('@/lib/connectors/email', () => ({
   sendEmailReply: connector.sendEmailReply,
   downloadEmailAttachment: connector.downloadEmailAttachment,
   searchInboxEmails: connector.searchInboxEmails,
+  invalidateEmailCache: vi.fn(),
 }));
 vi.mock('@/lib/connectors/slack', () => ({ sendSlackMessage: connector.sendSlackMessage }));
 

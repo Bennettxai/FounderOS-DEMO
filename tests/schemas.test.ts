@@ -78,6 +78,7 @@ describe('RoadmapItemSchema', () => {
       status: 'now',
       departmentId: null,
       description: 'Live web app on port 4100.',
+      phaseId: 'phase-1',
     };
     expect(RoadmapItemSchema.parse(item)).toEqual(item);
   });

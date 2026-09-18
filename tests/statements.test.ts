@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseStatementCsv, categorize } from '@/lib/statements';
+import { parseStatementCsv, categorize, parseCardStatementText } from '@/lib/statements';
 
 describe('parseStatementCsv', () => {
   it('parses a signed-amount CSV (negative = out), normalizing dates', () => {
@@ -67,8 +67,8 @@ describe('parseStatementCsv', () => {
   it('inverts sign for Amex/credit-card exports (charge positive → expense out)', () => {
     const csv = [
       'Date,Description,Card Member,Amount,Appears On Your Statement As',
-      '06/15/2026,OPENAI,ALEX RIVERA,52.99,OPENAI',
-      '06/10/2026,AUTOPAY PAYMENT - THANK YOU,ALEX RIVERA,-2000.00,AUTOPAY',
+      '06/15/2026,OPENAI,CASEY EXAMPLE,52.99,OPENAI',
+      '06/10/2026,AUTOPAY PAYMENT - THANK YOU,CASEY EXAMPLE,-2000.00,AUTOPAY',
     ].join('\n');
     const rows = parseStatementCsv(csv);
     const charge = rows.find((r) => r.description.startsWith('OPENAI'))!;
@@ -107,5 +107,50 @@ describe('categorize', () => {
   it('keyword rules still win over the export category for known merchants', () => {
     const row = { date: '2026-06-01', description: 'FACEBK ADS', amountCents: 100, direction: 'out' as const, sourceCategory: 'Business Services' };
     expect(categorize(row)).toBe('Advertising');
+  });
+});
+
+describe('parseCardStatementText (PDF-extracted credit card statements)', () => {
+  const AMEX = `
+The Platinum Card®
+Prepared for
+CASEY EXAMPLE
+Closing Date 07/26/26        Account Ending 0-00000
+
+Payments and Credits
+07/03/26*  ONLINE PAYMENT - THANK YOU                              -$1,000.00
+
+New Charges
+07/01/26   NORTHWIND CLOUD        SAMPLE CITY XX             $100.00
+07/04/26   ORBIT MARKET RT4G2     SAMPLE CITY XX              $25.00
+07/14/26   SKYLARK AIR            SAMPLE CITY XX             $400.00
+Total New Charges                                            $525.00
+`;
+
+  it('pulls dated charge lines with the closing-date year', () => {
+    const rows = parseCardStatementText(AMEX);
+    const first = rows.find((r) => r.description.startsWith('NORTHWIND'));
+    expect(first).toMatchObject({ date: '2026-07-01', amountCents: 10000, direction: 'out' });
+    expect(rows.filter((r) => r.direction === 'out')).toHaveLength(3);
+  });
+
+  it('reads a negative amount as money coming back in, not spend', () => {
+    const rows = parseCardStatementText(AMEX);
+    const payment = rows.find((r) => r.description.includes('ONLINE PAYMENT'));
+    expect(payment).toMatchObject({ direction: 'in', amountCents: 100000 });
+  });
+
+  it('ignores summary lines that carry no transaction date', () => {
+    const rows = parseCardStatementText(AMEX);
+    expect(rows.some((r) => /Total New Charges/i.test(r.description))).toBe(false);
+  });
+
+  it('resolves MM/DD lines against the statement year', () => {
+    const rows = parseCardStatementText(`Statement Date: 01/15/2027\n01/02  SPOTIFY USA  $11.99\n`);
+    expect(rows[0]).toMatchObject({ date: '2027-01-02', amountCents: 1199, direction: 'out' });
+  });
+
+  it('returns nothing for text that is not a statement', () => {
+    expect(parseCardStatementText('hello world\nno money here')).toEqual([]);
   });
 });

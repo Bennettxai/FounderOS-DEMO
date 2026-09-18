@@ -45,11 +45,11 @@ function RangeChips({ value, onChange }: { value: Range; onChange: (r: Range) =>
         <button
           key={String(r)}
           onClick={() => onChange(r)}
-          className={`rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
-            value === r
-              ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-              : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-          }`}
+          className={`pressable rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+ value === r
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
         >
           {RANGE_LABEL[String(r)]}
         </button>
@@ -75,9 +75,9 @@ function ToggleChips({
           <button
             key={s.key}
             onClick={() => onToggle(s.key)}
-            className={`flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] transition-colors ${
-              on ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
-            }`}
+            className={`pressable flex items-center gap-1.5 rounded-sm-t border px-2 py-1 font-mono text-[10px] ${
+ on ? 'border-os-border-strong text-os-text' : 'border-os-border text-os-dim hover:text-os-muted'
+ }`}
           >
             <span className="h-2 w-2 rounded-full" style={{ background: on ? s.color : 'var(--text-3)' }} />
             {s.label}
@@ -261,12 +261,12 @@ function AnalyticsModal({
           </div>
           <div className="flex items-center gap-3">
             <RangeChips value={range} onChange={setRange} />
-            <Link href="/social" className="flex items-center gap-1 font-mono text-[11px] text-os-dim transition-colors hover:text-os-accent">
+            <Link href="/social" className="flex items-center gap-1 font-mono text-[11px] text-os-dim linky">
               Open Social <ArrowUpRight className="h-3 w-3" />
             </Link>
             <button
               onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-sm-t border border-os-border text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
+              className="pressable flex h-7 w-7 items-center justify-center rounded-sm-t border border-os-border text-os-dim hover:border-os-border-strong hover:text-os-text"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
@@ -360,7 +360,7 @@ export function HomeSocialGraph({ series, posting = [] }: { series: LabelledSeri
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-os-dim">Social media · audience over time</span>
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-1 font-mono text-[11px] text-os-dim transition-colors hover:text-os-accent"
+            className="pressable flex items-center gap-1 font-mono text-[11px] text-os-dim hover:text-os-accent"
           >
             <Maximize2 className="h-3 w-3" /> Expand
           </button>
@@ -373,7 +373,7 @@ export function HomeSocialGraph({ series, posting = [] }: { series: LabelledSeri
         <ToggleChips items={chipItems} active={active} onToggle={toggle} />
       </div>
 
-      <button onClick={() => setOpen(true)} className="block w-full cursor-zoom-in" aria-label="Expand social analytics">
+      <button data-lens="r" onClick={() => setOpen(true)} className="pressable block w-full cursor-zoom-in" aria-label="Expand social analytics">
         <AudienceChart series={series} range={range} active={active} />
       </button>
 

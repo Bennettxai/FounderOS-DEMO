@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import type { ConnectorStatus } from '@/lib/connectors/types';
 import type { CommsItem } from '@/lib/comms';
 
 // WhatsApp ships two separate macOS apps, each with its own group container:
-// the consumer app and WhatsApp Business (SMB). Alex switched to Business,
+// the consumer app and WhatsApp Business (SMB). Either may be the one in use,
 // so we look in both and read whichever database is actually live.
 const WHATSAPP_CONTAINERS = [
   'group.net.whatsapp.WhatsApp.shared', // consumer
@@ -49,6 +50,7 @@ export function calibratedDate(raw: number, maxRaw: number, nowMs = Date.now()):
 
 type ChatRow = {
   ZPARTNERNAME: string | null;
+  ZCONTACTJID: string | null;
   ZLASTMESSAGEDATE: number | null;
   ZUNREADCOUNT: number | null;
   lastText: string | null;
@@ -75,7 +77,7 @@ try {
     out = { ok: true, chats, unread };
   } else {
     const maxRaw = db.prepare('SELECT COALESCE(MAX(ZLASTMESSAGEDATE),0) AS m FROM ZWACHATSESSION').get().m;
-    const rows = db.prepare('SELECT s.ZPARTNERNAME, s.ZLASTMESSAGEDATE, s.ZUNREADCOUNT, (SELECT m.ZTEXT FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = s.Z_PK AND m.ZTEXT IS NOT NULL ORDER BY m.ZMESSAGEDATE DESC LIMIT 1) AS lastText, (SELECT MAX(m.ZMESSAGEDATE) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = s.Z_PK) AS lastDate FROM ZWACHATSESSION s WHERE s.ZPARTNERNAME IS NOT NULL AND (s.ZARCHIVED IS NULL OR s.ZARCHIVED = 0) ORDER BY s.ZLASTMESSAGEDATE DESC LIMIT ?').all(limit);
+    const rows = db.prepare('SELECT s.ZPARTNERNAME, s.ZCONTACTJID, s.ZLASTMESSAGEDATE, s.ZUNREADCOUNT, (SELECT m.ZTEXT FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = s.Z_PK AND m.ZTEXT IS NOT NULL ORDER BY m.ZMESSAGEDATE DESC LIMIT 1) AS lastText, (SELECT MAX(m.ZMESSAGEDATE) FROM ZWAMESSAGE m WHERE m.ZCHATSESSION = s.Z_PK) AS lastDate FROM ZWACHATSESSION s WHERE s.ZPARTNERNAME IS NOT NULL AND (s.ZARCHIVED IS NULL OR s.ZARCHIVED = 0) ORDER BY s.ZLASTMESSAGEDATE DESC LIMIT ?').all(limit);
     out = { ok: true, rows, maxRaw };
   }
   db.close();
@@ -126,6 +128,7 @@ let statusCache: { at: number; status: ConnectorStatus } | null = null;
 const STATUS_TTL_MS = 60_000;
 
 export async function whatsappStatus(): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('whatsapp', 'WhatsApp', 'social', '4 chats synced');
   const now = Date.now();
   if (statusCache && now - statusCache.at < STATUS_TTL_MS) return statusCache.status;
 
@@ -164,16 +167,36 @@ export async function whatsappStatus(): Promise<ConnectorStatus> {
   return status;
 }
 
-export async function recentChats(limit = 15): Promise<CommsItem[]> {
+export const WHATSAPP_CACHE_TTL_MS = 20 * 60_000;
+let chatCache: { at: number; limit: number; items: CommsItem[] } | null = null;
+
+/** Drops the cache so a test or a send sees fresh state immediately. */
+export function invalidateWhatsappCache(): void {
+  chatCache = null;
+}
+
+export async function recentChats(limit = 40): Promise<CommsItem[]> {
+  const now = Date.now();
+  // Superset rule, as with email and slack: a cache of 40 answers a call for 15.
+  if (chatCache && chatCache.limit >= limit && now - chatCache.at < WHATSAPP_CACHE_TTL_MS) {
+    return chatCache.items.slice(0, limit);
+  }
   const dbPath = resolveChatDb();
   if (!dbPath) return [];
   const read = await boundedRead(dbPath, 'recent', limit);
   if (!read.ok) return []; // timed out / locked / no access — degrade quietly, never hang the feed
   const { rows, maxRaw } = read;
-  return rows.map((row) => ({
+  const items: CommsItem[] = rows.map((row) => ({
     source: 'whatsapp' as const,
     title: row.ZPARTNERNAME ?? 'Unknown chat',
     sender: row.ZPARTNERNAME ?? 'Unknown chat',
+    // The JID carries the number ("447700900000@s.whatsapp.net"), which is the
+    // only way to deep-link a thread: WhatsApp cannot be sent to from here, but
+    // wa.me/<digits> opens the exact conversation. Group JIDs end in @g.us and
+    // have no dialable number, so they are dropped rather than faked.
+    ...(typeof row.ZCONTACTJID === 'string' && /^\d+@s\.whatsapp\.net$/.test(row.ZCONTACTJID)
+      ? { replyTo: row.ZCONTACTJID.split('@')[0] }
+      : {}),
     preview: (row.lastText ?? '').slice(0, 140),
     ts:
       row.lastDate && row.lastDate > 0
@@ -181,4 +204,8 @@ export async function recentChats(limit = 15): Promise<CommsItem[]> {
         : calibratedDate(row.ZLASTMESSAGEDATE ?? 0, maxRaw).toISOString(),
     unread: row.ZUNREADCOUNT ?? 0,
   }));
+  // Successes only: an empty read can mean the DB was locked or unreadable,
+  // and pinning that would blank the lane for the whole window.
+  if (items.length > 0) chatCache = { at: Date.now(), limit, items };
+  return items;
 }

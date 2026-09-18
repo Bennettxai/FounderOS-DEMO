@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 // Beehiiv newsletter audience. Real-ready: honest `not_configured` until a key
@@ -35,6 +36,7 @@ export async function beehiivSubscribers(
   if (!key || !pub) return null;
   try {
     const res = await fetch(endpoint(pub), {
+      cache: 'no-store',
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(6000),
     });
@@ -50,6 +52,7 @@ export async function beehiivSubscribers(
 export async function beehiivStatus(
   env: Record<string, string | undefined> = process.env,
 ): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('beehiiv', 'Beehiiv', 'social', 'newsletter · 4.8k subscribers');
   const key = env.BEEHIIV_API_KEY;
   const pub = env.BEEHIIV_PUBLICATION_ID;
   if (!key || !pub) {
@@ -63,6 +66,7 @@ export async function beehiivStatus(
   }
   try {
     const res = await fetch(endpoint(pub), {
+      cache: 'no-store',
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(6000),
     });
@@ -172,6 +176,7 @@ export async function beehiivPosts(
   try {
     const url = `${BEEHIIV_API}/publications/${pub}/posts?expand[]=stats&limit=50&order_by=publish_date&direction=desc`;
     const res = await fetch(url, {
+      cache: 'no-store',
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(8000),
     });

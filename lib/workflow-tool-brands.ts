@@ -23,8 +23,14 @@ export const TOOL_BRANDS: Record<string, ToolBrand> = {
   skool: { slug: 'skool', name: 'Skool' },
   slack: { slug: 'slack', name: 'Slack' },
   trakyo: { slug: 'trakyo', name: 'Trakyo' },
-  webinarjam: { slug: 'webinarjam', name: 'WebinarJam' },
   postly: { slug: 'postly', name: 'Postly' },
+  camera: { slug: 'camera', name: 'Camera' },
+  gsend: { slug: 'gsend', name: 'gsend' },
+  instagram: { slug: 'instagram', name: 'Instagram' },
+  linkedin: { slug: 'linkedin', name: 'LinkedIn' },
+  premiere: { slug: 'premiere', name: 'Premiere Pro' },
+  telegram: { slug: 'telegram', name: 'Telegram' },
+  youtube: { slug: 'youtube', name: 'YouTube' },
 };
 
 export function toolBrand(toolId: string): ToolBrand {

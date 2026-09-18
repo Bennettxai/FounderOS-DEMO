@@ -1,13 +1,12 @@
 import { z } from 'zod';
 import { getBrainProvider } from '@/lib/brain';
-import { createGBrainProvider } from '@/lib/connectors/gbrain';
+import { createGBrainProvider, readStoreNotes } from '@/lib/connectors/gbrain';
+import { auditBrainStore } from '@/lib/brain-audit';
 import { parseInboxConfigs, unreadCounts } from '@/lib/connectors/email';
 import { configuredProcessors, stripeSnapshot } from '@/lib/connectors/payments';
 import { recentMessages } from '@/lib/connectors/slack';
-import { recentPages } from '@/lib/connectors/notion';
 import { zernioStatus } from '@/lib/connectors/zernio';
 import { attioClients, attioStatus } from '@/lib/connectors/attio';
-import { webinarjamStatus, listRegistrants } from '@/lib/connectors/webinarjam';
 import { trakyoStatus } from '@/lib/connectors/trakyo';
 import { arcadsStatus } from '@/lib/connectors/arcads';
 import { whatsappStatus } from '@/lib/connectors/whatsapp';
@@ -16,6 +15,8 @@ import { localStackStatus } from '@/lib/connectors/local-stack';
 import { getDb } from '@/lib/data';
 import type { LlmToolSpec } from '@/lib/connectors/llm';
 import type { AgentRunResult, RuntimeAgent } from '@/lib/agents/runtime';
+import { brandDealAgent } from '@/lib/agents/brand-deal-agent';
+import { newsletterAgent } from '@/lib/agents/newsletter-agent';
 
 /**
  * The real agent roster. Every run() does actual work against a live system —
@@ -23,7 +24,7 @@ import type { AgentRunResult, RuntimeAgent } from '@/lib/agents/runtime';
  * with setup instructions instead of pretending.
  *
  * Top-level agents are instance slots: when the dedicated host is live each one
- * becomes its own Clawline / Claude Code process and respond() routes
+ * becomes its own Clawline Hermes / Claude Code process and respond() routes
  * to that instance instead of the builtin implementation.
  */
 
@@ -112,6 +113,8 @@ async function processorConfirmationRun(): Promise<AgentRunResult> {
 }
 
 export const realAgents: RuntimeAgent[] = [
+  brandDealAgent,
+  newsletterAgent,
   // ── Command ──────────────────────────────────────────────────────────
   {
     id: 'conductor',
@@ -129,6 +132,21 @@ export const realAgents: RuntimeAgent[] = [
   },
 
   // ── Comms instance + channel workers ─────────────────────────────────
+  {
+    id: 'comms-digest',
+    name: 'Comms Digest',
+    description:
+      'The 9am report: scrapes the last 24h across all four inboxes, WhatsApp and Slack, and ranks who Alex needs to respond to — calls first, then clients, students and family, brand deals, group chats, companies last. Also lists what to unsubscribe from.',
+    departmentId: 'dept-comms',
+    async run(): Promise<AgentRunResult> {
+      const { runAndStoreCommsDigest, digestSummary } = await import('@/lib/comms-digest-run');
+      const result = await runAndStoreCommsDigest();
+      // ok only when at least one channel answered — an all-dead run is a
+      // failure worth seeing in the cron stats, not a cheerful empty report
+      const ok = result.sources.some((s) => s.ok);
+      return { ok, summary: digestSummary(result), data: result };
+    },
+  },
   {
     id: 'comms-agent',
     name: 'Comms Agent',
@@ -155,18 +173,18 @@ export const realAgents: RuntimeAgent[] = [
     description: 'Aggregates the Postly publishing and Adsmith ad-generation workers.',
     departmentId: 'dept-marketing-growth',
     async run() {
-      const [postly, adsmith] = await Promise.all([zernioRun(), arcadsRun()]);
-      const live = [postly, adsmith].filter((r) => r.ok).length;
+      const [zernio, arcads] = await Promise.all([zernioRun(), arcadsRun()]);
+      const live = [zernio, arcads].filter((r) => r.ok).length;
       const queued = getDb().socialPosts.queued().length;
       const queueNote = queued > 0 ? `${queued} post${queued === 1 ? '' : 's'} queued for publish` : 'no posts queued';
       return {
         ok: live > 0,
-        summary: `${live}/2 core content APIs live · Postly ${label(postly)} · Adsmith ${label(adsmith)} · ${queueNote}`,
-        data: { postly, adsmith, queuedPosts: queued },
+        summary: `${live}/2 core content APIs live · Postly ${label(zernio)} · Adsmith ${label(arcads)} · ${queueNote}`,
+        data: { zernio, arcads, queuedPosts: queued },
       };
     },
   },
-  { id: 'postly-publisher', name: 'Postly Publisher', description: 'Six platforms under @founderos.ai via Postly.', departmentId: 'dept-marketing-growth', run: zernioRun },
+  { id: 'postly-publisher', name: 'Postly Publisher', description: 'Six platforms under @alexx.ai via Postly.', departmentId: 'dept-marketing-growth', run: zernioRun },
   { id: 'adsmith-creative', name: 'Adsmith Creative', description: 'UGC ads for Vantage via the Adsmith API.', departmentId: 'dept-marketing-growth', run: arcadsRun },
   {
     id: 'reelkit-editor',
@@ -222,39 +240,21 @@ export const realAgents: RuntimeAgent[] = [
   {
     id: 'launchpad-cohort-sales',
     name: 'Launchpad Cohort',
+    // The webinar funnel is retired, so this lane runs on
+    // Trakyo attribution alone.
     description:
-      'Launchpad Cohort sales lane: WebinarJam funnel (registrants/attendees → leads), Trakyo revenue attribution, plus offer/call/payment context.',
+      'Launchpad Cohort sales lane: Trakyo revenue attribution, plus offer/call/payment context.',
     departmentId: 'dept-sales',
     async run() {
-      const [webinar, trakyo] = await Promise.all([webinarjamStatus(), trakyoStatus()]);
-      const live = [webinar, trakyo].filter((s) => s.state === 'connected').length;
+      const trakyo = await trakyoStatus();
+      const live = trakyo.state === 'connected';
       return {
-        ok: live > 0,
-        summary: `Launchpad Cohort · WebinarJam ${webinar.state} · Trakyo ${trakyo.state}${
-          live === 0 ? ' — set WEBINARJAM_API_KEY to pull webinar leads' : ''
+        ok: live,
+        summary: `Launchpad Cohort · Trakyo ${trakyo.state}${
+          live ? '' : ' — no live attribution source for this lane'
         }`,
-        data: { webinar, trakyo },
+        data: { trakyo },
       };
-    },
-    chatTools(): LlmToolSpec[] {
-      return [
-        {
-          name: 'searchWebinarRegistrants',
-          description:
-            "List registrants/attendees for an Launchpad Cohort WebinarJam session (these are leads). Read-only. Needs the webinar's id and schedule id.",
-          parameters: z.object({
-            webinarId: z.string().describe('WebinarJam webinar_id'),
-            scheduleId: z.string().describe('WebinarJam schedule_id for the session'),
-          }),
-          execute: async (args) => {
-            const webinarId = typeof args.webinarId === 'string' ? args.webinarId : '';
-            const scheduleId = typeof args.scheduleId === 'string' ? args.scheduleId : '';
-            if (!webinarId || !scheduleId) return { error: 'webinarId and scheduleId are required' };
-            const registrants = await listRegistrants(webinarId, scheduleId);
-            return { count: registrants.length, registrants: registrants.slice(0, 25) };
-          },
-        },
-      ];
     },
   },
   {
@@ -269,14 +269,14 @@ export const realAgents: RuntimeAgent[] = [
     name: 'PayKit',
     description: 'PayKit offer/payment/customer context for Sales.',
     departmentId: 'dept-sales',
-    run: envIntegrationRun('PayKit', 'FANBASIS_API_KEY', 'offers, customers, and payment context'),
+    run: envIntegrationRun('PayKit', 'PAYKIT_API_KEY', 'offers, customers, and payment context'),
   },
   {
     id: 'vantage-paykit',
     name: 'Vantage PayKit',
     description: 'PayKit lane specifically under Vantage.',
     departmentId: 'dept-sales',
-    run: envIntegrationRun('Vantage PayKit', 'FANBASIS_API_KEY', 'Vantage offer/payment context'),
+    run: envIntegrationRun('Vantage PayKit', 'PAYKIT_API_KEY', 'Vantage offer/payment context'),
   },
   { id: 'stripe-sales', name: 'Stripe', description: 'Stripe payment confirmation for sales workflows.', departmentId: 'dept-sales', run: stripeSalesRun },
   {
@@ -291,14 +291,41 @@ export const realAgents: RuntimeAgent[] = [
     name: 'FlexPay Financing',
     description: 'FlexPay financing options for offers and payment plans.',
     departmentId: 'dept-sales',
-    run: envIntegrationRun('FlexPay', 'FlexPay_API_KEY', 'financing options for sales offers'),
+    run: envIntegrationRun('FlexPay', 'FLEXPAY_API_KEY', 'financing options for sales offers'),
   },
   {
     id: 'sales-calls-data',
     name: 'Sales Calls Data',
-    description: 'Sales call recordings, notes, outcomes, and follow-up context.',
+    description: 'Sales call recordings, notes, outcomes, and follow-up context: Recall on the calls, Plaud in the room.',
     departmentId: 'dept-sales',
-    run: envIntegrationRun('Sales calls data', 'FATHOM_API_KEY', 'call recordings, summaries, and follow-up context'),
+    async run() {
+      const { plaudStatus } = await import('@/lib/connectors/plaud');
+      const { ingestPlaudNow } = await import('@/lib/plaud-ingest');
+      const { getDb } = await import('@/lib/data');
+      const fathom = process.env.FATHOM_API_KEY ? 'configured' : 'not_configured';
+      const plaud = await plaudStatus();
+      const recordings = plaud.state === 'connected' ? Number(plaud.meta?.recordings ?? 0) : 0;
+      const live = (fathom === 'configured' ? 1 : 0) + (plaud.state === 'connected' ? 1 : 0);
+      // The actual work: file every newly transcribed Plaud recording into the
+      // brain. Pure code (Plaud did the transcribing + summarising), so this is
+      // safe to run on a 30-minute cron without touching an LLM seat.
+      const ingest = plaud.state === 'connected' ? await ingestPlaudNow(getDb()) : null;
+      const filed = ingest?.ingested.length ?? 0;
+      const waiting = ingest?.skipped.notTranscribed.length ?? 0;
+      const inBrain = ingest ? ingest.skipped.alreadyIngested.length + filed : 0;
+      const failed = ingest?.failed.length ?? 0;
+      return {
+        ok: live > 0 && failed === 0,
+        summary: `Recorders: Recall ${fathom} · Plaud ${plaud.state}${
+          plaud.state === 'connected'
+            ? ` (${recordings} recording${recordings === 1 ? '' : 's'}, ${inBrain} in brain, ${filed} filed this pass, ${waiting} awaiting transcription${
+                ingest?.claims ? `, ${ingest.claims} claims to OptimalEngine` : ''
+              }${failed ? `, ${failed} FAILED: ${ingest?.failed.map((f) => f.error).join('; ')}` : ''})`
+            : ''
+        }${live === 0 ? ' — set FATHOM_API_KEY and PLAUD_REFRESH_TOKEN to capture calls and in-person meetings' : ''}`,
+        data: { fathom, plaud: plaud.state, recordings, filed, inBrain, waiting, failed, claims: ingest?.claims ?? 0 },
+      };
+    },
   },
 
   // ── Knowledge: the G-Brain analyst and its auditors ──────────────────
@@ -320,7 +347,7 @@ export const realAgents: RuntimeAgent[] = [
         ideas.push(`${warnings.length} doctor check(s) need attention (${warnings.map((w) => w.name).join(', ')})`);
       if (inbox && inbox.files > 3) ideas.push(`inbox/ holds ${inbox.files} unprocessed pages — file or archive them`);
       if (store.totalFiles < 50)
-        ideas.push(`only ${store.totalFiles} pages on disk vs ~1240 in Supabase — run \`gbrain export\` to restore locally`);
+        ideas.push(`only ${store.totalFiles} pages on disk vs ~918 in Supabase — run \`gbrain export\` to restore locally`);
       if (ideas.length === 0) ideas.push('storage healthy — no action needed');
 
       return {
@@ -343,37 +370,26 @@ export const realAgents: RuntimeAgent[] = [
         data: results,
       };
     },
-    chatTools(): LlmToolSpec[] {
-      return [
-        {
-          name: 'searchGBrain',
-          description:
-            'Search the G-Brain knowledge base (brain-store markdown + vector store) and return the top matching notes. Read-only.',
-          parameters: z.object({ query: z.string().describe('what to look up in the knowledge base') }),
-          execute: async (args) => {
-            const query = typeof args.query === 'string' ? args.query : '';
-            const results = await getBrainProvider().search(query);
-            return results.slice(0, 5);
-          },
-        },
-      ];
-    },
   },
   {
     id: 'markdown-auditor',
     name: 'Markdown Auditor',
-    description: 'Page counts per brain-store folder, strays at the root.',
+    description: 'Link health, orphans, duplicate titles and store-vs-index drift across the knowledge base.',
     departmentId: 'dept-tech',
     async run() {
-      const { store } = await createGBrainProvider().overview();
-      if (store.totalFiles === 0) {
-        return { ok: false, summary: `brain-store empty or unreadable at ${store.path}` };
-      }
-      const root = store.folders.find((f) => f.name === '(root)');
+      // It counted files until and reported green while the index
+      // held Links: 0 on 1,038 pages. Counting is not auditing: this reads the
+      // links, and compares the folder against the index search actually uses.
+      const provider = createGBrainProvider();
+      const notes = readStoreNotes();
+      const stats = await provider.stats().catch(() => null);
+      const audit = auditBrainStore(notes, { stats });
+
+      const errors = audit.findings.filter((f) => f.severity === 'err');
       return {
-        ok: true,
-        summary: `${store.totalFiles} pages across ${store.folders.length} folders${root ? ` · ${root.files} stray at root` : ''} · ${store.folders.map((f) => `${f.name}:${f.files}`).join(' ')}`,
-        data: store,
+        ok: errors.length === 0 && audit.pages > 0,
+        summary: errors.length > 0 ? `${audit.summary} · ${errors.map((f) => f.detail).join(' | ')}` : audit.summary,
+        data: audit,
       };
     },
   },
@@ -391,23 +407,6 @@ export const realAgents: RuntimeAgent[] = [
           ? `health ${doctor.healthScore ?? '?'}/100 · ${doctor.checks.length} checks, ${warn.length} warning(s)${warn.length ? `: ${warn.map((w) => w.name).join(', ')}` : ''}`
           : `doctor offline — ${doctor.detail}`,
         data: doctor,
-      };
-    },
-  },
-  {
-    id: 'notion-sync',
-    name: 'Notion Sync',
-    description: 'Lists the most recently edited Notion pages shared with the integration.',
-    departmentId: 'dept-tech',
-    async run() {
-      if (!process.env.NOTION_API_KEY) {
-        return { ok: false, summary: 'Notion not configured — set NOTION_API_KEY in .env.local' };
-      }
-      const pages = await recentPages(10);
-      return {
-        ok: true,
-        summary: `${pages.length} recently edited pages · latest: ${pages[0]?.title ?? 'none'}`,
-        data: pages,
       };
     },
   },
@@ -468,7 +467,7 @@ export const realAgents: RuntimeAgent[] = [
           : `Serving seeded funnel: ${converted.length} clients (${ventures}) · ${journeys.length - converted.length} in pipeline · Ledger ${live.state}`,
         data: {
           source: servingAttio ? 'ledger' : 'funnel',
-          ledger: { state: live.state, deals: live.clients.length },
+          attio: { state: live.state, deals: live.clients.length },
           clients: converted.map((j) => ({ id: j.id, name: j.name, venture: j.venture, amountUsd: j.amountUsd })),
         },
       };
@@ -477,38 +476,41 @@ export const realAgents: RuntimeAgent[] = [
   {
     id: 'client-onboarding',
     name: 'Onboarding Agent',
-    description: 'Readiness check for the onboarding SOP: the Ledger trigger plus the Slack and Notion workspaces it provisions.',
+    // Notion was the third rail here until it was retired; the
+    // onboarding SOP no longer provisions a Notion workspace.
+    description: 'Readiness check for the onboarding SOP: the Ledger trigger plus the Slack workspace it provisions.',
     departmentId: 'dept-clients',
     async run() {
       const { slackStatus } = await import('@/lib/connectors/slack');
-      const { notionStatus } = await import('@/lib/connectors/notion');
-      const [ledger, slack, notion] = await Promise.all([attioStatus(), slackStatus(), notionStatus()]);
-      const live = [ledger, slack, notion].filter((s) => s.state === 'connected').length;
+      const [attio, slack] = await Promise.all([attioStatus(), slackStatus()]);
+      const live = [attio, slack].filter((s) => s.state === 'connected').length;
       return {
         ok: live > 0,
-        summary: `Onboarding rails: Ledger ${ledger.state} · Slack ${slack.state} · Notion ${notion.state}${
-          live < 3 ? ' — connect the missing rail to run onboarding end to end' : ''
+        summary: `Onboarding rails: Ledger ${attio.state} · Slack ${slack.state}${
+          live < 2 ? ' — connect the missing rail to run onboarding end to end' : ''
         }`,
-        data: { ledger: ledger.state, slack: slack.state, notion: notion.state },
+        data: { attio: attio.state, slack: slack.state },
       };
     },
   },
   {
     id: 'client-success',
     name: 'Client Success',
-    description: 'Servicing rails: Recall call notes for deliverable tracking plus Slack for the check-in cadence.',
+    description: 'Servicing rails: Recall call notes and Plaud in-person recordings for deliverable tracking plus Slack for the check-in cadence.',
     departmentId: 'dept-clients',
     async run() {
       const { slackStatus } = await import('@/lib/connectors/slack');
+      const { plaudConfigured } = await import('@/lib/connectors/plaud');
       const slack = await slackStatus();
-      const recall = process.env.FATHOM_API_KEY ? 'configured' : 'not_configured';
-      const live = (slack.state === 'connected' ? 1 : 0) + (recall === 'configured' ? 1 : 0);
+      const fathom = process.env.FATHOM_API_KEY ? 'configured' : 'not_configured';
+      const plaud = plaudConfigured() ? 'configured' : 'not_configured';
+      const live = (slack.state === 'connected' ? 1 : 0) + (fathom === 'configured' ? 1 : 0) + (plaud === 'configured' ? 1 : 0);
       return {
         ok: live > 0,
-        summary: `Servicing rails: Recall ${recall} · Slack ${slack.state}${
-          live === 0 ? ' — set FATHOM_API_KEY and a Slack bot token to service clients' : ''
+        summary: `Servicing rails: Recall ${fathom} · Plaud ${plaud} · Slack ${slack.state}${
+          live === 0 ? ' — set FATHOM_API_KEY, PLAUD_REFRESH_TOKEN and a Slack bot token to service clients' : ''
         }`,
-        data: { recall, slack: slack.state },
+        data: { fathom, plaud, slack: slack.state },
       };
     },
   },
@@ -520,11 +522,11 @@ export const realAgents: RuntimeAgent[] = [
     description: 'Live check of the local creative/infra stack: Reelkit, Ollama, command-center, Clawline, tmux, whisper, ffmpeg, renderly, gh.',
     departmentId: 'dept-tech',
     async run() {
-      const [stack, dictate] = await Promise.all([localStackStatus(), wisprStatus()]);
+      const [stack, wispr] = await Promise.all([localStackStatus(), wisprStatus()]);
       return {
         ok: stack.state === 'connected',
-        summary: `${stack.detail} · Dictate: ${dictate.state === 'connected' ? dictate.detail : dictate.state}`,
-        data: { stack: stack.meta, dictate: dictate.meta },
+        summary: `${stack.detail} · Dictate: ${wispr.state === 'connected' ? wispr.detail : wispr.state}`,
+        data: { stack: stack.meta, wispr: wispr.meta },
       };
     },
   },

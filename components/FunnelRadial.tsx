@@ -192,7 +192,7 @@ export function FunnelRadial({
           else void rootRef.current?.requestFullscreen();
         }}
         aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-        className="absolute right-1 top-1 z-20 rounded-sm-t border border-os-border bg-os-surface2 p-1.5 text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
+        className="pressable absolute right-1 top-1 z-20 rounded-sm-t border border-os-border bg-os-surface2 p-1.5 text-os-dim hover:border-os-border-strong hover:text-os-text"
       >
         {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
       </button>
@@ -363,7 +363,7 @@ export function FunnelRadial({
           />{' '}
           fades red after {DECAY_FADE_START}d quiet → archive at {DECAY_DAYS}d
         </span>
-        <span className="ml-auto">untracked = word of mouth until Trakyo UTMs land · click a node</span>
+        <span className="ml-auto">wedge = Trakyo first touch when attributed · untracked = word of mouth · click a node</span>
       </div>
     </div>
   );

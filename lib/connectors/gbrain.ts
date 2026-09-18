@@ -1,21 +1,26 @@
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import type { BrainProvider, BrainSearchResult, BrainStatus } from '@/lib/brain';
 
 export type ExecResult = { stdout: string; stderr: string; code: number };
 export type ExecFn = (cmd: string, args: string[], stdin?: string) => Promise<ExecResult>;
 
 const GBRAIN_BIN = process.env.GBRAIN_BIN ?? 'gbrain';
-const DEFAULT_STORE = process.env.GBRAIN_STORE ?? path.join(os.homedir(), 'knowledge', 'brain-store');
+const DEFAULT_STORE = process.env.GBRAIN_STORE ?? path.join(process.cwd(), 'knowledge', 'brain-store');
+
+/** The markdown brain-store root this host reads (GBRAIN_STORE, else the
+ *  bundled knowledge/brain-store folder). */
+export function gbrainStorePath(): string {
+  return process.env.GBRAIN_STORE ?? DEFAULT_STORE;
+}
 const READ_TIMEOUT_MS = 15_000;
 const WRITE_TIMEOUT_MS = 60_000;
 
 /**
  * Reads (doctor/query/stats) must fail fast so a paused Supabase never hangs a
  * page render — 15s → local fallback. Writes (capture/import/embed) embed
- * synchronously through ZeroEntropy + Supabase and run 13–24s+, so they get a
+ * synchronously through the embedder + Supabase and run 13–24s+, so they get a
  * generous 60s or execFile kills them mid-embed (SIGTERM).
  */
 export function execTimeoutFor(args: string[]): number {
@@ -125,6 +130,10 @@ export type GBrainStats = {
   pages: number;
   chunks: number;
   embedded: number;
+  /** Ingested wikilink edges. Zero on a store full of links means a dead ingest. */
+  links: number;
+  /** Dated events the dream phases build. Zero alongside links is the same bug. */
+  timeline: number;
   byType: { type: string; count: number }[];
 };
 
@@ -145,7 +154,61 @@ export function parseGbrainStats(text: string): GBrainStats {
     const m = line.match(/^\s+([\w-]+):\s*(\d+)\s*$/);
     if (m) byType.push({ type: m[1], count: Number(m[2]) });
   }
-  return { pages: num('Pages'), chunks: num('Chunks'), embedded: num('Embedded'), byType };
+  return {
+    pages: num('Pages'),
+    chunks: num('Chunks'),
+    embedded: num('Embedded'),
+    links: num('Links'),
+    timeline: num('Timeline'),
+    byType,
+  };
+}
+
+/**
+ * Parse `gbrain query` output into results.
+ *
+ * The CLI prints a multi-LINE record per hit, headed by a score marker:
+ *
+ * [0.8641] conversations/2026/01/-greeting -- # Greeting
+ * <blank>
+ * *(no messages)*
+ * [0.6839] projects/webinar-examples -- # Webinar Examples
+ *
+ * Splitting on newlines and calling each line a result — which is what this
+ * did until — turns a body line like `hello` into the result
+ * `hello — hello` and leaves `[0.8641]` glued to the front of the title. So
+ * a record starts at a header line and swallows everything up to the next one.
+ *
+ * Ordered best-first: the CLI does not sort, and anything reading the top of
+ * this list (the /brain query card, a Hermes memory brief) wants the best hit
+ * there rather than whichever one came back first.
+ */
+const QUERY_HEAD = /^(?:\[(\d*\.?\d+)\]\s+)?(\S+)\s+--\s*(.*)$/;
+
+export function parseQueryOutput(stdout: string): BrainSearchResult[] {
+  const results: { title: string; parts: string[]; score?: number }[] = [];
+  for (const line of stdout.split('\n')) {
+    const head = QUERY_HEAD.exec(line);
+    if (head) {
+      results.push({
+        title: head[2],
+        score: head[1] === undefined ? undefined : Number(head[1]),
+        parts: head[3] ? [head[3]] : [],
+      });
+    } else if (results.length > 0 && line.trim()) {
+      results[results.length - 1].parts.push(line.trim());
+    }
+    // a body line before any header belongs to nothing — drop it
+  }
+
+  return results
+    .map((r) => ({
+      title: r.title,
+      snippet: (r.parts.join(' ').replace(/\s+/g, ' ').trim() || r.title).slice(0, 400),
+      source: 'gbrain',
+      ...(r.score === undefined ? {} : { score: r.score }),
+    }))
+    .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 }
 
 export type GBrainProvider = BrainProvider & {
@@ -200,14 +263,10 @@ export function createGBrainProvider(opts: { exec?: ExecFn; storePath?: string }
     async search(query: string): Promise<BrainSearchResult[]> {
       const result = await exec(GBRAIN_BIN, ['query', query, '--no-expand']);
       if (result.code === 0 && result.stdout.trim() && !/cannot connect/i.test(result.stdout)) {
-        return result.stdout
-          .split('\n')
-          .filter(Boolean)
-          .slice(0, 8)
-          .map((line) => {
-            const [slug, ...rest] = line.split(' -- ');
-            return { title: slug.trim(), snippet: rest.join(' -- ').trim() || slug.trim(), source: 'gbrain' };
-          });
+        const parsed = parseQueryOutput(result.stdout).slice(0, 8);
+        // An empty parse means the CLI answered with something that is not a
+        // result set. Fall through rather than reporting a confident nothing.
+        if (parsed.length > 0) return parsed;
       }
       return localSearch(storePath, query);
     },

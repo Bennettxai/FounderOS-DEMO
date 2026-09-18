@@ -40,7 +40,8 @@ export function Topbar() {
         <button
           onClick={openPalette}
           title="Command palette (⌘K)"
-          className="grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+          data-lens="c"
+          className="pressable is-dark grid h-[30px] w-[30px] place-items-center rounded-ctl border border-os-border bg-os-surface text-os-muted hover:text-os-text"
         >
           <Search className="h-3.5 w-3.5" />
         </button>
@@ -50,11 +51,12 @@ export function Topbar() {
           onClick={() => window.dispatchEvent(new CustomEvent(CONDUCTOR_OPEN_EVENT))}
           title="Ask the Conductor about this screen"
           aria-label="Open the Conductor agent panel"
-          className="grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted transition-colors hover:border-os-border-strong hover:text-os-accent"
+          data-lens="c"
+          className="pressable is-dark grid h-[30px] w-[30px] place-items-center rounded-ctl border border-os-border bg-os-surface text-os-muted hover:text-os-accent"
         >
           <Bot className="h-3.5 w-3.5" />
         </button>
-        {/* the OS mark, anchoring the brand in the top-right corner */}
+        {/* Founder OS emblem — brand mark in the top-right corner */}
         <OsMark size={26} className="ml-1 shrink-0" />
       </div>
     </div>

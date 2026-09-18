@@ -32,7 +32,7 @@ describe('openDb', () => {
     const agent = {
       id: 'agent-command-center',
       departmentId: 'dept-tech',
-      name: 'Command Center',
+      name: 'command-center',
       role: 'Chief Orchestrator',
       status: 'active' as const,
       tier: 'lead' as const,

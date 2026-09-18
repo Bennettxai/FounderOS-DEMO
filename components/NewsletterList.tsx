@@ -42,7 +42,7 @@ export function NewsletterList({ newsletters }: { newsletters: Newsletter[] }) {
             <button
               onClick={() => setOpenId(expanded ? null : n.id)}
               aria-expanded={expanded}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-os-surface2"
+              className="pressable flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-os-surface2"
             >
               <span className="shrink-0 text-os-dim">
                 {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -78,7 +78,8 @@ export function NewsletterList({ newsletters }: { newsletters: Newsletter[] }) {
                     href={n.webUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-sm-t border border-os-border px-2.5 py-1 font-mono text-[10.5px] text-os-accent transition-colors hover:border-os-border-strong"
+                    data-lens="c"
+                    className="pressable is-dark mt-3 inline-flex items-center gap-1.5 rounded-ctl border border-os-border px-2.5 py-1 font-mono text-[10.5px] text-os-accent"
                   >
                     Read the issue <ExternalLink className="h-3 w-3" />
                   </a>

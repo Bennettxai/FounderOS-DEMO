@@ -42,8 +42,8 @@ export const STALL_DAYS = 7;
 /** Quiet past this → the lead decays out of the space into the archive tab. */
 export const DECAY_DAYS = 90;
 /** Nodes stay their neutral segment color until here, then fade toward red.
- * Three quiet weeks = a lead visibly starting to die (Alex's live pipeline
- * clusters at 21–30d quiet, so the gradient actually shows). */
+ * Three quiet weeks = a lead visibly starting to die, which is where a typical
+ * pipeline's quiet leads cluster, so the gradient actually shows. */
 export const DECAY_FADE_START = 21;
 
 /**
@@ -60,7 +60,7 @@ export function decayFactor(daysSinceLastTouch: number, status: FunnelStage): nu
 export type JourneyState = 'converted' | 'stalled' | 'active' | 'decayed';
 
 /**
- * Liveness of one journey at `now`: how long since Alex last touched them,
+ * Liveness of one journey at `now`: how long since the operator last touched them,
  * and the color-state the space renders — green once converted, red when a
  * pre-conversion lead has sat quiet past STALL_DAYS, blue otherwise, and
  * `decayed` (out of the space, into the archive) past DECAY_DAYS.
@@ -83,7 +83,7 @@ export function journeyMeta(j: FunnelJourney, now: Date): { daysSinceLastTouch: 
 }
 
 /**
- * What Alex should act on today — the funnel answering a question instead
+ * What the operator should act on today — the funnel answering a question instead
  * of glowing. Two queues, both capped so the rail reads at a glance:
  *   pushNow — hot leads (likelihood ≥ 70) still in active motion; freshest
  *             movement first, because momentum is when a push closes.
@@ -115,7 +115,11 @@ export function attentionQueue(
       ({ j, meta }) =>
         meta.state !== 'decayed' &&
         j.status !== 'converted' &&
-        decayFactor(meta.daysSinceLastTouch, j.status) > 0,
+        // Stalled counts as well as fading. Testing only "is it fading" left
+        // days 8-20 in neither rail: red on the board, absent from the list of
+        // what to do about it. Still disjoint from pushNow, which requires
+        // active AND decay === 0.
+        (meta.state === 'stalled' || decayFactor(meta.daysSinceLastTouch, j.status) > 0),
     )
     .sort((a, b) => b.j.likelihood - a.j.likelihood || b.meta.daysSinceLastTouch - a.meta.daysSinceLastTouch)
     .slice(0, ATTENTION_CAP)

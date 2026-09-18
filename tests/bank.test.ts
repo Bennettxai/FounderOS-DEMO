@@ -17,8 +17,8 @@ const s = (account: string, business: string, month: string, c: number, d: numbe
 describe('bank store', () => {
   it('stores summaries and returns them ordered by month', () => {
     store = openBankStore(':memory:');
-    store.upsert(s('7001', 'General Operations', '2026-04', 2130040, 1785015));
-    store.upsert(s('7002', 'Vantage', '2026-04', 4000000, 1200000));
+    store.upsert(s('7001', 'General Operations', '2026-04', 2100000, 1900000));
+    store.upsert(s('7002', 'Vantage', '2026-04', 1750000, 2300000));
     store.upsert(s('7001', 'General Operations', '2026-03', 1800000, 1500000));
     expect(store.all()).toHaveLength(3);
     expect(store.all().map((x) => x.month)[0]).toBe('2026-03');
@@ -27,9 +27,9 @@ describe('bank store', () => {
   it('re-uploading the same account+month updates rather than duplicates', () => {
     store = openBankStore(':memory:');
     store.upsert(s('7001', 'General Operations', '2026-04', 1000, 500));
-    store.upsert(s('7001', 'General Operations', '2026-04', 2130040, 1785015));
+    store.upsert(s('7001', 'General Operations', '2026-04', 2100000, 1900000));
     expect(store.all()).toHaveLength(1);
-    expect(store.all()[0].creditsCents).toBe(2130040);
-    expect(store.all()[0].netCents).toBe(2130040 - 1785015);
+    expect(store.all()[0].creditsCents).toBe(2100000);
+    expect(store.all()[0].netCents).toBe(2100000 - 1900000);
   });
 });

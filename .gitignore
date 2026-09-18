@@ -1,8 +1,15 @@
 node_modules/
 .next/
 .next-*/
-data/*.db
-data/*.db-*
+# The whole data dir, not just *.db / *.db-*. Those two patterns missed the
+# point-in-time snapshots (founder-os.db.bak-<sha> contains ".db.bak-", never
+# the literal ".db-"), so all 11 of them read as plain untracked files and
+# `git clean -fd` — the SAFE variant — deleted every backup of the database.
+# See OS-330. This still does nothing against `git clean -fdx`: -x means "also
+# remove ignored files", so gitignoring a database is a no-op against it. The
+# only real fix there is keeping the data outside the repo — see DATA_DIR in
+# lib/paths.ts and .env.example.
+data/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
@@ -18,3 +25,13 @@ dir-sidebar.jpeg
 .env
 .env.local
 .env.*.local
+
+.vercel
+
+# local run artifacts and caches, never source
+agents/markets/journal/
+rosters/
+data/candles/
+.sanitize.mjs
+
+node_modules

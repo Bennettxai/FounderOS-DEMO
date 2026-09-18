@@ -1,31 +1,61 @@
 import type { Agent } from '@/lib/schemas';
+import { agentSlug, toolSlug, type WikiEntry, type WikiIndex, type WikiRef } from '@/lib/brain-wiki';
 
 /**
- * The wiki-style detail shown when you click an agent in the knowledge graph:
- * the markdown files that define the agent and the servers/tools it connects to
- * (flagged when they're MCP servers). Brain-store paths are seeded/derived —
- * real-ready for when each agent's actual definition files get wired in.
+ * The wiki detail shown when you click an agent or a tool in the knowledge
+ * graph.
+ *
+ * This used to be fiction. Every agent was reported to be defined by
+ * `system.md`, `playbook.md`, `memory.md` and `<id>.config.md` — four files
+ * that exist nowhere in the store, which really keeps one flat
+ * `agents/<id>.md` per agent — and every tool's description came from a
+ * hand-typed dictionary in this file that drifted from the store the moment
+ * either changed.
+ *
+ * Now both read the actual page: its path on disk, the summary its author
+ * wrote, the `- Key: Value` facts it states, and its real links in and out.
+ * When a page does not exist the answer is `hasPage: false` and empty fields,
+ * never a plausible-looking guess, so the panel can say "no page yet" and mean
+ * it. Same honesty rule the connectors follow.
+ *
+ * Pure and client-safe: the index is read from disk by the server and handed
+ * in (see lib/brain-wiki.ts).
  */
 
 // Tools that are backed by an MCP server (vs. a plain integration/local tool).
+// A hand-kept fact the store does not record; everything else here is read.
 const MCP_SLUGS = new Set([
   'attio', 'notion', 'slack', 'gbrain', 'obsidian', 'miro', 'playwright', 'figma',
   'serena', 'context7', 'zernio', 'arcads', 'wispr', 'higgsfield', 'canva', 'gmail',
-  'google-calendar', 'calendar', 'vercel',
+  'google-calendar', 'calendar', 'vercel', 'plaud',
 ]);
 
-export type WikiServer = { slug: string; name: string; mcp: boolean };
+export type WikiServer = { slug: string; name: string; mcp: boolean; hasPage: boolean };
+
 export type AgentWiki = {
   id: string;
   name: string;
   role: string;
   model: string;
-  path: string; // brain-store definition folder
-  files: string[]; // markdown files that make up the agent
-  servers: WikiServer[]; // tools / MCP servers the agent is wired to
+  /** Whether the brain-store actually holds a page for this agent. */
+  hasPage: boolean;
+  /** The real file, relative to the repo root, or null when there is none. */
+  path: string | null;
+  /** The real file name(s) that define it — [] when the store has none. */
+  files: string[];
+  /** The page's own opening line. */
+  summary: string;
+  /** The `- Key: Value` facts the page states (Tier, Status, Runs on, …). */
+  fields: Record<string, string>;
+  /** Real outbound wikilinks; a broken one carries slug: null. */
+  links: WikiRef[];
+  /** Real inbound wikilinks: the pages that point at this agent. */
+  backlinks: WikiRef[];
+  /** The tools / MCP servers the agent is wired to. */
+  servers: WikiServer[];
 };
 
-/** 'comms-feed' → 'Comms Feed' */
+/** 'comms-feed' → 'Comms Feed' — the fallback name when no page names it. */
 export function prettifySlug(slug: string): string {
   return slug
     .split(/[-_]/)
@@ -33,63 +63,68 @@ export function prettifySlug(slug: string): string {
     .join(' ');
 }
 
-export function buildAgentWiki(agent: Agent): AgentWiki {
+const STORE = 'brain-store';
+
+function pageOf(index: WikiIndex | undefined, slug: string): WikiEntry | null {
+  return index?.[slug] ?? null;
+}
+
+export function buildAgentWiki(agent: Agent, index?: WikiIndex): AgentWiki {
+  const page = pageOf(index, agentSlug(agent.id));
   return {
     id: agent.id,
     name: agent.name,
     role: agent.role,
     model: agent.model,
-    path: `brain-store/agents/${agent.id}`,
-    files: ['system.md', 'playbook.md', 'memory.md', `${agent.id}.config.md`],
-    servers: agent.tools.map((slug) => ({ slug, name: prettifySlug(slug), mcp: MCP_SLUGS.has(slug) })),
+    hasPage: page !== null,
+    path: page ? `${STORE}/${page.path}` : null,
+    files: page ? [page.path.split('/').pop()!] : [],
+    summary: page?.summary ?? '',
+    fields: page?.fields ?? {},
+    links: page?.links ?? [],
+    backlinks: page?.backlinks ?? [],
+    servers: agent.tools.map((slug) => {
+      const toolPage = pageOf(index, toolSlug(slug));
+      return {
+        slug,
+        name: toolPage?.title ?? prettifySlug(slug),
+        mcp: MCP_SLUGS.has(slug),
+        hasPage: toolPage !== null,
+      };
+    }),
   };
 }
-
-// Short, real-ready summaries for the tools agents lean on most. Anything not
-// listed falls back to a generic line — swap for live tool docs later.
-const TOOL_SUMMARY: Record<string, string> = {
-  attio: 'CRM of record — companies, people, and deals across Vantage + Launchpad Cohort.',
-  gbrain: 'The G-Brain CLI — hybrid search over the markdown brain-store + Supabase second brain.',
-  'brain-store': 'Local markdown knowledge base; the source of truth G-Brain syncs from.',
-  supabase: 'Postgres + pgvector "second brain" holding chunked embeddings.',
-  zeroentropy: 'Embedding provider behind G-Brain hybrid retrieval.',
-  'comms-feed': 'Unified inbox feed — WhatsApp, email, Slack, calendar in one stream.',
-  zernio: 'Social posting + audience analytics across the five platforms.',
-  manychat: 'DM automation across Instagram and Messenger.',
-  notion: 'Docs + databases workspace.',
-  obsidian: 'Local vault, incl. the Claude conversation archive.',
-  miro: 'Visual boards for planning and maps.',
-  wispr: 'Local dictation / flow capture.',
-  arcads: 'AI UGC ad generation.',
-  higgsfield: 'AI image / video / audio generation.',
-  playwright: 'Headless browser automation (e.g. Skool).',
-  stripe: 'Payments + balance + charges.',
-  slack: 'Team channels, read + post via the bot.',
-  openclaw: 'OpenClaw runtime the agents execute on.',
-  ollama: 'Local model runtime.',
-  remotion: 'Programmatic video rendering.',
-};
 
 export type ToolWiki = {
   slug: string;
   name: string;
   mcp: boolean;
   kind: string;
-  path: string;
+  hasPage: boolean;
+  path: string | null;
   summary: string;
+  fields: Record<string, string>;
+  /** Who is wired to it right now, from live OS state (not from the page). */
   usedBy: string[];
+  links: WikiRef[];
+  /** The pages that link here — the store's own answer to "who uses this". */
+  backlinks: WikiRef[];
 };
 
-export function buildToolWiki(slug: string, usedBy: string[] = []): ToolWiki {
+export function buildToolWiki(slug: string, usedBy: string[] = [], index?: WikiIndex): ToolWiki {
   const mcp = MCP_SLUGS.has(slug);
-  const name = prettifySlug(slug);
+  const page = pageOf(index, toolSlug(slug));
   return {
     slug,
-    name,
+    name: page?.title ?? prettifySlug(slug),
     mcp,
     kind: mcp ? 'MCP server' : 'integration',
-    path: `brain-store/tools/${slug}.md`,
-    summary: TOOL_SUMMARY[slug] ?? `${name} — wired in through the ${mcp ? 'MCP server' : 'tool'} layer.`,
+    hasPage: page !== null,
+    path: page ? `${STORE}/${page.path}` : null,
+    summary: page?.summary ?? '',
+    fields: page?.fields ?? {},
     usedBy,
+    links: page?.links ?? [],
+    backlinks: page?.backlinks ?? [],
   };
 }

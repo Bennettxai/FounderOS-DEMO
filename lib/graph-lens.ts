@@ -1,7 +1,7 @@
 /**
- * Lenses over the operating knowledge graph (Alex, 2026-07-12): slice the
+ * Lenses over the operating knowledge graph: slice the
  * same 114 nodes three ways — by ENTITY TYPE, by BUSINESS FUNCTION (core vs
- * enabling, plus his two venture teams), and by ACTION (what a thing is
+ * enabling, plus the two venture teams), and by ACTION (what a thing is
  * actually used for). Picking a lens lights the matching nodes and dims the
  * rest. Pure data + matchers; the component supplies the node list and a
  * department resolver.
@@ -83,7 +83,7 @@ const idSet = (ids: string[]) => new Set(ids.map((id) => `emp:${id}`));
 /**
  * The node ids a lens lights. Unknown lens → empty set. Workflows and
  * projects are not modeled as graph entities yet — their lenses honestly
- * return empty until those tables exist (larp-first, real-ready).
+ * return empty until those tables exist (demo-first, real-ready).
  */
 export function lensNodeSet(lensId: string, ctx: LensContext): Set<string> {
   const out = new Set<string>();

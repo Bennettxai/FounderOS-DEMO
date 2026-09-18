@@ -21,7 +21,7 @@ const rawDeal = (over: {
   created_at: over.createdAt ?? '2026-04-09T01:23:52.868Z',
   web_url: `https://app.attio.com/vantage/deals/record/${over.id ?? 'rec-1'}`,
   values: {
-    name: [{ value: over.name ?? 'Reese Calder' }],
+    name: [{ value: over.name ?? 'Riley Monroe' }],
     stage: [{ status: { title: over.stage ?? 'Contacted' }, active_from: over.stageSince ?? '2026-06-05T00:00:00Z' }],
     value: [{ currency_value: over.value ?? 0 }],
     budget_range: over.budget ? [{ value: over.budget }] : [],
@@ -62,7 +62,7 @@ describe('mapAttioDeals', () => {
 
   test('maps a deal to a valid journey: touches carry created + stage-since dates', () => {
     const { journeys } = mapAttioDeals([
-      rawDeal({ id: 'rec-a', name: 'Reese Calder', stage: 'Contacted', createdAt: '2026-04-09T01:23:52Z', stageSince: '2026-06-05T09:00:00Z' }),
+      rawDeal({ id: 'rec-a', name: 'Riley Monroe', stage: 'Contacted', createdAt: '2026-04-09T01:23:52Z', stageSince: '2026-06-05T09:00:00Z' }),
     ], NOW);
     expect(journeys).toHaveLength(1);
     const j = FunnelJourneySchema.parse(journeys[0]);
@@ -105,13 +105,13 @@ describe('mapAttioDeals', () => {
 
 describe('classifyVenture', () => {
   test('person-name deals read as Launchpad Cohort mentorship leads', () => {
-    expect(classifyVenture('Reese Calder')).toBe('launchpad-cohort');
+    expect(classifyVenture('Riley Monroe')).toBe('launchpad-cohort');
     expect(classifyVenture('Tayla Nguyen')).toBe('launchpad-cohort');
     expect(classifyVenture('CASEY EXAMPLE')).toBe('launchpad-cohort');
   });
 
   test('company-flavored deals read as Vantage client builds', () => {
-    expect(classifyVenture('Orbit Labs')).toBe('vantage');
+    expect(classifyVenture('NovaTech Solutions')).toBe('vantage');
     expect(classifyVenture('Harbor Dental')).toBe('vantage');
     expect(classifyVenture('Lin & Co Accounting')).toBe('vantage');
     expect(classifyVenture('Fields Roofing LLC')).toBe('vantage');
@@ -119,8 +119,8 @@ describe('classifyVenture', () => {
 
   test('mapAttioDeals stamps the heuristic venture on every journey', () => {
     const { journeys } = mapAttioDeals([
-      rawDeal({ id: 'rec-p', name: 'Reese Calder', stage: 'Contacted' }),
-      rawDeal({ id: 'rec-c', name: 'Orbit Labs', stage: 'Contacted' }),
+      rawDeal({ id: 'rec-p', name: 'Riley Monroe', stage: 'Contacted' }),
+      rawDeal({ id: 'rec-c', name: 'NovaTech Solutions', stage: 'Contacted' }),
     ], NOW);
     expect(journeys.find((j) => j.id === 'attio-rec-p')?.venture).toBe('launchpad-cohort');
     expect(journeys.find((j) => j.id === 'attio-rec-c')?.venture).toBe('vantage');
@@ -129,7 +129,7 @@ describe('classifyVenture', () => {
 
 describe('Attio contact join — the person behind the deal (AC52)', () => {
   const dealWithRefs = (): AttioDeal => ({
-    ...rawDeal({ id: 'rec-9', name: 'Calder Holdings automation' }),
+    ...rawDeal({ id: 'rec-9', name: 'monroe Holdings — automation' }),
     values: {
       ...rawDeal({ id: 'rec-9' }).values,
       associated_people: [{ target_record_id: 'person-1' }],
@@ -141,27 +141,27 @@ describe('Attio contact join — the person behind the deal (AC52)', () => {
       [
         'person-1',
         {
-          person: 'Reese Calder',
-          email: 'reese@example.com',
-          phone: '+15550100442',
+          person: 'Riley Monroe',
+          email: 'riley@acmeholdings.example.com',
+          phone: '+15550100311',
           role: 'Executive leadership (C-level)',
-          linkedin: 'https://linkedin.com/in/reesecalder-example',
+          linkedin: 'https://linkedin.com/in/riley-monroe-example',
         },
       ],
     ]),
-    companies: new Map([['company-1', 'Calder Holdings LLC']]),
+    companies: new Map([['company-1', 'monroe Holdings LLC']]),
   };
 
   test('joined contacts fill person, email, phone, role, company, linkedin', () => {
     const { journeys } = mapAttioDeals([dealWithRefs()], NOW, contacts);
     expect(journeys).toHaveLength(1);
     const j = journeys[0];
-    expect(j.person).toBe('Reese Calder');
-    expect(j.email).toBe('reese@example.com');
-    expect(j.phone).toBe('+15550100442');
+    expect(j.person).toBe('Riley Monroe');
+    expect(j.email).toBe('riley@acmeholdings.example.com');
+    expect(j.phone).toBe('+15550100311');
     expect(j.role).toBe('Executive leadership (C-level)');
-    expect(j.company).toBe('Calder Holdings LLC');
-    expect(j.linkedin).toBe('https://linkedin.com/in/reesecalder-example');
+    expect(j.company).toBe('monroe Holdings LLC');
+    expect(j.linkedin).toBe('https://linkedin.com/in/riley-monroe-example');
     expect(FunnelJourneySchema.parse(j)).toBeTruthy();
   });
 

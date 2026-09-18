@@ -35,6 +35,25 @@ const NOTES: BrainNote[] = [
   },
 ];
 
+describe('parseNote wikilink hygiene', () => {
+  test('ignores [[...]] inside a fenced code block', () => {
+    const note = parseNote('x.md', '# X\n\nReal [[alpha]].\n\n```json\n{"a": [[beta]]}\n```\n');
+    expect(note.wikilinks).toEqual(['alpha']);
+  });
+
+  test('ignores a target that is JSON rather than a page name', () => {
+    // one imported n8n page carried 25 of these and every one counted as a
+    // broken link until the guard existed
+    const note = parseNote('x.md', '# X\n\n[[{"node": "Respond to Webhook", "type": "main"}]] and [[real-page]].\n');
+    expect(note.wikilinks).toEqual(['real-page']);
+  });
+
+  test('ignores a target that spans a line break', () => {
+    const note = parseNote('x.md', '# X\n\n[[one\ntwo]] [[ok]]\n');
+    expect(note.wikilinks).toEqual(['ok']);
+  });
+});
+
 describe('parseNote', () => {
   test('extracts title from first H1, wikilinks, tags from frontmatter and inline', () => {
     const note = parseNote(NOTES[0].path, NOTES[0].content);

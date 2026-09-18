@@ -2,19 +2,16 @@ import { createGBrainProvider } from '@/lib/connectors/gbrain';
 import { foldersToClusters } from '@/lib/brain-viz';
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
 import { BrainCore } from '@/components/BrainCore';
 import { PillarRadar } from '@/components/PillarRadar';
 import { pillarRadarAxes } from '@/lib/pillar-radar';
 import { Dot, SectionHead } from '@/components/terminal';
+import { DoctorRerun } from '@/components/DoctorRerun';
+import { DoctorRunProvider } from '@/components/DoctorRun';
+import { DoctorChecks } from '@/components/DoctorChecks';
+import { Rise } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
-
-const CHECK_DOT: Record<string, string> = {
-  ok: 'ok',
-  warn: 'warn',
-  error: 'err',
-};
 
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -39,9 +36,9 @@ function Stage({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex-1 rounded-lg-t border border-os-border bg-os-surface p-5">
+    <section className="flex-1 rounded-panel border border-os-border bg-os-surface p-5">
       <div className="flex items-center gap-3">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm-t bg-os-accent font-mono text-xs font-bold text-os-ink">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-ctl bg-os-accent font-mono text-xs font-bold text-os-ink">
           {step}
         </span>
         <div>
@@ -71,7 +68,7 @@ function Arrow({ label }: { label: string }) {
 function FlowStep({ title, detail, dashed = false }: { title: string; detail: string; dashed?: boolean }) {
   return (
     <div
-      className={`flex-1 rounded-md-t border px-3 py-2.5 ${
+      className={`flex-1 rounded-panel border px-3 py-2.5 ${
         dashed ? 'border-dashed border-os-border' : 'border-os-border bg-os-surface2'
       }`}
     >
@@ -81,14 +78,8 @@ function FlowStep({ title, detail, dashed = false }: { title: string; detail: st
   );
 }
 
-// funnel; cached per process so a hot page doesn't hammer the API.
-
-
-// over the full note set) — too heavy to redo per request on a force-dynamic page, so
-// cache per server process with a short TTL. Never throws: an unreadable
-// store yields undefined and the graph falls back to the plain Alex dot.
-
-
+// The Doctor: everything that reports on G-Brain's health, split off
+// the knowledge-graph tab so that view can stay a single, uncluttered screen.
 export default async function DoctorPage() {
   const overview = await createGBrainProvider().overview();
   const { store, doctor } = overview;
@@ -107,13 +98,13 @@ export default async function DoctorPage() {
   );
   const warnings = doctor.checks.filter((c) => c.status !== 'ok');
   const supabaseCheck = doctor.checks.find((c) => /supabase|database/i.test(c.name));
-  const zeroEntropyCheck = doctor.checks.find((c) => /zero|embed/i.test(c.name));
+  const embedCheck = doctor.checks.find((c) => /embed|ollama|zero/i.test(c.name));
   const fallbackActive = supabaseCheck ? supabaseCheck.status !== 'ok' : !doctor.connected;
 
   const layers: { name: string; sub: string; val: string; state: string }[] = [
     {
       name: 'gbrain CLI',
-      sub: 'v0.41 · gbrain CLI · doctor --fast',
+      sub: 'binary path from env · doctor --fast',
       val: doctor.connected ? 'LIVE' : 'UNREACHABLE',
       state: doctor.connected ? 'connected' : 'error',
     },
@@ -124,38 +115,31 @@ export default async function DoctorPage() {
       state: store.totalFiles > 0 ? 'connected' : 'available',
     },
     {
-      name: 'ZeroEntropy',
-      sub: 'hybrid-search embeddings · key in ~/.config/knowledge',
-      val: zeroEntropyCheck ? (zeroEntropyCheck.status === 'ok' ? 'LIVE' : zeroEntropyCheck.status.toUpperCase()) : 'LIVE',
-      state: zeroEntropyCheck && zeroEntropyCheck.status !== 'ok' ? 'available' : 'connected',
+      name: 'Ollama (bge-m3)',
+      sub: 'hybrid-search embeddings · local, 1024d',
+      val: embedCheck ? (embedCheck.status === 'ok' ? 'LIVE' : embedCheck.status.toUpperCase()) : 'LIVE',
+      state: embedCheck && embedCheck.status !== 'ok' ? 'available' : 'connected',
     },
     {
-      name: 'Supabase Second Brain',
-      sub: '1240 pages / 15k chunks · free tier idle-pause',
+      name: 'Supabase vector store',
+      sub: '~900 pages / ~11k chunks · free tier idle-pause',
       val: fallbackActive ? 'PAUSED' : 'LIVE',
       state: fallbackActive ? 'available' : 'connected',
     },
   ];
 
   return (
+    <DoctorRunProvider>
     <div>
-      {/* the engine's health readouts. The graph itself owns /brain, so this
-          page is purely "is the knowledge layer working". */}
-      <PageHeader
-        eyebrow="knowledge core"
-        title="Doctor"
-        caret
-      />
+      <PageHeader eyebrow="engine health" title="Doctor" caret right={<DoctorRerun />} />
 
-
-      {/* G-Brain knowledge core: the PILLAR SPIDER CHART on the LEFT, the
-          radar/health monitor on the RIGHT — a 50/50 split of the row.
-          Stacks on narrow screens. */}
+      {/* Pillar spider chart on the LEFT, the radar/health monitor on the RIGHT
+          — a 50/50 split of the row. Stacks on narrow screens. */}
       <Rise i={1} className="mt-5 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
-        <div className="flex min-h-[480px] flex-col overflow-hidden rounded-lg-t border border-os-border bg-os-surface">
+        <div data-lens="r" className="flex min-h-[480px] flex-col overflow-hidden rounded-panel border border-os-border bg-os-surface">
           <div className="flex items-start justify-between px-4 pt-3.5 font-mono text-[10px] leading-normal text-os-dim">
             <span>
-              <b className="font-medium text-os-muted">pillar health</b> — live roster + runs + SOP coverage
+              <b className="font-medium text-os-muted">pillar health</b> · live roster + runs + SOP coverage
             </span>
           </div>
           <PillarRadar
@@ -165,13 +149,13 @@ export default async function DoctorPage() {
           />
         </div>
 
-        <div className="brain-stage flex min-h-[480px] flex-col overflow-hidden rounded-lg-t border border-os-border">
+        <div data-lens="r" className="brain-stage relative flex min-h-[480px] flex-col overflow-hidden rounded-panel border border-os-border">
           {/* annotations as a real header row — at half width the old absolute
               corners collided with the radar's ring labels */}
           <div className="flex items-start justify-between px-4 pt-3.5 font-mono text-[10px] leading-normal text-os-dim">
             <div className="flex flex-col gap-1">
               <span>
-                <b className="font-medium text-os-muted">doctor</b> —{' '}
+                <b className="font-medium text-os-muted">doctor</b> ·{' '}
                 {doctor.connected ? (warnings.length > 0 ? 'warnings' : 'ok') : 'unreachable'}
               </span>
               <span>
@@ -191,17 +175,16 @@ export default async function DoctorPage() {
             </div>
           </div>
         </div>
-
       </Rise>
 
       {/* Core status: storage layers + doctor-health footer, full width. */}
-      <div className="mt-4 flex flex-col overflow-hidden rounded-lg-t border border-os-border bg-os-surface">
+      <Rise i={2} className="mt-4 flex flex-col overflow-hidden border border-os-border bg-os-surface">
         <div className="border-b border-os-border px-3.5 py-2.5 font-mono text-[10px] uppercase tracking-[0.16em] text-os-dim">
           Storage layers
         </div>
         <div className="flex flex-1 flex-col divide-y divide-os-border">
           {layers.map((layer) => (
-            <div key={layer.name} className="flex flex-1 items-center gap-3 px-3.5 py-3">
+            <div key={layer.name} data-lens="r" className="pressable is-row flex flex-1 items-center gap-3 px-3.5 py-3">
               <Dot state={layer.state} pulse={layer.state === 'connected'} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[12.5px] font-semibold">{layer.name}</div>
@@ -219,21 +202,21 @@ export default async function DoctorPage() {
         </div>
         <div className="flex items-center justify-between border-t border-os-border px-3.5 py-3 font-mono text-[10.5px]">
           <span className="text-os-dim">
-            <b className="font-medium text-os-muted">doctor</b> — health {doctor.healthScore ?? '—'}/100
+            <b className="font-medium text-os-muted">doctor</b> · health {doctor.healthScore ?? '—'}/100
           </span>
           <span className={warnings.length > 0 ? 'text-os-warn' : doctor.connected ? 'text-os-ok' : 'text-os-err'}>
             {doctor.connected ? (warnings.length > 0 ? `${warnings.length} warnings` : 'all green') : 'offline'}
           </span>
         </div>
-      </div>
+      </Rise>
 
       {/* The pipeline: where knowledge lives and how it becomes searchable */}
-      <Rise as="section" i={2} className="mt-8">
+      <Rise as="section" i={3} className="mt-8">
         <SectionHead label="Pipeline" count={`${store.totalFiles} pages on disk`} />
         <div className="flex flex-col gap-2 xl:flex-row xl:items-stretch">
           <Stage step="1" title="Markdown brain-store" caption={storeShort}>
             <div className="text-xs text-os-muted">
-              {store.totalFiles} pages on disk, plain <span className="font-semibold text-os-text">.md</span> files —
+              {store.totalFiles} pages on disk, plain <span className="font-semibold text-os-text">.md</span> files,
               the source of truth. <code className="font-mono text-[11px]">gbrain sync</code> walks the git repo and
               pushes changed pages up.
             </div>
@@ -256,29 +239,16 @@ export default async function DoctorPage() {
 
           <Arrow label="sync · import" />
 
-          <Stage step="2" title="gbrain CLI" caption="chunk · embed · route — the engine between disk and database">
-            <div className="flex items-baseline gap-2">
-              <span className="font-mono text-3xl font-bold">{doctor.healthScore ?? '—'}</span>
-              <span className="font-mono text-xs text-os-dim">/ 100 health{doctor.connected ? '' : ' · CLI unreachable'}</span>
-            </div>
-            <ul className="mt-3 space-y-1.5">
-              {doctor.checks.map((check) => (
-                <li key={check.name} className="flex items-start gap-2 text-[11px]">
-                  <span className={`dot mt-1 ${CHECK_DOT[check.status] ?? 'err'}`} />
-                  <span className="text-os-muted">
-                    <span className="font-semibold text-os-text">{check.name}</span> — {check.message}
-                  </span>
-                </li>
-              ))}
-              {doctor.checks.length === 0 && (
-                <li className="rounded-md-t border border-dashed border-os-border px-3 py-2 font-mono text-[11px] text-os-dim">
-                  doctor offline — {doctor.detail}
-                </li>
-              )}
-            </ul>
+          <Stage step="2" title="gbrain CLI" caption="chunk · embed · route, the engine between disk and database">
+            <DoctorChecks
+              checks={doctor.checks}
+              healthScore={doctor.healthScore}
+              connected={doctor.connected}
+              detail={doctor.detail}
+            />
             <div className="mt-3 flex flex-wrap gap-1">
               {['put', 'get', 'query', 'search', 'sync', 'import', 'export', 'doctor'].map((cmd) => (
-                <span key={cmd} className="rounded-sm-t border border-os-border bg-os-surface2 px-1.5 py-0.5 font-mono text-[10px] text-os-muted">
+                <span key={cmd} data-lens="c" className="rounded-ctl border border-os-border bg-os-surface2 px-1.5 py-0.5 font-mono text-[10px] text-os-muted">
                   {cmd}
                 </span>
               ))}
@@ -287,20 +257,20 @@ export default async function DoctorPage() {
 
           <Arrow label="embed · upsert" />
 
-          <Stage step="3" title="Supabase Postgres + pgvector" caption='"Second Brain" · ZeroEntropy embeddings'>
+          <Stage step="3" title="Supabase Postgres + pgvector" caption="vector store · Ollama bge-m3 embeddings">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-md-t border border-os-border bg-os-surface2 px-3 py-2.5">
-                <div className="font-mono text-xl font-bold">1240</div>
+              <div className="rounded-panel border border-os-border bg-os-surface2 px-3 py-2.5">
+                <div className="font-mono text-xl font-bold">~900</div>
                 <div className="font-mono text-[10px] uppercase tracking-wider text-os-dim">pages · last known</div>
               </div>
-              <div className="rounded-md-t border border-os-border bg-os-surface2 px-3 py-2.5">
-                <div className="font-mono text-xl font-bold">15k</div>
+              <div className="rounded-panel border border-os-border bg-os-surface2 px-3 py-2.5">
+                <div className="font-mono text-xl font-bold">~11k</div>
                 <div className="font-mono text-[10px] uppercase tracking-wider text-os-dim">chunks · last known</div>
               </div>
             </div>
             <div className="mt-3 space-y-1.5 text-[11px] leading-relaxed text-os-muted">
               <p>
-                Each page is split into chunks; every chunk gets a ZeroEntropy embedding stored in a{' '}
+                Each page is split into chunks; every chunk gets a local bge-m3 embedding stored in a{' '}
                 <code className="font-mono">vector</code> column. Postgres holds both the text (tsvector) and the
                 vectors, so one database answers keyword and semantic queries.
               </p>
@@ -314,10 +284,10 @@ export default async function DoctorPage() {
       </Rise>
 
       {/* How a query actually resolves */}
-      <Rise as="section" i={3} className="mt-8">
+      <Rise as="section" i={4} className="mt-8">
         <SectionHead label="Query path" />
         <p className="mb-3 text-xs text-os-dim">
-          What happens when an agent calls <code className="font-mono">gbrain query</code> — hybrid retrieval with an
+          What happens when an agent calls <code className="font-mono">gbrain query</code>, hybrid retrieval with an
           honest fallback.
         </p>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
@@ -327,7 +297,7 @@ export default async function DoctorPage() {
           <Arrow label="fan out" />
           <div className="flex flex-1 flex-col gap-2">
             <FlowStep title="Keyword search" detail="Postgres tsvector full-text match over chunk text." />
-            <FlowStep title="Vector search" detail="pgvector nearest-neighbor over ZeroEntropy embeddings." />
+            <FlowStep title="Vector search" detail="pgvector nearest-neighbor over Ollama bge-m3 embeddings (1024d)." />
           </div>
           <Arrow label="merge" />
           <FlowStep title="RRF fusion" detail="Reciprocal-rank fusion merges both result lists into one ranking." />
@@ -343,5 +313,6 @@ export default async function DoctorPage() {
         </div>
       </Rise>
     </div>
+    </DoctorRunProvider>
   );
 }

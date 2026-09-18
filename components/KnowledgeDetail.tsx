@@ -3,10 +3,11 @@
 import { useState, type ReactNode } from 'react';
 import { Crown, Play,
   ArrowLeft, Boxes, ChevronDown, ChevronRight, CircleDot, ClipboardList, CornerDownLeft, Database,
-  DollarSign, Download, FileText, FolderTree, GitBranch, HelpCircle, Layers, ListChecks, Loader2,
+  DollarSign, Download, FileText, FolderTree, GitBranch, HelpCircle, Layers, Link2 as LinkIcon, ListChecks, Loader2,
   Puzzle, Search, Server, Sparkles, StickyNote, User, UserCheck, UserCog, Wrench, X, type LucideIcon,
 } from 'lucide-react';
 import type { AgentWiki, ToolWiki } from '@/lib/agent-wiki';
+import type { WikiRef } from '@/lib/brain-wiki';
 import type { BrainSearchResult } from '@/lib/brain';
 import type { Personnel } from '@/lib/personnel';
 import type { MemoryGraph, MemoryNode } from '@/lib/memory-core';
@@ -31,7 +32,7 @@ export function WikiLink({ label, mcp, onClick }: { label: string; mcp?: boolean
     </>
   );
   return onClick ? (
-    <button onClick={onClick} className="inline-flex items-center gap-1 font-mono text-[10.5px] text-os-accent transition-opacity hover:opacity-70">
+    <button onClick={onClick} className="pressable inline-flex items-center gap-1 font-mono text-[10.5px] text-os-accent transition-opacity hover:opacity-70">
       {inner}
     </button>
   ) : (
@@ -47,7 +48,7 @@ function PanelHeader({
   return (
     <div className="flex items-start gap-2 border-b border-os-border px-3 py-2">
       {onBack && (
-        <button onClick={onBack} aria-label="Back" className="mt-0.5 shrink-0 text-os-dim transition-colors hover:text-os-text">
+        <button onClick={onBack} aria-label="Back" className="pressable mt-0.5 shrink-0 text-os-dim hover:text-os-text">
           <ArrowLeft className="h-3.5 w-3.5" />
         </button>
       )}
@@ -56,7 +57,7 @@ function PanelHeader({
         {sub && <div className="truncate font-mono text-[9.5px] text-os-dim">{sub}</div>}
       </div>
       {onClose && (
-        <button onClick={onClose} aria-label="Close" className="shrink-0 text-os-dim transition-colors hover:text-os-text">
+        <button onClick={onClose} aria-label="Close" className="pressable shrink-0 text-os-dim hover:text-os-text">
           <X className="h-3.5 w-3.5" />
         </button>
       )}
@@ -82,9 +83,9 @@ function Row({
     <button
       onClick={onClick}
       disabled={!onClick}
-      className={`group flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-1.5 text-left transition-colors ${
-        onClick ? 'hover:border-os-border-strong' : 'cursor-default'
-      }`}
+      className={`pressable group flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-1.5 text-left ${
+ onClick ? 'hover:border-os-border-strong' : 'cursor-default'
+ }`}
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
       <span className="min-w-0 flex-1">
@@ -177,7 +178,7 @@ export function AgentHarnessCard({
 
         <SectionLabel icon={ListChecks}>instructions{task ? '' : ' · no SOP assigned'}</SectionLabel>
         {task ? (
-          <button onClick={onTask} disabled={!onTask} className={`mb-1 text-left ${onTask ? 'hover:opacity-80' : ''}`}>
+          <button onClick={onTask} disabled={!onTask} className={`pressable mb-1 text-left ${onTask ? 'hover:opacity-80' : ''}`}>
             <span className="font-mono text-[10.5px] text-os-accent">[[{task.title}]]</span>
           </button>
         ) : null}
@@ -200,7 +201,7 @@ export function AgentHarnessCard({
             <span>
               <span className="text-os-dim">reports to</span>{' '}
               {parentAgentId && onAgent ? (
-                <button onClick={() => onAgent(parentAgentId)} className="text-os-accent hover:opacity-80">
+                <button onClick={() => onAgent(parentAgentId)} className="pressable text-os-accent hover:opacity-80">
                   {parentName}
                 </button>
               ) : (
@@ -218,7 +219,7 @@ export function AgentHarnessCard({
               <span className="text-os-dim">sub-agents</span>
               {subAgents.map((s) =>
                 onAgent ? (
-                  <button key={s.id} onClick={() => onAgent(s.id)} className="text-os-accent hover:opacity-80">
+                  <button key={s.id} onClick={() => onAgent(s.id)} className="pressable text-os-accent hover:opacity-80">
                     {s.name}
                   </button>
                 ) : (
@@ -261,7 +262,52 @@ export function AgentHarnessCard({
   );
 }
 
-/** Tool wiki: what it is, how it's wired, and who uses it. */
+/**
+ * The links in and out of a brain-store page, rendered the way the store
+ * writes them. A link that resolves is a chip you can read; a link that
+ * points at nothing is shown struck through rather than hidden, because a
+ * wiki that quietly drops its dead ends is how `Links: 0` survived a
+ * thousand pages unnoticed.
+ */
+export function WikiLinks({
+  label, refs, icon,
+}: {
+  label: string;
+  refs: WikiRef[];
+  icon: LucideIcon;
+}) {
+  if (refs.length === 0) return null;
+  return (
+    <>
+      <SectionLabel icon={icon}>{label} ({refs.length})</SectionLabel>
+      <div className="mb-4 flex flex-wrap gap-1.5">
+        {refs.map((r, i) => (
+          <span key={`${r.target}-${i}`} className={r.slug ? undefined : 'line-through opacity-50'}>
+            <WikiLink label={r.slug ? r.title : r.target} />
+          </span>
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** The `- Key: Value` facts a page states about itself. */
+function WikiFields({ fields }: { fields: Record<string, string> }) {
+  const entries = Object.entries(fields);
+  if (entries.length === 0) return null;
+  return (
+    <div className="mb-3 flex flex-col gap-0.5">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex gap-2 font-mono text-[10.5px]">
+          <span className="shrink-0 text-os-dim">{k}</span>
+          <span className="text-os-muted">{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Tool wiki: what its page says, how it's wired, and who links to it. */
 export function ToolDetailCard({
   wiki, onBack, onClose,
 }: {
@@ -273,11 +319,27 @@ export function ToolDetailCard({
     <div className="flex h-full flex-col">
       <PanelHeader title={wiki.name} sub={wiki.kind} onBack={onBack} onClose={onClose} />
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2.5">
-        <p className="mb-3 text-[11px] leading-relaxed text-os-muted">{wiki.summary}</p>
-        <SectionLabel icon={FileText}>context · {wiki.path}</SectionLabel>
+        {wiki.summary ? (
+          <p className="mb-3 text-[11px] leading-relaxed text-os-muted">{wiki.summary}</p>
+        ) : null}
+        <WikiFields fields={wiki.fields} />
+
+        <SectionLabel icon={FileText}>page{wiki.hasPage ? ` · ${wiki.path}` : ''}</SectionLabel>
         <div className="mb-4 flex items-center gap-2">
-          <WikiLink label={`${wiki.slug}.md`} mcp={wiki.mcp} />
+          {wiki.hasPage ? (
+            <WikiLink label={`${wiki.slug}.md`} mcp={wiki.mcp} />
+          ) : (
+            // Honest: the store has no page for this tool. Saying so is what
+            // turns the panel from decoration into an audit surface.
+            <span className="font-mono text-[10.5px] text-os-dim">
+              no page in the brain-store yet — run `npm run brain:docs`
+            </span>
+          )}
         </div>
+
+        <WikiLinks label="links to" refs={wiki.links} icon={LinkIcon} />
+        <WikiLinks label="linked from" refs={wiki.backlinks} icon={LinkIcon} />
+
         <SectionLabel icon={User}>used by ({wiki.usedBy.length})</SectionLabel>
         {wiki.usedBy.length === 0 ? (
           <p className="font-mono text-[10.5px] text-os-dim">no agents in view</p>
@@ -425,7 +487,7 @@ const fmt = (n: number): string => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10_00
 
 /** The Obsidian core detail: the whole company knowledge brain at a glance —
  *  its size, its knowledge domains, and where it comes from. Opens on the left
- *  when the middle Obsidian constellation is clicked (the operator). */
+ *  when the middle Obsidian constellation is clicked. */
 export function MemoryCoreCard({
   memory, color, onBack, onClose,
 }: {
@@ -500,7 +562,7 @@ export function MemoryCoreCard({
             {loading ? (
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-os-dim" />
             ) : (
-              <button type="submit" aria-label="Search" className="shrink-0 text-os-dim transition-colors hover:text-os-accent">
+              <button type="submit" aria-label="Search" className="pressable shrink-0 text-os-dim hover:text-os-accent">
                 <CornerDownLeft className="h-3.5 w-3.5" />
               </button>
             )}
@@ -513,7 +575,7 @@ export function MemoryCoreCard({
               <button
                 key={s}
                 onClick={() => runSearch(s)}
-                className="rounded-sm-t border border-os-border px-2 py-0.5 font-mono text-[10px] text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+                className="pressable rounded-sm-t border border-os-border px-2 py-0.5 font-mono text-[10px] text-os-muted hover:border-os-border-strong hover:text-os-text"
               >
                 {s}
               </button>
@@ -528,7 +590,7 @@ export function MemoryCoreCard({
               {loading ? 'searching…' : `${results.length} result${results.length === 1 ? '' : 's'}`}
               {provider && !loading ? ` · ${provider}` : ''}
               {' · '}
-              <button onClick={() => { setResults(null); setError(null); setQ(''); }} className="text-os-dim hover:text-os-text">
+              <button onClick={() => { setResults(null); setError(null); setQ(''); }} className="pressable text-os-dim hover:text-os-text">
                 clear
               </button>
             </SectionLabel>
@@ -558,7 +620,7 @@ export function MemoryCoreCard({
         ) : (
           <>
             <p className="mb-4 text-[11px] leading-relaxed text-os-muted">
-              the operator&apos;s entire second brain, distilled: every note, folder and link across the
+              The operator&apos;s entire second brain, distilled: every note, folder and link across the
               brain-store and the Obsidian vault, clustered into the domains the whole OS reasons over.
             </p>
 
@@ -579,7 +641,7 @@ export function MemoryCoreCard({
                 <button
                   key={folder}
                   onClick={() => runSearch(folder)}
-                  className="group flex w-full items-center gap-2 text-left"
+                  className="pressable group flex w-full items-center gap-2 text-left"
                   title={`search "${folder}"`}
                 >
                   <span className="w-28 shrink-0 truncate text-[10.5px] text-os-muted group-hover:text-os-text" title={folder}>{folder}</span>
@@ -600,7 +662,7 @@ export function MemoryCoreCard({
                     <button
                       key={note.id}
                       onClick={() => runSearch(note.label)}
-                      className="group flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-1.5 text-left transition-colors hover:border-os-border-strong"
+                      className="pressable group flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-1.5 text-left hover:border-os-border-strong"
                       title={`search "${note.label}"`}
                     >
                       <span className="min-w-0 flex-1 truncate text-[11px] text-os-muted group-hover:text-os-text">{note.label}</span>
@@ -723,7 +785,7 @@ export function SopTaskDetailCard({
         {/* runnable skill file — yours to download */}
         <button
           onClick={downloadSkill}
-          className="mb-4 flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-2 text-left transition-colors hover:border-os-border-strong"
+          className="pressable mb-4 flex w-full items-center gap-2 rounded-md-t border border-os-border bg-os-surface px-2.5 py-2 text-left hover:border-os-border-strong"
         >
           <Download className="h-3.5 w-3.5 shrink-0 text-os-accent" />
           <span className="min-w-0 flex-1">
@@ -803,7 +865,7 @@ export function SopTaskDetailCard({
         <div className="mb-2 rounded-md-t border border-os-border bg-os-surface">
           <button
             onClick={() => setSkillOpen((v) => !v)}
-            className="flex w-full items-center gap-2 px-2.5 py-2 text-left"
+            className="pressable flex w-full items-center gap-2 px-2.5 py-2 text-left"
           >
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-os-accent" />
             <span className="min-w-0 flex-1">
@@ -818,7 +880,7 @@ export function SopTaskDetailCard({
               <pre className="max-h-64 overflow-auto px-2.5 py-2 font-mono text-[9.5px] leading-relaxed text-os-muted">{pb.skillMarkdown}</pre>
               <button
                 onClick={downloadSkill}
-                className="flex w-full items-center justify-center gap-1.5 border-t border-os-border px-2.5 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim transition-colors hover:text-os-accent"
+                className="pressable flex w-full items-center justify-center gap-1.5 border-t border-os-border px-2.5 py-1.5 font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim hover:text-os-accent"
               >
                 <Download className="h-3 w-3" /> download {pb.skill.slug}.md
               </button>
@@ -826,7 +888,7 @@ export function SopTaskDetailCard({
           )}
         </div>
 
-        <button className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-md-t border border-dashed border-os-border px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text">
+        <button className="pressable mt-1 flex w-full items-center justify-center gap-1.5 rounded-md-t border border-dashed border-os-border px-2.5 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-os-dim hover:border-os-border-strong hover:text-os-text">
           <HelpCircle className="h-3.5 w-3.5" /> need help building this?
         </button>
       </div>
@@ -906,7 +968,7 @@ export function PersonDetailCard({
 }
 
 /** Department-head card — the crown node: its board seat, a real Run, and the
- *  department's SOP skills it presides over (the operator, 2026-08-06). */
+ * department's SOP skills it presides over. */
 export function HeadDetailCard({
   title, deptName, color, boardLead, sops, roleLabel = 'department head', blurb, showSops = true, embed = null, onBack, onClose, onTask,
 }: {
@@ -980,7 +1042,7 @@ export function HeadDetailCard({
         <button
           onClick={run}
           disabled={!boardLead || running}
-          className="mb-1.5 flex w-full items-center justify-center gap-1.5 rounded border border-os-border-strong bg-os-surface2 px-3 py-1.5 text-[11.5px] font-semibold text-os-text transition-colors hover:border-os-dim disabled:opacity-40"
+          className="pressable mb-1.5 flex w-full items-center justify-center gap-1.5 rounded border border-os-border-strong bg-os-surface2 px-3 py-1.5 text-[11.5px] font-semibold text-os-text hover:border-os-dim disabled:opacity-40"
         >
           <Play className="h-3 w-3" /> {running ? 'starting run…' : 'Run heartbeat on the board'}
         </button>

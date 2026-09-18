@@ -54,8 +54,7 @@ export type StateSegment = { text: string; tone: Tone };
 export type PulseFacts = {
   activeAgents: number;
   totalAgents: number;
-  connected: number;
-  totalConnectors: number;
+  connectorsDown: number; // connectors in an ERROR state; not_configured is NOT "down"
   inbound: number;
   health: number | null;
   brainConnected: boolean;
@@ -72,16 +71,31 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
  */
 export function stateOfWorld(f: PulseFacts): StateSegment[] {
   const segs: StateSegment[] = [];
-  const down = Math.max(0, f.totalConnectors - f.connected);
 
   if (f.failedRuns > 0) segs.push({ text: `${plural(f.failedRuns, 'run')} failed`, tone: 'err' });
   if (!f.brainConnected) segs.push({ text: 'G-Brain offline', tone: 'err' });
   else if (f.health != null && f.health < 70) segs.push({ text: `G-Brain degraded ${f.health}/100`, tone: 'warn' });
-  if (down > 0) segs.push({ text: `${plural(down, 'connector')} down`, tone: 'warn' });
+  if (f.connectorsDown > 0) segs.push({ text: `${plural(f.connectorsDown, 'connector')} down`, tone: 'warn' });
   if (f.inbound > 0) segs.push({ text: `${f.inbound} inbound need reply`, tone: 'accent' });
 
   const hadAttention = segs.length > 0;
-  segs.push({ text: `${f.activeAgents}/${f.totalAgents} agents live`, tone: f.activeAgents > 0 ? 'ok' : 'dim' });
+
+  // Mock 3a runs the roster as "3 agents live · 6 idle". Idle is not a
+  // problem, so it never counts toward hadAttention, but leaving it out made
+  // "19/32" a fraction the reader has to do arithmetic on to learn the only
+  // thing it is actually saying: thirteen seats are sitting still.
+  const idle = Math.max(0, f.totalAgents - f.activeAgents);
+  segs.push({ text: `${f.activeAgents} agents live`, tone: f.activeAgents > 0 ? 'ok' : 'dim' });
+  segs.push({ text: `${idle} idle`, tone: 'dim' });
+
+  // The artboard states the brain score at every health ("brain 78/100"),
+  // not only when it has gone bad. A number that appears only on failure
+  // teaches the reader to read its absence as "fine", which is exactly the
+  // habit that let /api/metrics report a null page count for two weeks.
+  if (f.brainConnected && f.health != null && f.health >= 70) {
+    segs.push({ text: `brain ${f.health}/100`, tone: 'ok' });
+  }
+
   if (!hadAttention) segs.unshift({ text: 'All nominal', tone: 'ok' });
 
   return segs;

@@ -18,8 +18,8 @@ const HEATS = new Set(['hot', 'warm', 'cold']);
 const WAITS = new Set(['you', 'them', 'none']);
 
 // 2026-08-18: the seeded-card assertions that used to live here are gone with
-// the seeding — real clients only, so a client with no Slack thread now
-// renders an honest empty card.
+// the seeding. the operator asked for real clients only, so a client with no Slack
+// thread now renders an honest empty card. See slack-clients-real.test.ts.
 
 describe('slackClientBoard', () => {
   test('a client whose name matches a channel gets a LIVE card from the message', () => {

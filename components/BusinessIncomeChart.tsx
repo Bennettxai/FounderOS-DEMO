@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import type { BusinessSeries, IncomeRange, MonthPoint } from '@/lib/bank-statements';
+import { Chip } from '@/components/Pressable';
 
 const RANGES: { label: string; value: IncomeRange }[] = [
-  { label: '30 days', value: 1 },
-  { label: '60 days', value: 2 },
-  { label: '3 months', value: 3 },
-  { label: '6 months', value: 6 },
-  { label: '12 months', value: 12 },
-  { label: 'All time', value: 'all' },
+  { label: '3 mo', value: 3 },
+  { label: '6 mo', value: 6 },
+  { label: 'All', value: 'all' },
 ];
 
 /** What the card plots: deposits, outflow, or what's left after outflow. */
@@ -63,29 +61,21 @@ export function BusinessIncomeChart({ series }: { series: BusinessSeries }) {
             {metric === 'in' ? 'income · bank deposits' : metric === 'out' ? 'outflow · bank debits' : 'net · after money out'}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value as Metric)}
-            className="rounded-sm-t border border-os-border bg-os-bg px-2 py-1 font-mono text-[10px] text-os-muted focus:border-os-border-strong focus:outline-none"
-          >
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex items-center gap-1">
             {METRICS.map((m) => (
-              <option key={m.value} value={m.value}>
+              <Chip key={m.value} on={metric === m.value} onClick={() => setMetric(m.value)}>
                 {m.label}
-              </option>
+              </Chip>
             ))}
-          </select>
-          <select
-            value={String(range)}
-            onChange={(e) => setRange(e.target.value === 'all' ? 'all' : (Number(e.target.value) as IncomeRange))}
-            className="rounded-sm-t border border-os-border bg-os-bg px-2 py-1 font-mono text-[10px] text-os-muted focus:border-os-border-strong focus:outline-none"
-          >
+          </div>
+          <div className="flex items-center gap-1">
             {RANGES.map((r) => (
-              <option key={r.label} value={String(r.value)}>
+              <Chip key={r.label} on={range === r.value} onClick={() => setRange(r.value)}>
                 {r.label}
-              </option>
+              </Chip>
             ))}
-          </select>
+          </div>
         </div>
       </div>
 
@@ -129,7 +119,7 @@ export function BusinessIncomeChart({ series }: { series: BusinessSeries }) {
                     style={{ height: `${h}px`, opacity: hot ? 1 : hovered ? 0.45 : 0.8 }}
                   />
                 </div>
-                <span className={`font-mono text-[9px] transition-colors duration-150 ${hot ? 'text-os-text' : 'text-os-dim'}`}>
+                <span className={`state-fade font-mono text-[9px] ${hot ? 'text-os-text' : 'text-os-dim'}`}>
                   {fmtMonth(m.month)}
                 </span>
               </div>

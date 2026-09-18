@@ -1,29 +1,30 @@
 import Link from 'next/link';
-import { Instagram, Linkedin, Music2, Twitter, Youtube, type LucideIcon } from 'lucide-react';
+import { Instagram, Linkedin, Music2, Youtube } from 'lucide-react';
+import { XLogo } from '@/components/XLogo';
+
+/** Any icon that takes a className: the lucide set and the hand-rolled X mark
+    both satisfy it, and the map does not care which it is holding. */
+type PlatformIcon = React.ComponentType<{ className?: string }>;
 import { getDb } from '@/lib/data';
 import { buildSocialDashboard, syncFromZernioConfig, audienceGrowthPct, PLATFORM_LABELS } from '@/lib/social';
-import { agentRunVolume, runsWithin } from '@/lib/analytics';
-import { splitMetrics, type MetricInput, type MetricTile } from '@/lib/operating-metrics';
-import { attioStatus } from '@/lib/connectors/attio';
-import { wisprStatus } from '@/lib/connectors/wispr';
-import { readStoreNotes } from '@/lib/connectors/gbrain';
-import { stripeSnapshot } from '@/lib/connectors/payments';
-import { unreadCounts } from '@/lib/connectors/email';
-import { beehiivSubscribers } from '@/lib/connectors/beehiiv';
+import { agentRunVolume } from '@/lib/analytics';
+import { splitMetrics, sparkSeries, type MetricTile } from '@/lib/operating-metrics';
+import { gatherOperatingMetrics } from '@/lib/analytics-refresh';
 import type { SocialPlatform } from '@/lib/schemas';
 import type { PieItem } from '@/lib/social-chart';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge, Label, SectionHead, Spark } from '@/components/terminal';
 import { SharePie } from '@/components/SharePie';
-import { Rise } from '@/components/motion';
 import { formatFollowers, GrowthBadge, MiniBars } from '@/components/SocialStats';
+import { RunVolumeCard } from '@/components/RunVolumeCard';
+import { Rise } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
 
-const PLATFORM_ICONS: Record<SocialPlatform, LucideIcon> = {
+const PLATFORM_ICONS: Record<SocialPlatform, PlatformIcon> = {
   instagram: Instagram,
   tiktok: Music2,
-  twitter: Twitter,
+  twitter: XLogo,
   youtube: Youtube,
   linkedin: Linkedin,
 };
@@ -35,69 +36,21 @@ function tileValue(value: number, unit: string): { main: string; small: string }
   return { main: value.toLocaleString('en-US'), small: unit };
 }
 
-// Deterministic spark shape per metric id until per-metric history lands.
-function sparkFor(id: string, value: number): number[] {
-  const seed = [...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  return Array.from({ length: 7 }, (_, i) => {
-    const wobble = ((seed * (i + 3)) % 17) / 17 - 0.5;
-    return Math.max(0, value * (0.82 + 0.18 * (i / 6) + wobble * 0.08));
-  });
-}
-
-// Deterministic rising bars per channel for the by-platform cards.
+// Deterministic rising bars per channel — fallback until a platform has
+// enough real snapshot history (two points) to draw the truth.
 function barsFor(seed: string): number[] {
   const base = [...seed].reduce((s, c) => s + c.charCodeAt(0), 0);
   return Array.from({ length: 12 }, (_, i) => 4 + i * 1.3 + ((base + i * 7) % 5));
 }
 
-function fmtShort(iso: string): string {
-  return new Date(`${iso}T00:00:00Z`)
-    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
-    .toLowerCase();
-}
-
 const fmtCount = (n: number) => n.toLocaleString('en-US');
 
-/** Responsive area chart for daily agent-run counts (real log, honest zeros). */
-function RunVolumeChart({ data }: { data: { date: string; count: number }[] }) {
-  const W = 640;
-  const H = 170;
-  const pad = 8;
-  const max = Math.max(...data.map((d) => d.count), 1);
-  const n = data.length;
-  const xAt = (i: number) => (n <= 1 ? W / 2 : (i / (n - 1)) * W);
-  const yAt = (v: number) => H - pad - (v / max) * (H - pad * 2);
-  const pts = data.map((d, i) => `${xAt(i).toFixed(1)},${yAt(d.count).toFixed(1)}`);
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-[170px] w-full" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="runfill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75].map((g) => (
-        <line key={g} x1="0" x2={W} y1={H * g} y2={H * g} stroke="var(--border)" strokeWidth="1" />
-      ))}
-      <polygon points={`0,${H} ${pts.join(' ')} ${W},${H}`} fill="url(#runfill)" />
-      <polyline
-        points={pts.join(' ')}
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
-  );
-}
-
-function MetricCard({ tile }: { tile: MetricTile }) {
+function MetricCard({ tile, spark }: { tile: MetricTile; spark: number[] }) {
   const up = tile.delta > 0;
   const flat = tile.delta === 0;
   const { main, small } = tileValue(tile.value, tile.unit);
   return (
-    <div className="hoverable flex flex-col gap-2.5 rounded-lg-t border border-os-border bg-os-surface px-[18px] py-4">
+    <div data-lens="r" className="pressable is-row flex flex-col gap-2.5 rounded-lg-t border border-os-border bg-os-surface px-[18px] py-4">
       <div className="flex items-center justify-between gap-2">
         <Label>{tile.label}</Label>
         <span className={`font-mono text-[10px] font-semibold ${flat ? 'text-os-dim' : up ? 'text-os-ok' : 'text-os-err'}`}>
@@ -111,7 +64,7 @@ function MetricCard({ tile }: { tile: MetricTile }) {
         {small && <small className="text-[11px] font-normal tracking-normal text-os-dim">{small}</small>}
       </div>
       <div className="flex items-end justify-between gap-2">
-        <Spark data={sparkFor(tile.id, tile.value)} w={96} h={26} />
+        <Spark data={spark} w={96} h={26} />
         <span className="font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">{tile.source}</span>
       </div>
     </div>
@@ -158,55 +111,26 @@ export default async function AnalyticsPage() {
   // Real agent-run activity — powers the agent-runs tile, the volume chart, and
   // the run-distribution pies.
   const runs = db.agentRuns.recent(2000);
-  const runVolume = agentRunVolume(runs, today, 14);
-  const windowRuns = runVolume.reduce((s, p) => s + p.count, 0);
-  const runs7d = runsWithin(runs, today, 7);
+  const runVolume = agentRunVolume(runs, today, 30);
 
   // Real audience — Zernio snapshot totals + true 7d growth.
   const dash = buildSocialDashboard(db);
   const totalFollowers = dash.totalFollowers;
   const audience7d = audienceGrowthPct(db, 7);
 
-  // Live reads from the wired connectors (parallel; each degrades to pending).
-  const [attio, wispr, stripe, emailUnread, subs] = await Promise.all([
-    attioStatus().catch(() => null),
-    wisprStatus().catch(() => null),
-    stripeSnapshot().catch(() => null),
-    unreadCounts()
-      .then((cs) => cs.reduce((sum, c) => sum + c.unread, 0))
-      .catch(() => null),
-    beehiivSubscribers().catch(() => null),
-  ]);
-  const pipelineDeals = attio?.state === 'connected' ? Number(attio.meta?.deals ?? 0) : null;
-  const dictations = wispr?.state === 'connected' ? Number(wispr.meta?.dictations ?? 0) : null;
-  const stripeAvail = stripe ? Math.round((stripe.available[0]?.amount ?? 0) / 100) : null;
-  let brainPages = 0;
-  try {
-    brainPages = readStoreNotes().length;
-  } catch {
-    brainPages = 0;
-  }
-
-  // Every tile is a real connector read, or honest pending (value === null).
-  const inputs: MetricInput[] = [
-    {
-      id: 'audience',
-      label: 'Audience',
-      unit: 'followers',
-      source: '7d · Zernio',
-      value: totalFollowers || null,
-      delta: audience7d != null ? Math.round(audience7d * 10) / 10 : 0,
-      deltaPct: audience7d != null,
-    },
-    { id: 'subscribers', label: 'Subscribers', unit: 'subs', source: 'Beehiiv', value: subs },
-    { id: 'pipeline', label: 'Open Pipeline', unit: 'deals', source: 'Attio', value: pipelineDeals },
-    { id: 'stripe', label: 'Stripe Available', unit: 'usd', source: 'Stripe', value: stripeAvail },
-    { id: 'agent-runs', label: 'Agent Runs', unit: 'runs', source: 'all time', value: runs.length || null, delta: runs7d },
-    { id: 'unread', label: 'Unread · all inboxes', unit: 'emails', source: 'Email', value: emailUnread },
-    { id: 'brain', label: 'Brain-store Pages', unit: 'pages', source: 'GBrain', value: brainPages },
-    { id: 'dictations', label: 'Dictations', unit: 'dictations', source: 'Wispr Flow', value: dictations },
-  ];
+  // Every tile is a real connector read, or honest pending (value === null) —
+  // the same sweep the /api/analytics/refresh cron snapshots every 15 min.
+  const { inputs, subs } = await gatherOperatingMetrics(db);
   const { live, pending } = splitMetrics(inputs);
+
+  // Real sparklines from snapshot history (per-day last value); a tile with
+  // fewer than two captured days keeps the deterministic placeholder shape.
+  const sparkOf = (id: string, value: number) =>
+    sparkSeries(
+      db.metricSnapshots.history(id, 7, today).map((h) => h.value),
+      id,
+      value,
+    );
 
   // ---- Distribution pies (all real: live snapshots + the real run log) ----
 
@@ -230,6 +154,14 @@ export default async function AnalyticsPage() {
   const tailRuns = rankedAgents.slice(6).reduce((s, [, n]) => s + n, 0);
   if (tailRuns > 0) runsByAgentItems.push({ key: 'other', label: 'Other agents', value: tailRuns });
 
+  // By-platform bars: real follower snapshots (last 12 captures) once a
+  // platform has two, else the deterministic placeholder.
+  const realBarsByPlatform = new Map<SocialPlatform, number[]>();
+  for (const p of dash.platforms) {
+    const snaps = db.social.snapshots(p.platform).map((s) => s.followers).slice(-12);
+    if (snaps.length >= 2) realBarsByPlatform.set(p.platform, snaps);
+  }
+
   // Run outcomes — reliability at a glance.
   const okRuns = runs.filter((r) => r.ok).length;
   const outcomeItems: PieItem[] = [
@@ -249,7 +181,7 @@ export default async function AnalyticsPage() {
       {live.length > 0 && (
         <Rise as="section" i={1} className="mb-6 grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
           {live.map((tile) => (
-            <MetricCard key={tile.id} tile={tile} />
+            <MetricCard key={tile.id} tile={tile} spark={sparkOf(tile.id, tile.value)} />
           ))}
         </Rise>
       )}
@@ -296,20 +228,7 @@ export default async function AnalyticsPage() {
 
       {/* Agent run volume (real log) + awaiting-credentials sidebar */}
       <Rise as="section" i={3} className="mb-6 grid gap-3.5 xl:grid-cols-3">
-        <div className="rounded-lg-t border border-os-border bg-os-surface p-5 xl:col-span-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>Agent run volume · 14d</Label>
-            <span className="font-mono text-[11px] text-os-muted">{windowRuns} runs</span>
-          </div>
-          <div className="mt-4">
-            <RunVolumeChart data={runVolume} />
-          </div>
-          <div className="mt-2 flex justify-between font-mono text-[9.5px] uppercase tracking-[0.12em] text-os-dim">
-            <span>{fmtShort(runVolume[0].date)}</span>
-            <span>{fmtShort(runVolume[Math.floor(runVolume.length / 2)].date)}</span>
-            <span>{fmtShort(runVolume[runVolume.length - 1].date)}</span>
-          </div>
-        </div>
+        <RunVolumeCard data={runVolume} />
 
         <div className="flex flex-col rounded-lg-t border border-os-border bg-os-surface p-5">
           <Label>Awaiting credentials</Label>
@@ -336,7 +255,8 @@ export default async function AnalyticsPage() {
           </div>
           <Link
             href="/integrations"
-            className="mt-3 flex items-center justify-center gap-1.5 rounded-sm-t border border-os-border bg-os-surface2 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-os-muted transition-colors hover:border-os-accent hover:text-os-accent"
+            data-lens="c"
+            className="pressable is-dark mt-3 flex items-center justify-center gap-1.5 rounded-ctl border border-os-border bg-os-surface2 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-os-muted"
           >
             wire connectors → flip to live
           </Link>
@@ -354,11 +274,11 @@ export default async function AnalyticsPage() {
               <Link
                 key={p.platform}
                 href={`/social/${p.platform}`}
-                className="hoverable group rounded-lg-t border border-os-border bg-os-surface p-5"
+                data-lens="r" className="pressable is-row group rounded-lg-t border border-os-border bg-os-surface p-5"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-sm-t bg-os-surface2 transition-colors group-hover:bg-os-accent group-hover:[&>svg]:text-os-ink">
+                    <div className="flex h-8 w-8 items-center justify-center lens-child rounded-ctl bg-os-surface2 group-hover:bg-os-accent group-hover:[&>svg]:text-os-ink">
                       <Icon className="h-4 w-4 text-os-text" />
                     </div>
                     <div>
@@ -372,7 +292,7 @@ export default async function AnalyticsPage() {
                   <div className="font-mono text-[24px] font-semibold tracking-[-0.02em]">
                     {formatFollowers(p.followers)}
                   </div>
-                  <MiniBars bars={barsFor(p.platform)} />
+                  <MiniBars bars={realBarsByPlatform.get(p.platform) ?? barsFor(p.platform)} />
                 </div>
                 <div className="mt-3 h-1 overflow-hidden rounded-sm-t bg-os-surface2">
                   <div className="h-full bg-os-accent opacity-60" style={{ width: `${share}%` }} />

@@ -166,7 +166,7 @@ describe('wheel stage — pillars ride the top arc of a wheel', () => {
   });
 
   test('a whole tree rotated one sector about the hub lands its base on the flank spot', () => {
-    // the expanded-tree wheel (Alex): departments ride the rim in full
+    // the expanded-tree wheel (the operator): departments ride the rim in full
     // form; a step is a RIGID rotation about the hub, so rotating the apex
     // point by ±delta must reproduce the flank spots exactly
     const { hub, delta } = wheelStageGeom(W, H);

@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import { ImapFlow, type FetchMessageObject, type ListResponse, type MessageAddressObject } from 'imapflow';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 import type { CommsItem } from '@/lib/comms';
@@ -11,6 +12,8 @@ import {
   type EmailThread,
   type EmailInboxItem,
 } from '@/lib/email-thread';
+
+import { checkOutboundMail } from '@/lib/mail-guard.mjs';
 
 export type InboxConfig = {
   id: string;
@@ -60,6 +63,11 @@ export async function sendEmailReply(
   if (inboxes.length === 0) return { ok: false, error: 'no inbox configured (set INBOX_n_* in .env.local)' };
   if (!reply.to || reply.to.trim() === '') return { ok: false, error: 'no recipient address' };
   const cfg = inboxes.find((i) => i.id === reply.accountId) ?? inboxes[0];
+  // This route sits behind the app's access gate and defaults to inboxes[0],
+  // so an unapproved recipient here sends as the operator to anyone. Refuse
+  // before we touch SMTP.
+  const allowed = checkOutboundMail({ from: cfg.user, to: reply.to }, env);
+  if (!allowed.ok) return { ok: false, error: allowed.error };
   try {
     const nodemailer = await import('nodemailer');
     const transport = nodemailer.createTransport({
@@ -113,16 +121,63 @@ async function unreadCount(config: InboxConfig): Promise<InboxUnread> {
   }
 }
 
+let unreadCache: { at: number; counts: InboxUnread[] } | null = null;
+
+/**
+ * Every /comms render opened one IMAP connection PER INBOX for these counts, on
+ * top of the message fetch. Same short window as the message cache, and only a
+ * result where at least one inbox answered is kept, so a total outage retries
+ * instead of being pinned.
+ */
 export async function unreadCounts(env: Record<string, string | undefined> = process.env): Promise<InboxUnread[]> {
+  const now = Date.now();
+  if (unreadCache && now - unreadCache.at < EMAIL_CACHE_TTL_MS) return unreadCache.counts;
   const inboxes = parseInboxConfigs(env);
-  return Promise.all(inboxes.map(unreadCount));
+  const counts = await Promise.all(inboxes.map(unreadCount));
+  if (counts.some((c) => !c.error)) unreadCache = { at: Date.now(), counts };
+  return counts;
+}
+
+/**
+ * /comms renders on the server, so every page view used to pay for four fresh
+ * IMAP round trips: connect, TLS, LOGIN, SELECT, FETCH, per inbox. Measured on
+ * the host that was 9.5s while every other page was under 0.4s.
+ *
+ * Deepening the feed to 40 per inbox made that worse, so the result is cached
+ * instead of the depth being given back.
+ *
+ * The TTL deliberately EXCEEDS the 15-minute refresh sweep. A cold render was
+ * measured at 18.4s, so if the window were shorter than the sweep, whoever
+ * opened /comms first after an expiry would eat that wait. Instead the sweep
+ * repopulates the cache before it can expire and the background job pays the
+ * cost. Freshness is then bounded by the sweep, which is the cadence the operator
+ * chose, not by this number.
+ *
+ * Only successes are cached, so a transient IMAP failure retries rather than
+ * being pinned for the window.
+ */
+export const EMAIL_CACHE_TTL_MS = 20 * 60_000;
+let emailCache: { at: number; limit: number; items: CommsItem[] } | null = null;
+
+/** Drops the cache so a reply or a test sees fresh state immediately. */
+export function invalidateEmailCache(): void {
+  emailCache = null;
+  unreadCache = null;
 }
 
 /** Latest message envelopes across every configured inbox, for the Comms feed. */
 export async function latestEmails(
-  limitPerInbox = 5,
+  limitPerInbox = 40,
   env: Record<string, string | undefined> = process.env,
 ): Promise<CommsItem[]> {
+  const now = Date.now();
+  // A cache built at a DEEPER limit already contains everything a shallower
+  // request wants, so serve it. Requiring an exact match meant the home feed
+  // (which asks for 5/inbox) missed the cache warmed for /comms (40/inbox) and
+  // paid the full IMAP cost — measured at 18.2s on the home page.
+  if (emailCache && emailCache.limit >= limitPerInbox && now - emailCache.at < EMAIL_CACHE_TTL_MS) {
+    return emailCache.items;
+  }
   const inboxes = parseInboxConfigs(env);
   const items: CommsItem[] = [];
   await Promise.all(
@@ -165,6 +220,9 @@ export async function latestEmails(
       }
     }),
   );
+  // Only a real result is cached; an empty list may mean every inbox errored,
+  // and pinning that for 90s would turn a blip into a blank comms page.
+  if (items.length > 0) emailCache = { at: Date.now(), limit: limitPerInbox, items };
   return items;
 }
 
@@ -412,6 +470,7 @@ export async function downloadEmailAttachment(
 }
 
 export async function emailStatus(env: Record<string, string | undefined> = process.env): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('email', 'Email', 'email', '4 inboxes · IMAP');
   const inboxes = parseInboxConfigs(env);
   if (inboxes.length === 0) {
     return {

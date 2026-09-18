@@ -8,7 +8,7 @@ import { layoutBrainNodes, polar, type BrainCluster } from '@/lib/brain-viz';
 export function BrainViz({
   clusters,
   health,
-  supabasePages = 1240,
+  supabasePages = 918,
   version = 'v0.41',
   compact = false,
 }: {
@@ -65,7 +65,7 @@ export function BrainViz({
         ))}
       </g>
 
-      {/* middle ring — zeroentropy embeddings */}
+      {/* middle ring — ollama bge-m3 embeddings */}
       <g className="brain-ring r2">
         <circle cx="260" cy="260" r="158" fill="none" stroke="var(--border-strong)" strokeWidth="1" opacity="0.8" />
         {Array.from({ length: 8 }, (_, i) => {
@@ -156,7 +156,7 @@ export function BrainViz({
             BRAIN-STORE · {totalPages} PAGES
           </text>
           <text x="260" y="96" textAnchor="middle" fill="var(--brain-2)">
-            ZEROENTROPY · EMBEDDINGS
+            OLLAMA · BGE-M3 · 1024d
           </text>
           <text x="260" y="44" textAnchor="middle" fill="var(--text-3)">
             SUPABASE · {supabasePages} PAGES · PAUSED

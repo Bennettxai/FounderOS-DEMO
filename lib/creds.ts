@@ -3,11 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 /**
- * Credential resolution for connectors. Alex's keys already live in
- * canonical locations around the machine (~/.config/social/.env,
- * knowledge/.env.agents, ~/.config/mcp.json, project .env files). Connectors
- * resolve from process.env first, then fall back to those files at runtime —
- * no secrets are ever copied into this repo.
+ * Credential resolution for connectors. Everything comes from the environment:
+ * a fresh read of .env.local first (so the connect flow takes effect without a
+ * restart), then process.env, then ONE optional generic file at
+ * ~/.founder-os/.env for a machine that keeps its keys outside the project.
+ * Nothing reaches into any other application's config, and no secret is ever
+ * copied into this repo.
  */
 
 export function parseEnvFile(content: string): Record<string, string> {
@@ -32,19 +33,27 @@ export function parseEnvFile(content: string): Record<string, string> {
   return out;
 }
 
-export function extractMcpEnvKey(claudeJson: unknown, server: string, key: string): string | undefined {
-  const servers = (claudeJson as { mcpServers?: Record<string, { env?: Record<string, string> }> })
-    ?.mcpServers;
-  return servers?.[server]?.env?.[key];
-}
-
 const HOME = os.homedir();
 
+/** The ONE optional fallback file, deliberately generic: a connector must never
+ *  reach into a particular person's machine or another app's config. Override
+ *  it with FOUNDER_OS_CRED_FILE. */
+export function credFilePath(): string {
+  return process.env.FOUNDER_OS_CRED_FILE ?? path.join(HOME, '.founder-os', '.env');
+}
+
+/** Kept as a record so call sites read `CRED_FILES.<whatever>`; every entry is
+ *  the same generic file. There is only one. */
 export const CRED_FILES = {
-  socialMedia: path.join(HOME, '.config/social', '.env'),
-  agentsEnv: path.join(HOME, 'knowledge', '.env.agents'),
-  arcads: path.join(HOME, 'Projects', 'arcads-agent-skills', '.env'),
-  claudeJson: path.join(HOME, '.config/mcp.json'),
+  get socialMedia() {
+    return credFilePath();
+  },
+  get brainAgent() {
+    return credFilePath();
+  },
+  get arcads() {
+    return credFilePath();
+  },
 };
 
 function readEnvFileSafe(filePath: string): Record<string, string> {
@@ -130,25 +139,13 @@ export function resolveCred(name: string, files: string[]): string | undefined {
   return undefined;
 }
 
+/** Attio's key: env only — .env.local, then process.env, then the one generic
+ *  fallback file. */
 export function resolveAttioKey(): string | undefined {
-  if (process.env.ATTIO_API_KEY) return process.env.ATTIO_API_KEY;
-  try {
-    const claudeJson = JSON.parse(fs.readFileSync(CRED_FILES.claudeJson, 'utf8'));
-    return extractMcpEnvKey(claudeJson, 'attio', 'ATTIO_API_KEY');
-  } catch {
-    return undefined;
-  }
+  return resolveCred('ATTIO_API_KEY', [credFilePath()]);
 }
 
-/** ManyChat's key lives in ~/.config/mcp.json (the manychat MCP registration),
- *  same reuse pattern as Attio. .env.local / process.env still win. */
+/** ManyChat's key, resolved exactly the same way. */
 export function resolveManychatKey(): string | undefined {
-  const direct = readEnvLocal().MANYCHAT_API_KEY ?? process.env.MANYCHAT_API_KEY;
-  if (direct) return direct;
-  try {
-    const claudeJson = JSON.parse(fs.readFileSync(CRED_FILES.claudeJson, 'utf8'));
-    return extractMcpEnvKey(claudeJson, 'manychat', 'MANYCHAT_API_KEY');
-  } catch {
-    return undefined;
-  }
+  return resolveCred('MANYCHAT_API_KEY', [credFilePath()]);
 }

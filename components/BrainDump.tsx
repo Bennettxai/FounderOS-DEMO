@@ -9,6 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff, BrainCircuit, Upload } from 'lucide-react';
+import { AsyncButton } from '@/components/AsyncButton';
 import { VENTURES } from '@/lib/ventures';
 
 const FOLDERS = ['inbox', 'ideas', 'people', 'companies', 'meetings', 'projects', 'writing'];
@@ -158,14 +159,15 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
   };
 
   if (compact) {
-    // ONE untitled part (Alex): a wide, short capture bar tucked across the
+    // ONE untitled part (the operator): a wide, short capture bar tucked across the
     // top-right whitespace beside the title — type, talk, drop, or upload
     // documents into the brain. Horizontal, not tall: the graph owns the space
     // directly under the title.
     return (
       <div
         {...dropProps}
-        className={`w-full rounded-lg-t border bg-os-surface p-2 transition-colors ${
+        data-lens="r"
+        className={`pressable is-row w-full rounded-panel border bg-os-surface p-2 ${
           dragOver ? 'border-os-accent' : 'border-os-border'
         }`}
       >
@@ -184,10 +186,11 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
             <button
               onClick={listening ? stopListening : startListening}
               title={listening ? 'Stop dictation' : 'Start dictation'}
-              className={`absolute right-0 top-0 flex h-6 w-6 items-center justify-center rounded-sm-t border transition-colors ${
+              data-lens="c"
+              className={`pressable absolute right-0 top-0 flex h-6 w-6 items-center justify-center rounded-ctl border ${
                 listening
                   ? 'animate-pulse border-os-err bg-os-err text-black'
-                  : 'border-os-border bg-os-surface text-os-muted hover:text-os-text'
+                  : 'is-dark border-os-border bg-os-surface text-os-muted'
               }`}
             >
               {listening ? <MicOff className="h-3 w-3" /> : <Mic className="h-3 w-3" />}
@@ -221,18 +224,24 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
           <button
             onClick={() => fileRef.current?.click()}
             title="Choose documents to upload"
-            className="flex shrink-0 items-center gap-1 rounded-sm-t border border-os-border bg-os-surface px-2 py-0.5 font-mono text-[10px] text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+            data-lens="c"
+            className="pressable is-dark flex shrink-0 items-center gap-1 rounded-ctl border border-os-border bg-os-surface px-2 py-0.5 font-mono text-[10px] text-os-muted"
           >
             <Upload className="h-3 w-3" />
             Upload
           </button>
-          <button
-            onClick={save}
-            disabled={!text.trim() || status.kind === 'saving'}
-            className="shrink-0 rounded-sm-t bg-os-text px-2.5 py-0.5 font-mono text-[10px] font-bold text-os-bg transition-opacity disabled:opacity-30"
+          <AsyncButton
+            run={save}
+            tone="primary"
+            busyLabel="saving"
+            doneLabel="embedded"
+            failLabel="save failed"
+            failed={status.kind === 'error'}
+            disabled={!text.trim()}
+            className="shrink-0 !h-[22px] !px-2.5 !text-[10px]"
           >
             Save
-          </button>
+          </AsyncButton>
         </div>
       </div>
     );
@@ -241,7 +250,7 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
   return (
     <div
       {...dropProps}
-      className={`rounded-xl border bg-os-surface p-4 transition-colors ${dragOver ? 'border-os-accent' : 'border-os-border'}`}
+      className={`state-fade rounded-panel border bg-os-surface p-4 ${dragOver ? 'border-os-accent' : 'border-os-border'}`}
     >
       <div className="flex items-center gap-2">
         <BrainCircuit className="h-4 w-4 text-os-muted" />
@@ -282,11 +291,11 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
             <button
               onClick={listening ? stopListening : startListening}
               title={listening ? 'Stop dictation' : 'Start dictation'}
-              className={`absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
-                listening
-                  ? 'animate-pulse border-[#ef4444] bg-[#ef4444] text-black'
-                  : 'border-os-border bg-os-surface text-os-muted hover:text-os-text'
-              }`}
+              className={`pressable absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-ctl border ${
+ listening
+ ? 'animate-pulse border-[#ef4444] bg-[#ef4444] text-black'
+ : 'border-os-border bg-os-surface text-os-muted hover:text-os-text'
+ }`}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
@@ -301,9 +310,9 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
               <button
                 key={v.id}
                 onClick={() => setTags((prev) => (on ? prev.filter((t) => t !== v.brainTag) : [...prev, v.brainTag]))}
-                className={`flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] transition-colors ${
-                  on ? 'text-black' : 'border-os-border text-os-muted hover:text-os-text'
-                }`}
+                className={`pressable flex items-center gap-1 rounded-ctl border px-2 py-0.5 text-[10px] ${
+ on ? 'text-black' : 'border-os-border text-os-muted hover:text-os-text'
+ }`}
                 style={on ? { background: v.color, borderColor: v.color } : undefined}
               >
                 #{v.brainTag}
@@ -314,20 +323,21 @@ export function BrainDump({ compact = false }: { compact?: boolean }) {
           <button
             onClick={save}
             disabled={!text.trim() || status.kind === 'saving'}
-            className="ml-auto rounded-lg bg-os-text px-4 py-1.5 text-xs font-bold text-os-bg transition-opacity disabled:opacity-30"
+            className="pressable ml-auto rounded-ctl bg-os-text px-4 py-1.5 text-xs font-bold text-os-bg transition-opacity disabled:opacity-30"
           >
             {status.kind === 'saving' ? 'Saving…' : 'Save to brain'}
           </button>
         </div>
 
         {status.kind === 'saved' && (
-          <p className="font-mono text-[11px] text-os-muted">
+          <p className="animate-enter font-mono text-[11px] text-os-muted">
+            <span className="animate-pop inline-block">✓</span>{' '}
             {status.embedded
-              ? `✓ saved & embedded → ${status.slug ?? status.detail} — retrievable by agents now`
-              : `✓ saved → brain-store/${status.detail} — embed pending (G-Brain unreachable, will sync later)`}
+              ? `saved & embedded → ${status.slug ?? status.detail} — retrievable by agents now`
+              : `saved → brain-store/${status.detail} — embed pending (G-Brain unreachable, will sync later)`}
           </p>
         )}
-        {status.kind === 'error' && <p className="font-mono text-[11px] text-os-muted">✗ {status.detail}</p>}
+        {status.kind === 'error' && <p className="animate-enter font-mono text-[11px] text-os-muted">✗ {status.detail}</p>}
       </div>
     </div>
   );

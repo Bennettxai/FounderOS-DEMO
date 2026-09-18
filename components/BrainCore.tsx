@@ -72,7 +72,7 @@ export function BrainCore({
           onClick={() => setOpen(false)}
         >
           <div
-            className="panel-in mb-[6vh] mt-[5vh] w-full max-w-2xl rounded-lg-t border border-os-border bg-os-bg2 shadow-[var(--glow)]"
+            className="panel-in mb-[6vh] mt-[5vh] w-full max-w-2xl rounded-panel border border-os-border bg-os-bg2 shadow-[var(--glow)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sticky top-0 flex items-center justify-between border-b border-os-border bg-os-bg2 px-5 py-3.5">
@@ -84,7 +84,7 @@ export function BrainCore({
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Close"
-                className="grid h-7 w-7 place-items-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+                className="pressable grid h-7 w-7 place-items-center rounded-ctl border border-os-border text-os-muted hover:border-os-border-strong hover:text-os-text"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -139,7 +139,7 @@ export function BrainCore({
                     </div>
                     <Link
                       href="/roadmap"
-                      className="shrink-0 rounded-sm-t border border-os-border-strong bg-os-surface2 px-2.5 py-1 text-[11px] font-semibold transition-colors hover:border-os-dim"
+                      className="pressable shrink-0 rounded-ctl border border-os-border-strong bg-os-surface2 px-2.5 py-1 text-[11px] font-semibold hover:border-os-dim"
                     >
                       Roadmap →
                     </Link>

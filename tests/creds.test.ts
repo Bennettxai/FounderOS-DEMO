@@ -4,12 +4,13 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   parseEnvFile,
-  extractMcpEnvKey,
+  credFilePath,
   readEnvLocal,
   upsertEnvLocal,
   removeEnvLocal,
   resolveCred,
   runtimeEnv,
+  CRED_FILES,
 } from '@/lib/creds';
 
 describe('parseEnvFile', () => {
@@ -37,19 +38,19 @@ describe('parseEnvFile', () => {
   });
 });
 
-describe('extractMcpEnvKey', () => {
-  test('pulls an env value out of a claude.json mcpServers entry', () => {
-    const claudeJson = {
-      mcpServers: {
-        attio: { command: 'npx', args: ['attio-mcp'], env: { ATTIO_API_KEY: 'att_secret' } },
-      },
-    };
-    expect(extractMcpEnvKey(claudeJson, 'attio', 'ATTIO_API_KEY')).toBe('att_secret');
+describe('the credential fallback file', () => {
+  test('is a single generic path, overridable by env', () => {
+    const prev = process.env.FOUNDER_OS_CRED_FILE;
+    delete process.env.FOUNDER_OS_CRED_FILE;
+    expect(credFilePath()).toBe(path.join(os.homedir(), '.founder-os', '.env'));
+    process.env.FOUNDER_OS_CRED_FILE = '/tmp/somewhere/.env';
+    expect(credFilePath()).toBe('/tmp/somewhere/.env');
+    if (prev === undefined) delete process.env.FOUNDER_OS_CRED_FILE;
+    else process.env.FOUNDER_OS_CRED_FILE = prev;
   });
 
-  test('returns undefined when the server or key is missing', () => {
-    expect(extractMcpEnvKey({}, 'attio', 'ATTIO_API_KEY')).toBeUndefined();
-    expect(extractMcpEnvKey({ mcpServers: { attio: {} } }, 'attio', 'ATTIO_API_KEY')).toBeUndefined();
+  test('every CRED_FILES entry is that same one file', () => {
+    expect(new Set(Object.values(CRED_FILES))).toEqual(new Set([credFilePath()]));
   });
 });
 
@@ -58,7 +59,7 @@ describe('env.local as a live credential store (connect flow)', () => {
   const prevOverride = process.env.FOUNDER_OS_ENV_LOCAL;
 
   beforeEach(() => {
-    tmp = path.join(os.tmpdir(), `alex-env-local-${process.pid}-${Math.random().toString(36).slice(2)}`);
+    tmp = path.join(os.tmpdir(), `founder-env-local-${process.pid}-${Math.random().toString(36).slice(2)}`);
     process.env.FOUNDER_OS_ENV_LOCAL = tmp;
   });
   afterEach(() => {
@@ -106,5 +107,25 @@ describe('env.local as a live credential store (connect flow)', () => {
     expect(env.ONLY_PROCESS_KEY).toBe('proc');
     expect(env.ONLY_FILE_KEY).toBe('file');
     delete process.env.ONLY_PROCESS_KEY;
+  });
+});
+
+describe('credential lookups are environment-only', () => {
+  /**
+   * A connector must never read another application's config or a path that
+   * only exists on one person's machine: .env.local, then process.env, then at
+   * most the one generic fallback file. This pins that nothing creeps back in.
+   */
+  test('lib/creds.ts reaches into no app config and no per-person path', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'lib/creds.ts'), 'utf8');
+    expect(src).not.toMatch(/\.claude\.json|mcpServers|social-config|brain-agent|Projects/);
+  });
+
+  test('resolveAttioKey and resolveManychatKey both go through resolveCred', () => {
+    const src = fs.readFileSync(path.join(process.cwd(), 'lib/creds.ts'), 'utf8');
+    for (const fn of ['resolveAttioKey', 'resolveManychatKey']) {
+      const body = src.slice(src.indexOf(`export function ${fn}`));
+      expect(body.slice(0, body.indexOf('\n}'))).toContain('resolveCred(');
+    }
   });
 });

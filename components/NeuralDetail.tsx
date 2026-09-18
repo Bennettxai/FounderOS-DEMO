@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { Agent, AgentRun, Department, Person, SopTask } from '@/lib/schemas';
 import { toolSlugOf, type KnowledgeGraph as KGData } from '@/lib/knowledge-graph';
 import { buildToolWiki } from '@/lib/agent-wiki';
+import type { WikiIndex } from '@/lib/brain-wiki';
 import {
   AgentHarnessCard,
   GraphHumanDetailCard,
@@ -32,7 +33,7 @@ const agoLabel = (iso: string): string => {
 };
 
 export function NeuralDetail({
-  nodeId, graph, agents, departments, people, tasks, runsByAgent, onSelect, onClose,
+  nodeId, graph, agents, departments, people, tasks, runsByAgent, wiki, onSelect, onClose,
 }: {
   nodeId: string;
   graph: KGData;
@@ -41,12 +42,14 @@ export function NeuralDetail({
   people: Person[];
   tasks: SopTask[];
   runsByAgent: Record<string, AgentRun>;
+  /** real brain-store pages for the tool nodes (lib/brain-wiki) */
+  wiki?: WikiIndex;
   onSelect: (nodeId: string) => void;
   onClose: () => void;
 }) {
   const deptName = (id: string) => departments.find((d) => d.id === id)?.name ?? id;
   const chips = (slugs: string[]) =>
-    slugs.map((slug) => ({ slug, name: prettify(slug), mcp: buildToolWiki(slug).mcp }));
+    slugs.map((slug) => ({ slug, name: prettify(slug), mcp: buildToolWiki(slug, [], wiki).mcp }));
   // resolve a slug to this graph's tool node (dept copy or plain id)
   const toolNodeFor = useMemo(
     () => (slug: string) =>
@@ -128,7 +131,7 @@ export function NeuralDetail({
       ...agents.filter((a) => a.tools.includes(slug)).map((a) => a.name),
       ...people.filter((p) => p.tools.includes(slug)).map((p) => p.name),
     ];
-    return <ToolDetailCard wiki={buildToolWiki(slug, users)} onClose={onClose} />;
+    return <ToolDetailCard wiki={buildToolWiki(slug, users, wiki)} onClose={onClose} />;
   }
 
   return null;

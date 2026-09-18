@@ -35,7 +35,12 @@ export function mergeFeed(items: CommsItem[], limit = 50): CommsItem[] {
     .slice(0, limit);
 }
 
-/** Resolve one sender's highest-priority matching contact tag. */
+/**
+ * The contact priority for a piece of text. A tag matches when the tagged
+ * person equals the text, or (for names ≥ 5 chars) appears inside it — so
+ * "Acme Brand" matches "ACME Brand Team" but "Max" can't hijack "Maximilian
+ * Corp". Lowest tier (highest priority) wins on multi-match; undefined if none.
+ */
 export function contactPriority(text: string, tags: ContactTag[]): 1 | 2 | 3 | undefined {
   const hay = text.toLowerCase().trim();
   let best: number | undefined;
@@ -47,16 +52,11 @@ export function contactPriority(text: string, tags: ContactTag[]): 1 | 2 | 3 | u
   return best as 1 | 2 | 3 | undefined;
 }
 
-/**
- * Stamp each feed item with its contact priority. A tag matches when the
- * tagged person equals the sender, or (for names ≥ 5 chars) appears inside
- * it — so "Acme Brand" matches "ACME Brand Team" but "Max" can't hijack
- * "Maximilian Corp". Lowest tier (highest priority) wins on multi-match.
- */
+/** Stamp each feed item with its contact priority (see contactPriority). */
 export function annotatePriorities(items: CommsItem[], tags: ContactTag[]): CommsItem[] {
   if (tags.length === 0) return items;
   return items.map((item) => {
-    const best = contactPriority(item.sender ?? item.title, tags);
-    return best === undefined ? item : { ...item, priority: best as 1 | 2 | 3 };
+    const p = contactPriority(item.sender ?? item.title, tags);
+    return p === undefined ? item : { ...item, priority: p };
   });
 }

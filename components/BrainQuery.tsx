@@ -31,7 +31,7 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
 
   const statusLine =
     state.phase === 'busy'
-      ? 'querying — hybrid (local + zeroentropy)…'
+      ? 'querying — hybrid (local + bge-m3)…'
       : state.phase === 'done'
         ? `${state.hits.length} hits · "${state.query}"${fallbackActive ? ' · local fallback (supabase paused)' : ''}`
         : state.phase === 'error'
@@ -61,7 +61,11 @@ export function BrainQuery({ fallbackActive }: { fallbackActive: boolean }) {
         </div>
         {state.phase === 'done' &&
           state.hits.map((hit) => (
-            <div key={hit.title} className="rounded-sm-t px-[11px] py-[9px] transition-colors hover:bg-os-surface2">
+            <div
+              key={hit.title}
+              data-lens="r"
+              className="pressable is-row rounded-ctl border border-transparent px-[11px] py-[9px]"
+            >
               <div className="flex items-baseline gap-2 font-mono text-[11.5px] text-os-text">
                 <span className="text-os-accent">▸</span>
                 <span className="min-w-0 flex-1 truncate">{hit.title}</span>

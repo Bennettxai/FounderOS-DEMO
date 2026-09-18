@@ -2,7 +2,7 @@ import type { Agent } from '@/lib/schemas';
 
 /**
  * The content-creation crew: the Marketing/Growth pillar, where the content
- * agent (`social-agent`) and its Postly publisher + creative workers live. The
+ * agent (`social-agent`) and its Zernio publisher + creative workers live. The
  * lead comes first, then the workers alphabetically.
  */
 export const CONTENT_DEPT_ID = 'dept-marketing-growth';

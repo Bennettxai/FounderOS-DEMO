@@ -8,7 +8,7 @@
  */
 
 /** Where both placements send people. */
-export const COHORT_URL = 'https://thefounderos.com';
+export const COHORT_URL = 'https://founderos.example.com';
 
 /** The line that sits at the bottom of every page. */
 export const COHORT_CTA =

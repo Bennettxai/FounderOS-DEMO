@@ -229,7 +229,7 @@ describe('distillMemoryGraph', () => {
 
   test('de-clumps piled-up projections: linked notes separate, inside the unit disc', () => {
     // PCA regularly dumps most notes onto one spot — the constellation must
-    // still read as an Notes graph, not a smear. A linked chain keeps them
+    // still read as an Obsidian graph, not a smear. A linked chain keeps them
     // one community (blob), but every pair still gets breathing room.
     const nodes = [
       ...Array.from({ length: 12 }, (_, i) => page(`clump-${i}`, { vx: 0.01, vy: 0.02 })),
@@ -249,7 +249,7 @@ describe('distillMemoryGraph', () => {
     }
   });
 
-  test('default cap keeps the open Notes graph light (120 pages)', () => {
+  test('default cap keeps the open Obsidian graph light (120 pages)', () => {
     const nodes = [
       ...Array.from({ length: 620 }, (_, i) => page(`n-${i}`, { vx: (i % 25) / 25 - 0.5, vy: Math.floor(i / 25) / 26 - 0.5 })),
       hub('ideas'),
@@ -264,26 +264,26 @@ describe('distillMemoryGraph', () => {
     // alone the archive barely survives the cap. With centerFolder it keeps
     // at least the quota AND its component anchors at the center.
     const archive = Array.from({ length: 80 }, (_, i) =>
-      page(`arc${String(i).padStart(2, '0')}`, { folder: 'Chat Archive', vx: 0.5, vy: 0.2, wordCount: 50 + i }));
+      page(`arc${String(i).padStart(2, '0')}`, { folder: 'Claude Archive', vx: 0.5, vy: 0.2, wordCount: 50 + i }));
     const webby = Array.from({ length: 40 }, (_, i) => page(`w${String(i).padStart(2, '0')}`, { vx: -0.3, vy: -0.1 }));
-    const edges: BrainGraphEdge[] = [hub('Chat Archive'), hub('ideas')].flatMap(() => []);
+    const edges: BrainGraphEdge[] = [hub('Claude Archive'), hub('ideas')].flatMap(() => []);
     const es: BrainGraphEdge[] = [];
     for (let i = 0; i < 40; i++) for (let j = i + 1; j < Math.min(i + 6, 40); j++) es.push(wiki(`w${String(i).padStart(2, '0')}`, `w${String(j).padStart(2, '0')}`));
-    for (let i = 0; i < 80; i++) es.push(member('folder:Chat Archive', `arc${String(i).padStart(2, '0')}`));
-    const nodes = [...archive, ...webby, hub('Chat Archive'), hub('ideas')];
+    for (let i = 0; i < 80; i++) es.push(member('folder:Claude Archive', `arc${String(i).padStart(2, '0')}`));
+    const nodes = [...archive, ...webby, hub('Claude Archive'), hub('ideas')];
 
     const plain = distillMemoryGraph({ nodes, edges: es }, { maxPages: 60 });
-    const plainArc = plain.nodes.filter((n) => n.folder === 'Chat Archive' && n.type === 'page').length;
+    const plainArc = plain.nodes.filter((n) => n.folder === 'Claude Archive' && n.type === 'page').length;
 
-    const boosted = distillMemoryGraph({ nodes, edges: es }, { maxPages: 60, centerFolder: 'Chat Archive', centerQuota: 30 });
-    const arcNotes = boosted.nodes.filter((n) => n.folder === 'Chat Archive' && n.type === 'page');
+    const boosted = distillMemoryGraph({ nodes, edges: es }, { maxPages: 60, centerFolder: 'Claude Archive', centerQuota: 30 });
+    const arcNotes = boosted.nodes.filter((n) => n.folder === 'Claude Archive' && n.type === 'page');
     expect(arcNotes.length, `archive kept ${arcNotes.length} (plain kept ${plainArc})`).toBeGreaterThanOrEqual(30);
     expect(arcNotes.length).toBeGreaterThan(plainArc);
     // and the archive community sits in the MIDDLE: its linked notes' mean
     // radius is well inside the other community's
     const linkedArc = arcNotes.filter((n) => n.links > 0);
     const meanR = (ns: typeof arcNotes) => ns.reduce((s, n) => s + Math.hypot(n.vx, n.vy), 0) / ns.length;
-    const others = boosted.nodes.filter((n) => n.type === 'page' && n.folder !== 'Chat Archive' && n.links > 0);
+    const others = boosted.nodes.filter((n) => n.type === 'page' && n.folder !== 'Claude Archive' && n.links > 0);
     expect(meanR(linkedArc), `archive meanR ${meanR(linkedArc).toFixed(2)} vs others ${meanR(others).toFixed(2)}`).toBeLessThan(meanR(others) * 0.8);
   });
 
@@ -345,10 +345,10 @@ describe('distillMemoryGraph', () => {
     expect(outer / rs.length, `only ${(outer / rs.length * 100).toFixed(0)}% of notes past half-radius`).toBeGreaterThanOrEqual(0.3);
   });
 
-  test('pickRestTier spreads the mini graph around the whole disc, not just the dense blob', () => {
+  test('pickRestTier spreads the host graph around the whole disc, not just the dense blob', () => {
     // 48 heavily-linked pages piled into one sector plus 48 lightly-linked
     // pages evenly around the rim: link-rank alone would show one clump. The
-    // mini Notes view must cover (nearly) every angular sector instead.
+    // mini Obsidian view must cover (nearly) every angular sector instead.
     const heavy = Array.from({ length: 48 }, (_, i) =>
       ({ ...page(`h${String(i).padStart(2, '0')}`, { vx: 0.5 + (i % 7) * 0.012, vy: 0.02 + Math.floor(i / 7) * 0.012 }), cluster: 0, links: 100 - i }) as MemoryNode);
     const light = Array.from({ length: 48 }, (_, i) => {
@@ -421,7 +421,7 @@ const state = (over: Partial<CameraState> = {}): CameraState => ({
 });
 
 describe('cameraRect', () => {
-  test('rest → the full frame, breathed out a touch (Alex: a bit more zoomed out)', () => {
+  test('rest → the full frame, breathed out a touch (the operator: a bit more zoomed out)', () => {
     const r = cameraRect(VIEW, state());
     expect(r.x).toBeLessThan(0);
     expect(r.y).toBeLessThan(0);
@@ -437,10 +437,28 @@ describe('cameraRect', () => {
     expect(cameraRect(VIEW, state({ focusedTeam: true }))).toEqual(cameraRect(VIEW, state()));
   });
 
-  test('selected org node → tighter frame centered on the node, canvas aspect kept', () => {
-    const r = cameraRect(VIEW, state({ focusedTeam: true, selectedNodePos: { x: 440, y: 300 } }));
+  test('selected org node on the home wheel → tighter frame centered on the node, canvas aspect kept', () => {
+    const r = cameraRect(VIEW, state({ selectedNodePos: { x: 440, y: 300 } }));
     expect(r.w).toBeLessThan(880 * 0.7);
     expect(r.w / r.h).toBeCloseTo(880 / 600, 5);
+    expect(r.x + r.w / 2).toBeCloseTo(440, 5);
+    expect(r.y + r.h / 2).toBeCloseTo(300, 5);
+  });
+
+  // the operator 2026-07-30 (revised): inside a focused tree a full dive cropped the
+  // tree, but he still wants "a slight zoom on what I'm looking at, in the
+  // center of the screen". So a node click gives a GENTLE zoom that recentres
+  // the clicked node exactly on screen center (un-clamped), not the full dive.
+  test('selected node INSIDE a focused tree → gentle zoom held on screen center (no pan)', () => {
+    const resting = cameraRect(VIEW, state({ focusedTeam: true }));
+    const r = cameraRect(VIEW, state({ focusedTeam: true, selectedNodePos: { x: 300, y: 120 } }));
+    // a real but SLIGHT zoom-in relative to the resting frame...
+    expect(r.w).toBeLessThan(resting.w);
+    expect(r.w).toBeCloseTo(880 * 0.8, 5);
+    // ...gentler than the home-wheel dive (0.62)...
+    expect(r.w).toBeGreaterThan(880 * 0.62);
+    // ...and held on the SCREEN CENTER — it does NOT pan to the node (panning
+    // swung the frame off-canvas near tree edges and glitched, the operator)
     expect(r.x + r.w / 2).toBeCloseTo(440, 5);
     expect(r.y + r.h / 2).toBeCloseTo(300, 5);
   });
@@ -453,9 +471,9 @@ describe('cameraRect', () => {
     expect(r.y + r.h).toBeLessThanOrEqual(600);
   });
 
-  test('expanded core → dives to a half-canvas frame with breathing room', () => {
+  test('expanded core → eased dive with breathing room (the operator: 25% less zoom)', () => {
     const r = cameraRect(VIEW, state({ coreExpanded: true }));
-    expect(r.w).toBeCloseTo(880 * 0.5, 5);
+    expect(r.w).toBeCloseTo(880 * 0.667, 5);
     expect(r.x + r.w / 2).toBeCloseTo(CORE.x, 5);
     expect(r.y + r.h / 2).toBeCloseTo(CORE.y, 5);
   });

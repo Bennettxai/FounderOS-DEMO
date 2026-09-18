@@ -17,7 +17,7 @@ import {
 export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
   instagram: 'Instagram',
   tiktok: 'TikTok',
-  twitter: 'Twitter / X',
+  twitter: 'X',
   youtube: 'YouTube',
   linkedin: 'LinkedIn',
 };
@@ -26,7 +26,7 @@ export const PLATFORM_LABELS: Record<SocialPlatform, string> = {
 export const PLATFORM_COLORS: Record<SocialPlatform, string> = {
   instagram: '#e1306c',
   tiktok: '#25f4ee',
-  twitter: '#1d9bf0',
+  twitter: '#f2f2f2', // X's mark on a dark ground is white, not Twitter blue
   youtube: '#ff4d4d',
   linkedin: '#0a85c2',
 };
@@ -73,7 +73,7 @@ function growthFor(snapshots: SocialSnapshot[]): SocialGrowth {
 
 /**
  * Record today's follower counts as snapshots. Accounts shaped like the Zernio
- * config (~/.config/social/config.json); untracked platforms and accounts with
+ * config (the optional local social config file); untracked platforms and accounts with
  * no follower count are skipped. Same-day re-sync overwrites. Returns the
  * number of snapshots recorded.
  */
@@ -97,7 +97,7 @@ export function syncSocialSnapshots(
   return recorded;
 }
 
-/** Live sync from Alex's Zernio config — called on every dashboard read. */
+/** Live sync from the operator's Zernio config — called on every dashboard read. */
 export function syncFromZernioConfig(db: FounderDb, today?: string): number {
   return syncSocialSnapshots(db, zernioAccounts(), today ?? new Date().toISOString().slice(0, 10));
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseManyChatWebhook } from '@/lib/connectors/manychat-webhook';
 
-// The body Alex configures in ManyChat's External Request action. The parser
+// The body the operator configures in ManyChat's External Request action. The parser
 // is tolerant of ManyChat's field-name variants ({{contact.id}} etc.).
 describe('parseManyChatWebhook', () => {
   it('maps a canonical payload to an inbound Instagram DM message', () => {

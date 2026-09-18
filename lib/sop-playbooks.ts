@@ -3,14 +3,14 @@ import type { SopTask } from '@/lib/schemas';
 
 /**
  * SOP playbooks — the rich breakdown behind each SOP task card in the /brain
- * knowledge graph. Larp-first, real-ready: a repo-level lookup keyed by task id,
+ * knowledge graph. demo-first, real-ready: a repo-level lookup keyed by task id,
  * so it can later be swapped for engine/DB-backed data without touching the card.
  *
  * Each SOP decomposes into sub-skills (BREAKS INTO), stands on upstream work
  * (BUILDS ON), states what it displaces (WHAT IT REPLACES), and carries the
  * autonomy ladder (human-led → human-assisted → fully-autonomous), the human's
  * role, build notes, a runnable skill file, and a build status. Skill file
- * bodies are generated dummy SKILL.md for now (the operator: "dummy data for the
+ * bodies are generated dummy SKILL.md for now (Alex: "dummy data for the
  * skills for now").
  */
 
@@ -208,7 +208,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
   'sop-whatsapp-worker': {
     autonomy: 'human-assisted',
     categoryPath: 'Communications · Chat Monitoring',
-    description: 'Read 600+ local chats and surface AA + Vantage team messages with money/deadline flags.',
+    description: 'Read 600+ local chats and surface LC + Vantage team messages with money/deadline flags.',
     breaksInto: ['local-reader', 'sender-tagger', 'risk-flagger'],
     buildsOn: ['Full Disk Access'],
     replaces: "Scrolling 600 chats hoping you didn't miss a client asking a question.",
@@ -239,23 +239,6 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     skill: { name: 'Slack Digester', slug: 'slack-digester', blurb: 'Summarizes joined channels and flags mentions and unanswered questions.' },
     status: 'not-started',
   },
-  'sop-mia': {
-    autonomy: 'human-led',
-    categoryPath: 'Communications · Escalations',
-    description: 'The human on the threads that need judgment: VIP replies and 24h chases.',
-    breaksInto: ['queue-review', 'vip-drafting', 'loop-closing'],
-    buildsOn: ['Inbox Triage', 'Unified Feed Composer'],
-    replaces: 'Nothing, this is the human backstop the agents escalate to.',
-    ladder: {
-      humanLed: 'Mia reads the escalation queue and drafts every VIP reply herself.',
-      humanAssisted: 'Agents draft VIP replies; Mia edits and sends.',
-      fullyAutonomous: 'Not the goal, VIP judgment stays human.',
-    },
-    theHuman: "Mia owns tone and judgment on anything an agent wasn't confident to send.",
-    buildNotes: 'This SOP is deliberately human-led. The skill assists drafting; the send stays with Mia.',
-    skill: { name: 'Escalation Handler', slug: 'escalation-handler', blurb: 'Assists a human clearing the escalation queue and chasing stale threads.' },
-    status: 'ready-to-run',
-  },
 
   // ── MARKETING / GROWTH ────────────────────────────────────────────────────
   'sop-social-agent': {
@@ -270,7 +253,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
       humanAssisted: 'It briefs the creative workers and QAs assets; you approve the drop.',
       fullyAutonomous: 'It runs calendar to queue, rejecting off-brand takes with a reason.',
     },
-    theHuman: 'Nadia approves every drop. The pipeline fills the queue; the human opens the gate.',
+    theHuman: 'Nadia Kapoor approves every drop. The pipeline fills the queue; the human opens the gate.',
     buildNotes: "Reject off-brand with a one-line reason so the fix is fast. Log what shipped so tomorrow's brief starts warm.",
     skill: { name: 'Content Pipeline Runner', slug: 'content-pipeline-runner', blurb: 'Turns the calendar into briefs, QAs returned assets, and queues approved posts.' },
     status: 'in-development',
@@ -278,7 +261,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
   'sop-postly-publisher': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Marketing · Cross-Platform Publishing',
-    description: 'One queue out to every @founderos surface with per-platform captions.',
+    description: 'One queue out to every @alexx.ai surface with per-platform captions.',
     breaksInto: ['caption-adapter', 'multi-publish', 'post-verifier'],
     buildsOn: ['Content Pipeline Runner', 'Postly API'],
     replaces: 'Manually reposting the same clip to six apps with tweaked captions.',
@@ -292,7 +275,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     skill: { name: 'Six-Platform Publisher', slug: 'six-platform-publisher', blurb: 'Adapts a caption per platform, publishes via Postly, and verifies each went live.' },
     status: 'ready-to-run',
   },
-  'sop-arcads-creative': {
+  'sop-adsmith-creative': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Marketing · UGC Creative',
     description: 'Vantage ad angles rendered as UGC actors across Veo, Sora and Kling.',
@@ -309,7 +292,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     skill: { name: 'UGC Variant Generator', slug: 'ugc-variant-generator', blurb: 'Renders ad angles as UGC actor variants and delivers a labeled variant sheet.' },
     status: 'in-development',
   },
-  'sop-remotion-editor': {
+  'sop-reelkit-editor': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Marketing · Short-Form Editing',
     description: 'Raw footage to platform-ready crops with captions landing on beat.',
@@ -321,12 +304,12 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
       humanAssisted: 'It transcribes and suggests hooks; you finish the cut.',
       fullyAutonomous: 'It transcribes, picks the hook, renders themed crops, and checks caption timing.',
     },
-    theHuman: 'You set the theme (AA vs Vantage). It executes the cut to spec.',
+    theHuman: 'You set the theme (LC vs Vantage). It executes the cut to spec.',
     buildNotes: 'Check captions land on beat before export. Transcribe locally with Whisper, no upload.',
     skill: { name: 'Short-Form Cutter', slug: 'short-form-cutter', blurb: 'Transcribes source, picks the hook, and renders platform crops with timed captions.' },
     status: 'in-development',
   },
-  'sop-higgsfield-creative': {
+  'sop-renderly-creative': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Marketing · AI Visuals',
     description: 'Stills and motion from the creative brief, culled then upscaled.',
@@ -368,12 +351,12 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     buildsOn: ['Content Pipeline Runner'],
     replaces: 'Nothing, this is the taste layer the pipeline reports into.',
     ladder: {
-      humanLed: 'Nadia sets angles and approves every asset before it ships.',
-      humanAssisted: 'Agents propose angles from performance; Nadia decides.',
+      humanLed: 'Nadia Kapoor sets angles and approves every asset before it ships.',
+      humanAssisted: 'Agents propose angles from performance; Nadia Kapoor decides.',
       fullyAutonomous: 'Not the goal, editorial taste stays human.',
     },
-    theHuman: 'Nadia owns what gets published and why. The agents fill the queue; he opens the gate.',
-    buildNotes: 'Deliberately human-led. The skill surfaces performance and proposes angles; the kill/approve stays with Nadia.',
+    theHuman: 'Nadia Kapoor owns what gets published and why. The agents fill the queue; he opens the gate.',
+    buildNotes: 'Deliberately human-led. The skill surfaces performance and proposes angles; the kill/approve stays with Nadia Kapoor.',
     skill: { name: 'Editorial Gate', slug: 'editorial-gate', blurb: "Surfaces last cycle's numbers and proposed angles for a human approve/kill." },
     status: 'ready-to-run',
   },
@@ -384,24 +367,24 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     categoryPath: 'Sales · Pipeline Ops',
     description: 'Every open deal inspected daily; stalled deals get a next action and an owner.',
     breaksInto: ['deal-puller', 'stall-detector', 'call-briefer'],
-    buildsOn: ['Ledger CRM CRM', 'Payment Links'],
+    buildsOn: ['Ledger CRM', 'Payment Links'],
     replaces: 'A $60-80k/year sales ops manager keeping the board clean.',
     ladder: {
       humanLed: 'You eyeball the board when you remember and hope nothing stalled.',
       humanAssisted: 'It ranks stalled deals and briefs the closer; you work them.',
       fullyAutonomous: 'It inspects, attaches next actions, preps payment links, and logs stage changes same-day.',
     },
-    theHuman: 'Marco works the deals. The agent makes sure none go quiet unnoticed.',
+    theHuman: 'Theo works the deals. The agent makes sure none go quiet unnoticed.',
     buildNotes: 'Past 7 days in stage = stalled. Prep payment links across PayKit/Stripe/FlexPay before calls, not during.',
     skill: { name: 'Pipeline Keeper', slug: 'pipeline-keeper', blurb: 'Ranks stalled deals, attaches next actions, and briefs the closer daily.' },
     status: 'in-development',
   },
-  'sop-aa-lane': {
+  'sop-lc-lane': {
     autonomy: 'fully-autonomous',
-    categoryPath: 'Sales · AA Lane',
-    description: 'Webinar registrants to closed AA deals, with no-shows rebooked in 24h.',
+    categoryPath: 'Sales · LC Lane',
+    description: 'Webinar registrants to closed LC deals, with no-shows rebooked in 24h.',
     breaksInto: ['lead-tracker', 'noshow-rebooker', 'revenue-reporter'],
-    buildsOn: ['WebinarJam', 'Ledger CRM CRM'],
+    buildsOn: ['Ledger CRM'],
     replaces: 'An SDR manually chasing webinar no-shows.',
     ladder: {
       humanLed: 'You export the registrant list and chase no-shows by hand.',
@@ -409,8 +392,8 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
       fullyAutonomous: 'It tracks registration-to-call, rebooks no-shows in 24h, and reconciles payments.',
     },
     theHuman: 'You run the calls. The lane keeps the funnel full and reconciled.',
-    buildNotes: 'The rebooking sequence must fire within 24h of a no-show or the lead cools. Sync every stage change to Ledger CRM.',
-    skill: { name: 'AA Lane Runner', slug: 'aa-lane-runner', blurb: 'Tracks AA webinar leads to booked calls and rebooks no-shows automatically.' },
+    buildNotes: 'The rebooking sequence must fire within 24h of a no-show or the lead cools. Sync every stage change to Ledger.',
+    skill: { name: 'LC Lane Runner', slug: 'lc-lane-runner', blurb: 'Tracks LC webinar leads to booked calls and rebooks no-shows automatically.' },
     status: 'in-development',
   },
   'sop-vantage-lane': {
@@ -418,14 +401,14 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     categoryPath: 'Sales · Vantage Lane',
     description: 'Local-business inbound qualified, booked, and reconciled end to end.',
     breaksInto: ['icp-qualifier', 'calendar-booker', 'revenue-reporter'],
-    buildsOn: ['ICP Definition', 'Ledger CRM CRM'],
+    buildsOn: ['ICP Definition', 'Ledger CRM'],
     replaces: 'An SDR qualifying and booking inbound by hand.',
     ladder: {
       humanLed: 'You read every inbound lead and book calls manually.',
       humanAssisted: 'It qualifies against ICP; you book the good ones.',
-      fullyAutonomous: "It qualifies, books onto Marco's calendar with context, and reconciles payments.",
+      fullyAutonomous: "It qualifies, books onto Theo's calendar with context, and reconciles payments.",
     },
-    theHuman: "Marco closes. The lane decides who's worth his calendar.",
+    theHuman: "Theo closes. The lane decides who's worth his calendar.",
     buildNotes: 'Attach context to every booking so the call starts warm. Qualify hard against the ICP before booking.',
     skill: { name: 'Vantage Lane Runner', slug: 'vantage-lane-runner', blurb: 'Qualifies inbound against ICP and books calls with context attached.' },
     status: 'in-development',
@@ -435,33 +418,33 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     categoryPath: 'Sales · Payment Reconciliation',
     description: 'PayKit customers matched to CRM deals, every mismatch chased to resolution.',
     breaksInto: ['payment-puller', 'deal-matcher', 'mismatch-chaser'],
-    buildsOn: ['PayKit API', 'Ledger CRM CRM'],
+    buildsOn: ['PayKit API', 'Ledger CRM'],
     replaces: 'A bookkeeper cross-checking payments against the CRM by hand.',
     ladder: {
-      humanLed: 'You reconcile PayKit against Ledger CRM in a spreadsheet monthly.',
+      humanLed: 'You reconcile PayKit against Ledger in a spreadsheet monthly.',
       humanAssisted: 'It flags mismatches; you chase them.',
       fullyAutonomous: 'It matches every payment to a deal and chases mismatches to resolution.',
     },
     theHuman: 'You resolve the genuinely ambiguous ones. It clears the obvious matches.',
     buildNotes: 'Flag both directions: payments with no deal AND deals with no payment. Chase to resolution, not just a flag.',
-    skill: { name: 'PayKit Reconciler', slug: 'paykit-reconciler', blurb: 'Matches PayKit payments to Ledger CRM deals and chases every mismatch.' },
+    skill: { name: 'PayKit Reconciler', slug: 'paykit-reconciler', blurb: 'Matches PayKit payments to Ledger deals and chases every mismatch.' },
     status: 'not-started',
   },
   'sop-sales-calls-data': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Sales · Call Intelligence',
-    description: 'Every Fathom call becomes CRM intelligence: objections, commitments, next steps.',
-    breaksInto: ['fathom-ingest', 'objection-extractor', 'crm-writer'],
-    buildsOn: ['Fathom', 'Ledger CRM CRM'],
+    description: 'Every Recall call and Plaud recording becomes CRM intelligence: objections, commitments, next steps.',
+    breaksInto: ['recall-ingest', 'plaud-ingest', 'objection-extractor', 'crm-writer'],
+    buildsOn: ['Recall', 'Plaud', 'Ledger CRM'],
     replaces: 'A closer typing call notes from memory after every call.',
     ladder: {
       humanLed: 'You write call notes from memory, if you write them at all.',
       humanAssisted: 'It extracts objections and next steps; you file them.',
-      fullyAutonomous: 'It ingests each call, extracts the intel, and writes it back to Ledger CRM.',
+      fullyAutonomous: 'It ingests each call, extracts the intel, and writes it back to Ledger.',
     },
     theHuman: 'You run the conversation. It captures what was said and what to do next.',
     buildNotes: 'Tag calls where pricing or competitors came up, those patterns feed the pipeline brief.',
-    skill: { name: 'Call Miner', slug: 'call-miner', blurb: 'Turns Fathom recordings into objections, commitments and next steps in Ledger CRM.' },
+    skill: { name: 'Call Miner', slug: 'call-miner', blurb: 'Turns Recall calls and Plaud in-person recordings into objections, commitments and next steps in Ledger.' },
     status: 'in-development',
   },
   'sop-crm-pulse': {
@@ -469,7 +452,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     categoryPath: 'Sales · CRM Hygiene',
     description: 'A CRM the numbers can be trusted from: dedupe, backfill, verify stages.',
     breaksInto: ['dupe-merger', 'stage-verifier', 'metric-snapshotter'],
-    buildsOn: ['Ledger CRM CRM'],
+    buildsOn: ['Ledger CRM'],
     replaces: 'A RevOps analyst cleaning the CRM every Friday.',
     ladder: {
       humanLed: 'You clean the CRM when the numbers stop making sense.',
@@ -478,10 +461,10 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     },
     theHuman: 'You decide the risky merges. It handles the safe ones and nudges owners on stale records.',
     buildNotes: 'Only backfill what can be backfilled safely. Nudge lane owners rather than guessing stale fields.',
-    skill: { name: 'CRM Pulse', slug: 'crm-pulse', blurb: 'Dedupes, verifies stages, and snapshots pipeline metrics in Ledger CRM.' },
+    skill: { name: 'CRM Pulse', slug: 'crm-pulse', blurb: 'Dedupes, verifies stages, and snapshots pipeline metrics in Ledger.' },
     status: 'not-started',
   },
-  'sop-marco': {
+  'person-theo': {
     autonomy: 'human-led',
     categoryPath: 'Sales · Closing',
     description: 'The human on the phone from hello to signed.',
@@ -489,12 +472,12 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     buildsOn: ['Pipeline Keeper', 'Call Miner'],
     replaces: 'Nothing, this is the closer the whole lane feeds.',
     ladder: {
-      humanLed: 'Marco runs every call live from brief to signature.',
-      humanAssisted: 'Agents prep the brief and objections; Marco runs the call.',
+      humanLed: 'Theo runs every call live from brief to signature.',
+      humanAssisted: 'Agents prep the brief and objections; Theo runs the call.',
       fullyAutonomous: 'Not the goal, closing stays human.',
     },
-    theHuman: 'Marco owns the conversation and the close. Never improvise pricing, use the objection sheet.',
-    buildNotes: "Deliberately human-led. The skill preps the brief and last three touches; the call is Marco's.",
+    theHuman: 'Theo owns the conversation and the close. Never improvise pricing, use the objection sheet.',
+    buildNotes: "Deliberately human-led. The skill preps the brief and last three touches; the call is Theo's.",
     skill: { name: 'Close Call Runner', slug: 'close-call-runner', blurb: 'Preps the pre-call brief and objection sheet for a human closer.' },
     status: 'ready-to-run',
   },
@@ -510,7 +493,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     ladder: {
       humanLed: 'You add up PayKit payments in a spreadsheet at month end.',
       humanAssisted: 'It pulls MTD; you split by venture.',
-      fullyAutonomous: 'It pulls MTD, splits AA vs Vantage, and flags refunds the day they land.',
+      fullyAutonomous: 'It pulls MTD, splits LC vs Vantage, and flags refunds the day they land.',
     },
     theHuman: 'You own the books. It keeps the running total honest between closes.',
     buildNotes: 'Flag refunds and disputes same-day, not at month end. Reconcile the running total against the close.',
@@ -520,14 +503,14 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
   'sop-stripe': {
     autonomy: 'fully-autonomous',
     categoryPath: 'Finance · Income Tracking',
-    description: 'Stripe balance and charges labeled AA, anomalies flagged, payouts noted.',
+    description: 'Stripe balance and charges labeled LC, anomalies flagged, payouts noted.',
     breaksInto: ['balance-puller', 'income-labeler', 'anomaly-flagger'],
     buildsOn: ['Stripe Key'],
-    replaces: 'Checking the Stripe dashboard by hand for the AA total.',
+    replaces: 'Checking the Stripe dashboard by hand for the LC total.',
     ladder: {
       humanLed: 'You open Stripe and eyeball the balance.',
       humanAssisted: 'It pulls charges; you label and reconcile.',
-      fullyAutonomous: 'It pulls balance and charges, labels AA, flags anomalies, and notes payouts.',
+      fullyAutonomous: 'It pulls balance and charges, labels LC, flags anomalies, and notes payouts.',
     },
     theHuman: 'You own the reconciliation. It keeps the income chart current.',
     buildNotes: 'Needs a live key with balance+charges read (restricted keys 403 without it). Flag anomalies against the trailing average.',
@@ -585,23 +568,6 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     skill: { name: 'Processor Health Watch', slug: 'processor-health-watch', blurb: 'Pings every processor, records honest status, and alerts on downtime.' },
     status: 'ready-to-run',
   },
-  'sop-dana': {
-    autonomy: 'human-led',
-    categoryPath: 'Finance · Monthly Close',
-    description: "The human sign-off on every month's numbers and the P&L.",
-    breaksInto: ['statement-import', 'transaction-categorize', 'pnl-delivery'],
-    buildsOn: ['PayKit Income Tracker', 'Stripe Income Tracker'],
-    replaces: 'A $50-70/hr bookkeeper or a monthly accountant fee.',
-    ladder: {
-      humanLed: 'Dana imports statements and reconciles the month by hand.',
-      humanAssisted: 'Agents pre-categorize; Dana reconciles and signs off.',
-      fullyAutonomous: 'Not the goal, the month-end sign-off stays human.',
-    },
-    theHuman: 'Dana owns the numbers the operator sees. Reconcile against what the agents recorded, chase every gap.',
-    buildNotes: "Deliberately human-led. The skill imports statements and pre-categorizes; reconciliation and the P&L commentary are Dana's.",
-    skill: { name: 'Monthly Close', slug: 'monthly-close', blurb: 'Imports statements and pre-categorizes for a human month-end reconciliation.' },
-    status: 'in-development',
-  },
 
   // ── CLIENTS ───────────────────────────────────────────────────────────────
   'sop-client-roster': {
@@ -609,7 +575,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     categoryPath: 'Clients · Roster',
     description: 'One always-current list of every client, health-marked with a reason.',
     breaksInto: ['source-puller', 'health-marker', 'delta-publisher'],
-    buildsOn: ['Ledger CRM CRM', 'PayKit API'],
+    buildsOn: ['Ledger CRM', 'PayKit API'],
     replaces: 'A stale client spreadsheet nobody trusts.',
     ladder: {
       humanLed: 'You keep a client list you update when you remember.',
@@ -633,7 +599,7 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
       humanAssisted: 'It runs the steps; you confirm access and hand off.',
       fullyAutonomous: 'It triggers on closed-won, verifies payment, ships the pack, and books kickoff.',
     },
-    theHuman: 'Rae owns the relationship handoff. The agent runs the mechanical checklist without dropping a step.',
+    theHuman: 'Sasha owns the relationship handoff. The agent runs the mechanical checklist without dropping a step.',
     buildNotes: 'Verify payment landed BEFORE anything ships. Collect all access in one request, not five follow-ups.',
     skill: { name: 'Client Onboarder', slug: 'client-onboarder', blurb: 'Runs the closed-won-to-kickoff checklist, payment-gated, without dropped steps.' },
     status: 'in-development',
@@ -650,12 +616,12 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
       humanAssisted: 'It tracks cadence and scope; you run the calls.',
       fullyAutonomous: 'It runs the cadence, flags slippage, scores health, and raises renewals 30 days out.',
     },
-    theHuman: 'Rae runs the relationship. The agent makes sure no week and no renewal slips.',
+    theHuman: 'Sasha runs the relationship. The agent makes sure no week and no renewal slips.',
     buildNotes: 'No skipped weeks in the cadence. Raise renewals and upsells 30 days out, not at expiry.',
     skill: { name: 'Client Success Runner', slug: 'client-success-runner', blurb: 'Runs the check-in cadence, tracks scope, and flags renewals 30 days out.' },
     status: 'not-started',
   },
-  'sop-rae': {
+  'sop-sasha': {
     autonomy: 'human-led',
     categoryPath: 'Clients · Accounts',
     description: 'The human accountable for every account: kickoffs, QBRs, escalations, renewals.',
@@ -663,12 +629,12 @@ const PLAYBOOKS: Record<string, SopPlaybook> = {
     buildsOn: ['Client Success Runner'],
     replaces: 'Nothing, this is the accountable human every account rolls up to.',
     ladder: {
-      humanLed: 'Rae runs kickoffs, QBRs and escalations personally.',
-      humanAssisted: 'Agents prep health scores and materials; Rae runs the calls.',
+      humanLed: 'Sasha runs kickoffs, QBRs and escalations personally.',
+      humanAssisted: 'Agents prep health scores and materials; Sasha runs the calls.',
       fullyAutonomous: 'Not the goal, account accountability stays human.',
     },
-    theHuman: 'Rae owns every account relationship. Resolve escalations same-day, approve scope before work starts.',
-    buildNotes: "Deliberately human-led. The skill preps QBR materials and health reviews; the relationship stays Rae's.",
+    theHuman: 'Sasha owns every account relationship. Resolve escalations same-day, approve scope before work starts.',
+    buildNotes: "Deliberately human-led. The skill preps QBR materials and health reviews; the relationship stays Sasha's.",
     skill: { name: 'Account Owner', slug: 'account-owner', blurb: 'Preps QBR materials and health reviews for the accountable human.' },
     status: 'ready-to-run',
   },

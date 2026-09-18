@@ -69,7 +69,7 @@ export function CohortModal() {
             type="button"
             onClick={dismiss}
             aria-label="Close"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-sm-t border border-os-border text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+            className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-sm-t border border-os-border text-os-muted transition-[background-color,border-color,color] duration-[var(--dur-press)] hover:border-os-border-strong hover:text-os-text"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -99,13 +99,13 @@ export function CohortModal() {
               onClick={dismiss}
               className="inline-flex items-center justify-center gap-1.5 rounded-sm-t border border-os-accent bg-os-accent px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-os-ink transition-opacity hover:opacity-90"
             >
-              Join the cohort — TheFounderOS.com
+              Join the cohort — founderos.example.com
               <ArrowUpRight className="h-3 w-3" />
             </a>
             <button
               type="button"
               onClick={dismiss}
-              className="rounded-sm-t border border-os-border px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+              className="pressable rounded-sm-t border border-os-border px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-os-muted transition-[background-color,border-color,color] duration-[var(--dur-press)] hover:border-os-border-strong hover:text-os-text"
             >
               Keep exploring
             </button>

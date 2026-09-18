@@ -6,7 +6,7 @@ import path from 'node:path';
 // Own temp DB so ingest is observable in isolation. Secret read at request
 // time, so tests can toggle MANYCHAT_WEBHOOK_SECRET between calls.
 beforeAll(() => {
-  process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'alex-mc-wh-')), 'test.db');
+  process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-mc-wh-')), 'test.db');
   delete process.env.MANYCHAT_WEBHOOK_SECRET;
 });
 

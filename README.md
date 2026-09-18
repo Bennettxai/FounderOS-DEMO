@@ -10,17 +10,17 @@ knowledge graph, and a roster of named AI agents that each own a real job.
 This repository is the **open-source demo build**. It ships seeded with
 realistic placeholder data, so every page is alive out of the box with no
 accounts, no API keys, and nothing to configure. It's the same system taught,
-live, in the [Founder OS cohort](https://www.thefounderos.com); this repo lets
+live, in the [Founder OS cohort](https://www.founderos.example.com); this repo lets
 you explore and run it yourself.
 
 > Want to build your own, live, with guidance? That's what the cohort is for.
-> [thefounderos.com](https://www.thefounderos.com)
+> [founderos.example.com](https://www.founderos.example.com)
 
 ---
 
 ## Quick start
 
-Requires **Node 18+**.
+Requires **Node 22**.
 
 ```bash
 npm install
@@ -62,11 +62,19 @@ npm run seed                 # re-seed the demo DB (idempotent)
 | `/integrations` | Live connections board with honest status for every connector |
 | `/analytics` | Real connector numbers and sparkline history |
 | `/roadmap`, `/reference` | Phases and quarters, and the reference model |
+| `/brand-deals` | Sponsorship pipeline as one slab: hatched funnel, deal volume meters, sortable deals, detail drawer |
+| `/trading` | Brokerage monitor: sleeve value line, agent reasoning, positions, open orders, trade log, guardrail limits with an Autopilot switch |
+| `/chats` | Chat hub: talk to any agent, with the Conductor routing |
+| `/adpilot`, `/blueprint` | Paid-media planner and the system blueprint |
+| `/doctor` | Health checks for the knowledge layer and connectors |
+| `/usage` | Token-burn board across model seats |
 | `/personas` | Persona templates that reskin the OS for other business types |
+
+Every screen runs the same interaction layer: a cursor spotlight across the whole viewport, a hover lens on every control, press-sink buttons, async idle → busy → done affordances, sliding tabs, and slab motion (cards rise in, lines draw, numerals count).
 
 ---
 
-## Architecture: larp-first, real-ready
+## Architecture: demo-first, real-ready
 
 This is the load-bearing design rule. The demo looks alive because of rich
 seeded data, but **every page and API route reads through a repository layer**
@@ -227,4 +235,4 @@ MIT. See [`LICENSE`](LICENSE).
 ---
 
 Built as the reference implementation for **Founder OS**.
-[thefounderos.com](https://www.thefounderos.com)
+[founderos.example.com](https://www.founderos.example.com)

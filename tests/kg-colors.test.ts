@@ -4,11 +4,12 @@ import { describe, expect, test } from 'vitest';
 import { themedNodeColor } from '@/lib/kg-colors';
 
 /**
- * Daylight G-Brain graph pass (2026-08-20): in mono-light the knowledge graph
- * reads like an inverted G-Brain palette — cyan tools, ink agents, royal-blue
- * humans, teal memory core, and every life-area hue swapped for its optical
- * inversion. Data colors route through per-hex CSS vars so only mono-light
- * remaps them and live theme switching keeps working.
+ * Daylight G-Brain graph pass (2026-08-20): the operator wants the knowledge graph
+ * in mono-light to read like the inverted cover graph from the Zero API
+ * carousel — cyan tools, ink agents, royal-blue humans, teal memory core, and
+ * every life-area hue swapped for its optical inversion. Data colors route
+ * through per-hex CSS vars so only mono-light remaps them and live theme
+ * switching keeps working.
  */
 describe('knowledge-graph themed colors', () => {
   test('themedNodeColor wraps hex colors in a per-hex CSS var with the hex as fallback', () => {

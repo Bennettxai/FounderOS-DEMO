@@ -14,7 +14,7 @@ afterEach(() => {
 
 describe('agents table migration', () => {
   test('openDb upgrades a pre-hierarchy agents table in place', () => {
-    const file = path.join(mkdtempSync(path.join(tmpdir(), 'alex-migrate-')), 'old.db');
+    const file = path.join(mkdtempSync(path.join(tmpdir(), 'founder-migrate-')), 'old.db');
     const raw = new Database(file);
     raw.exec(`
       CREATE TABLE agents (

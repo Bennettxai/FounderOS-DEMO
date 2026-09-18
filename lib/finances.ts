@@ -1,8 +1,8 @@
 /**
  * Finances domain — pure, real-ready. Income flows through a processor/account
- * registry (Stripe wired today; PayPal, FanBasis ×2, Wise ×2 are honest pending
- * slots until their keys land). Expenses are seeded SAMPLE data until the
- * statement-ingestion engine (Phase 2) replaces them with parsed bank/CC rows.
+ * registry: the three accounts with real API connections (Stripe ×2, PayKit
+ * LC). Expenses are the operator's declared set fees until a statement upload takes
+ * over.
  *
  * No faked money: an unwired account reports null income, never a zero that
  * reads as "earned nothing". The page renders pending honestly.
@@ -12,14 +12,24 @@
 
 export type IncomeAccount = {
   id: string;
-  processor: string; // 'Stripe' | 'PayPal' | 'FanBasis' | 'Wise'
+  processor: string; // 'Stripe' | 'PayPal' | 'PayKit' | 'Wise'
   label: string; // display label, incl. the business for multi-account processors
   configured: boolean; // does this account have credentials in the env?
   live: boolean; // actually pulling real income right now (Stripe only, for now)
   income: number | null; // month-to-date income in USD (null = pending)
+  // Upper bound, when the source can only bound the month rather than pin it
+  // down (PayKit repeat buyers — see connectors/payments.ts). Null when
+  // `income` IS exact. `income` always stays the PROVEN floor, so a consumer
+  // that ignores this field understates and never overstates.
+  incomeUpper: number | null;
+  // Customers the source could not split. 0 ⇒ `income` is exact.
+  unsplittableCustomers: number;
 };
 
-/** Recent outgoing transfer (e.g. Wise) — money Alex sent out. */
+/** A month figure a source could only bound. `exactUsd` is the proven floor. */
+export type IncomeBand = { exactUsd: number; upperUsd: number; unsplittableCustomers: number };
+
+/** Recent outgoing transfer (e.g. Wise) — money the operator sent out. */
 export type OutgoingTransfer = {
   amountCents: number;
   currency: string;
@@ -29,31 +39,45 @@ export type OutgoingTransfer = {
 };
 
 /**
- * Every processor Alex runs money through. Stripe carries its real
- * month-to-date income when connected; the rest are multi-account-ready slots
- * (two FanBasis for Vantage / Launchpad Cohort, two Wise). `configured` flags
- * which accounts have keys in the env (from `configuredProcessors`); `live`
- * means a real pull is actually happening — true only for Stripe today, so a
- * key-set-but-not-yet-integrated account reads "key set", never a faked number.
+ * The processors with real API connections. LC Stripe carries its real
+ * month-to-date income when connected; the others go live when a real pull is
+ * supplied via `liveIncomeUsd`. `configured` flags which accounts have keys in
+ * the env (from `configuredProcessors`) — a key-set-but-not-pulling account
+ * reads "key set", never a faked number.
+ *
+ * An entry in `liveIncomeUsd` is either a plain exact number or an `IncomeBand`
+ * for a source that can only bound the month. A band contributes its FLOOR to
+ * `income` and carries its ceiling alongside, so the headline total can never
+ * be inflated by a figure nobody can prove.
  */
 export function incomeAccounts(
   stripe: { connected: boolean; mtdUsd: number | null },
   configured: Record<string, boolean> = {},
-  liveIncomeUsd: Record<string, number> = {},
+  liveIncomeUsd: Record<string, number | IncomeBand> = {},
 ): IncomeAccount[] {
   // Non-Stripe accounts light up when a real month-to-date income is supplied
-  // (e.g. FanBasis via its customers API); otherwise they're honest pending.
+  // (e.g. PayKit via its customers API); otherwise they're honest pending.
   const account = (id: string, processor: string, label: string): IncomeAccount => {
-    const live = liveIncomeUsd[id] != null;
+    const value = liveIncomeUsd[id];
+    const live = value != null;
+    const band = typeof value === 'object' ? value : null;
     return {
       id,
       processor,
       label,
       configured: configured[id] ?? false,
       live,
-      income: live ? liveIncomeUsd[id] : null,
+      income: band ? band.exactUsd : live ? (value as number) : null,
+      // Only surface a ceiling when it actually differs from the floor —
+      // a band with nothing unsplittable is an exact figure, not a range.
+      incomeUpper: band && band.unsplittableCustomers > 0 ? band.upperUsd : null,
+      unsplittableCustomers: band ? band.unsplittableCustomers : 0,
     };
   };
+  // Only processors with a real API connection get a card (the operator,
+  // 2026-08-17): PayPal, PayKit · Vantage, and Wise were cut — no keys, no
+  // pull, so their perpetual "awaiting key" boxes were noise. They re-enter
+  // here (one line each) the day a connection actually exists.
   return [
     {
       id: 'stripe',
@@ -62,46 +86,43 @@ export function incomeAccounts(
       configured: configured.stripe ?? stripe.connected,
       live: stripe.connected,
       income: stripe.connected ? stripe.mtdUsd : null,
+      incomeUpper: null, // Stripe reports per-charge; the month is always exact.
+      unsplittableCustomers: 0,
     },
-    account('paypal', 'PayPal', 'PayPal'),
-    account('fanbasis-vantage', 'FanBasis', 'FanBasis · Vantage'),
-    account('fanbasis-lc', 'FanBasis', 'FanBasis · Launchpad Cohort'),
-    account('wise-1', 'Wise', 'Wise · Account 1'),
-    account('wise-2', 'Wise', 'Wise · Account 2'),
+    account('stripe-vantage', 'Stripe', 'Stripe · Vantage'),
+    account('paykit-lc', 'PayKit', 'PayKit · Launchpad Cohort'),
   ];
 }
 
-/** Total month-to-date income across accounts; pending (null) counts as zero. */
+/** Total month-to-date income across accounts; pending (null) counts as zero.
+    This is the PROVEN floor: an account that could only be bounded contributes
+    its exact part. Pair it with `totalIncomeUpper` to show the band. */
 export function totalIncome(accounts: IncomeAccount[]): number {
   return accounts.reduce((sum, a) => sum + (a.income ?? 0), 0);
 }
 
-// ── Expenses: seeded sample until statement ingestion lands (Phase 2) ────────
+/** Ceiling of the same total — every bounded account at its upper end. Equal to
+    `totalIncome` when nothing is unsplittable, which is the usual case. */
+export function totalIncomeUpper(accounts: IncomeAccount[]): number {
+  return accounts.reduce((sum, a) => sum + (a.incomeUpper ?? a.income ?? 0), 0);
+}
+
+/** Whether any account in the set could only be bounded, not pinned down. */
+export function hasUnsplittableIncome(accounts: IncomeAccount[]): boolean {
+  return accounts.some((a) => a.unsplittableCustomers > 0);
+}
+
+// ── Expenses: declared set fees until a statement upload takes over ──────────
 
 export type ExpenseItem = { id: string; label: string; category: string; monthly: number };
 
-/**
- * Placeholder recurring spend for an AI-operator / agency stack. Clearly a
- * SAMPLE in the UI — gets replaced by real parsed transactions once monthly
- * bank + credit-card statement uploads are wired.
- */
-export const SAMPLE_EXPENSES: ExpenseItem[] = [
-  { id: 'claude', label: 'Anthropic · Claude Max', category: 'Software', monthly: 200 },
-  { id: 'openai', label: 'OpenAI · ChatGPT', category: 'Software', monthly: 20 },
-  { id: 'cursor', label: 'Cursor', category: 'Software', monthly: 20 },
-  { id: 'higgsfield', label: 'Higgsfield', category: 'Software', monthly: 39 },
-  { id: 'elevenlabs', label: 'ElevenLabs', category: 'Software', monthly: 22 },
-  { id: 'figma', label: 'Figma', category: 'Software', monthly: 15 },
-  { id: 'notion', label: 'Notion', category: 'Software', monthly: 10 },
-  { id: 'wispr', label: 'Wispr Flow', category: 'Software', monthly: 15 },
-  { id: 'vercel', label: 'Vercel Pro', category: 'Infrastructure', monthly: 20 },
-  { id: 'supabase', label: 'Supabase', category: 'Infrastructure', monthly: 25 },
-  { id: 'domains', label: 'Domains & DNS', category: 'Infrastructure', monthly: 12 },
-  { id: 'attio', label: 'Attio', category: 'CRM & Revenue', monthly: 29 },
-  { id: 'fathom', label: 'Fathom', category: 'CRM & Revenue', monthly: 19 },
-  { id: 'meta-ads', label: 'Meta Ads', category: 'Advertising', monthly: 1500 },
-  { id: 'editor', label: 'Video editor (contract)', category: 'Contractors', monthly: 1200 },
-  { id: 'va', label: 'Virtual assistant', category: 'Contractors', monthly: 800 },
+// A deliberately short placeholder list of recurring costs, shown only until a
+// statement upload takes over (the ledger replaces this section the moment one
+// is ingested). Keep it short and obviously illustrative: real fixed costs
+// belong in the ledger, not hand-typed here.
+export const DECLARED_EXPENSES: ExpenseItem[] = [
+  { id: 'contractor-csm', label: 'Contractor · CSM', category: 'Contractors', monthly: 1000 },
+  { id: 'software-stack', label: 'Core software stack', category: 'Software', monthly: 500 },
 ];
 
 /** Sum of every recurring monthly cost. */

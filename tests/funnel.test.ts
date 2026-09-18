@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
 import {
@@ -9,6 +11,7 @@ import {
   splitFunnelJourneys,
   decayFactor,
   DECAY_FADE_START,
+  STALL_DAYS,
   DECAY_DAYS,
   FUNNEL_STAGES,
 } from '@/lib/funnel';
@@ -409,18 +412,18 @@ describe('funnelSpaceModel', () => {
 
   test('identity fields ride onto the node for the dossier (AC52/AC54)', () => {
     const j = mkJourney('who', 'engaged', [mkTouch('who', 1, 'first_touch', 1)], {
-      person: 'Reese Calder',
-      company: 'Calder Holdings LLC',
+      person: 'Riley Monroe',
+      company: 'monroe Holdings LLC',
       role: 'C-level',
-      linkedin: 'https://linkedin.com/in/reesecalder-example',
-      email: 'reese@example.com',
-      phone: '+15550100442',
+      linkedin: 'https://linkedin.com/in/riley-monroe-example',
+      email: 'riley@acmeholdings.example.com',
+      phone: '+15550100311',
     });
     const [node] = funnelSpaceModel([j], NOW);
-    expect(node.person).toBe('Reese Calder');
-    expect(node.company).toBe('Calder Holdings LLC');
+    expect(node.person).toBe('Riley Monroe');
+    expect(node.company).toBe('monroe Holdings LLC');
     expect(node.role).toBe('C-level');
-    expect(node.linkedin).toBe('https://linkedin.com/in/reesecalder-example');
+    expect(node.linkedin).toBe('https://linkedin.com/in/riley-monroe-example');
   });
 
   test('node radius grows with likelihood-to-buy inside compact 2.5–5.5px bounds', () => {
@@ -520,6 +523,37 @@ describe('attentionQueue — what to act on today (AC55)', () => {
     expect(q.saveNow.map((j) => j.id)).toEqual(['fading-inbound']);
   });
 
+  /**
+   * The band between the rails (found in FounderOS-DEMO #3, 2026-08-06).
+   * A lead quiet past STALL_DAYS (7) runs red on the board, but the fade
+   * does not begin until DECAY_FADE_START (21). saveNow used to test only
+   * "is it fading", so days 8-21 landed in neither rail: flagged as a
+   * problem on the board, absent from the list of what to do about it.
+   * Three real seeded leads sat in that hole.
+   */
+  test('a stalled lead that is not fading yet is still a save, not silence', () => {
+    const q = attentionQueue([lead('late-not-fading', { likelihood: 60 }, 15)], NOW);
+    expect(q.saveNow.map((j) => j.id)).toEqual(['late-not-fading']);
+    expect(q.pushNow).toEqual([]);
+  });
+
+  test('every day of the stalled-but-not-fading band surfaces', () => {
+    for (let days = STALL_DAYS + 1; days <= DECAY_FADE_START; days++) {
+      const q = attentionQueue([lead(`quiet-${days}`, { likelihood: 60 }, days)], NOW);
+      expect(q.saveNow.length, `${days}d quiet should be rescuable`).toBe(1);
+      expect(q.pushNow.length, `${days}d quiet is not a push`).toBe(0);
+    }
+  });
+
+  test('the rails stay mutually exclusive after the widening', () => {
+    for (const status of ['engaged', 'first_touch'] as const) {
+      for (let days = 0; days <= 120; days++) {
+        const q = attentionQueue([lead(`x-${status}-${days}`, { likelihood: 90, status }, days)], NOW);
+        expect(q.pushNow.length + q.saveNow.length, `${status} at ${days}d`).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
   test('empty pipeline yields empty queues', () => {
     expect(attentionQueue([], NOW)).toEqual({ pushNow: [], saveNow: [] });
   });
@@ -537,5 +571,33 @@ describe('orbitSpread — crowded hubs breathe wider', () => {
     expect(orbitSpread(1000)).toBe(2.4);
     // safe on empty clusters
     expect(orbitSpread(0)).toBe(1);
+  });
+});
+
+/**
+ * Mock 3c polish (the operator, 2026-09-07): the view controls are the same chip
+ * vocabulary as the venture tabs — a Flow/Radial toggle plus an Archive (n)
+ * chip — instead of bare text links, and every visible string drops the em
+ * dash for the middot.
+ */
+describe('/funnel mock-3c polish', () => {
+  const page = readFileSync(join(process.cwd(), 'app/funnel/page.tsx'), 'utf8');
+
+  test('Flow / Radial is a chip toggle, Archive is a chip with its count', () => {
+    expect(page).toContain("label: 'Flow'");
+    expect(page).toContain("label: 'Radial'");
+    expect(page).toMatch(/Archive \(\{archived\.length\}\)/);
+    // chips, not text links: the archive control carries the chip frame
+    expect(page).toMatch(/rounded-ctl border[\s\S]{0,600}Archive \(/);
+    // the standalone "live funnel" text link is retired
+    expect(page).not.toContain('live funnel');
+  });
+
+  test('visible copy carries no em dashes', () => {
+    expect(page).toContain('hot + moving · close them');
+    expect(page).toContain('fading toward the archive · highest likelihood first');
+    expect(page).not.toMatch(/decayed — no lead/);
+    expect(page).not.toMatch(/fading — every lead/);
+    expect(page).not.toMatch(/unavailable — last messages/);
   });
 });

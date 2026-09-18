@@ -3,8 +3,9 @@ import os from 'node:os';
 import path from 'node:path';
 
 /**
- * Reads the operator's real Claude Code skills from ~/.claude/skills/<name>/SKILL.md,
- * honest about what's on disk (empty list when the directory is absent). The
+ * Reads the Claude Code skills installed on this host (the user skills
+ * directory, one SKILL.md per skill), honest about what is on disk: an empty
+ * list when the directory is absent. The
  * full SKILL.md is loaded on demand via readSkillMarkdown so the /skills page
  * ships light. Frontmatter parsing is pure + tested.
  */
@@ -21,20 +22,14 @@ const SLUG_RE = /^[a-zA-Z0-9._-]+$/;
 
 const validHalf = (s: string) => SLUG_RE.test(s) && s !== '.' && s !== '..';
 
-/**
- * Where to read real Claude Code skills from. OPT-IN ONLY: this is a public
- * demo, and defaulting to ~/.claude would make any machine that runs it serve
- * its owner's private skill files over HTTP. Set FOUNDER_OS_SKILLS_DIR to a
- * directory you are happy to publish; unset, the catalog stays empty and the
- * page falls back to the seeded skills.
- */
-function skillsDir(): string | null {
-  return process.env.FOUNDER_OS_SKILLS_DIR || null;
+/** Resolved per call so tests (and deploys) can point FOUNDER_OS_SKILLS_DIR elsewhere. */
+function skillsDir(): string {
+  return process.env.FOUNDER_OS_SKILLS_DIR || path.join(os.homedir(), '.claude', 'skills');
 }
 
-/** Installed-plugin skills. Opt-in for the same reason as skillsDir(). */
-function pluginsDir(): string | null {
-  return process.env.FOUNDER_OS_PLUGINS_DIR || null;
+/** ~/.claude/plugins (installed_plugins.json + version cache). Same override pattern. */
+function pluginsDir(): string {
+  return process.env.FOUNDER_OS_PLUGINS_DIR || path.join(os.homedir(), '.claude', 'plugins');
 }
 
 /** plugin name → live installPath, resolved through installed_plugins.json so
@@ -107,8 +102,7 @@ export function skillGroup(name: string): string {
 }
 
 /** List the real skills on disk (metadata only). Empty when the dir is absent. */
-export function readUserSkills(dir: string | null = skillsDir()): CatalogSkill[] {
-  if (!dir) return []; // not opted in
+export function readUserSkills(dir: string = skillsDir()): CatalogSkill[] {
   let entries: fs.Dirent[];
   try {
     entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -143,8 +137,7 @@ export function readUserSkills(dir: string | null = skillsDir()): CatalogSkill[]
 /** The skills the operator uses through Claude Code plugins (superpowers, vercel,
  *  slack, …), slugged `plugin:skill` like the CLI names them. Only the live
  *  version of each plugin is read. Empty when the manifest is absent. */
-export function readPluginSkills(dir: string | null = pluginsDir()): CatalogSkill[] {
-  if (!dir) return []; // not opted in
+export function readPluginSkills(dir: string = pluginsDir()): CatalogSkill[] {
   const home = os.homedir();
   const out: CatalogSkill[] = [];
   for (const [plugin, installPath] of installedPluginPaths(dir)) {
@@ -178,14 +171,11 @@ export function readPluginSkills(dir: string | null = pluginsDir()): CatalogSkil
 /** Read one skill's full SKILL.md — a plain slug from ~/.claude/skills, or a
  *  `plugin:skill` slug resolved through the live plugin install. Null on a bad
  *  slug or missing file (honest). */
-export function readSkillMarkdown(slug: string, dir: string | null = skillsDir()): string | null {
-  if (!dir) return null; // not opted in
+export function readSkillMarkdown(slug: string, dir: string = skillsDir()): string | null {
   if (slug.includes(':')) {
     const parts = slug.split(':');
     if (parts.length !== 2 || !parts.every(validHalf)) return null; // no path traversal
-    const plugins = pluginsDir();
-    if (!plugins) return null;
-    const installPath = installedPluginPaths(plugins).get(parts[0]);
+    const installPath = installedPluginPaths(pluginsDir()).get(parts[0]);
     if (!installPath) return null;
     try {
       return fs.readFileSync(path.join(installPath, 'skills', parts[1], 'SKILL.md'), 'utf8');

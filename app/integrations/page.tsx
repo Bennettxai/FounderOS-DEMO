@@ -1,12 +1,13 @@
 import { allConnectorStatuses } from '@/lib/connectors';
 import { readEnvLocal } from '@/lib/creds';
+import { oauthReadiness } from '@/lib/oauth/store';
 import { connectionCatalog, integrationsByCategory, type CatalogEntry } from '@/lib/integrations-catalog';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
 import { ApiKeys } from '@/components/ApiKeys';
 import { SectionHead } from '@/components/terminal';
 import { ConnectionCard } from '@/components/ConnectionCard';
 import { IntegrationCategory } from '@/components/IntegrationCategory';
+import { Rise } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,10 @@ const GRID = 'grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
 
 export default async function ConnectionsPage() {
   const statuses = await allConnectorStatuses();
-  const catalog = connectionCatalog(statuses, readEnvLocal());
+  const env = readEnvLocal();
+  const catalog = connectionCatalog(statuses, env);
+  // Null for every tile whose provider has no usable authorization-code flow.
+  const oauthFor = (slug: string) => oauthReadiness(slug, env);
   const detailByConnector = new Map(statuses.map((s) => [s.id, s.detail]));
   const guidanceFor = (entry: CatalogEntry) =>
     entry.connectorId ? detailByConnector.get(entry.connectorId) : undefined;
@@ -34,7 +38,7 @@ export default async function ConnectionsPage() {
           <SectionHead label="Your connected tools" count={connected.length} />
           <div className={GRID}>
             {connected.map((entry) => (
-              <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
+              <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} oauth={oauthFor(entry.slug)} />
             ))}
           </div>
         </Rise>
@@ -45,7 +49,7 @@ export default async function ConnectionsPage() {
         <SectionHead label="Popular" count={popular.length} />
         <div className={GRID}>
           {popular.map((entry) => (
-            <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} />
+            <ConnectionCard key={entry.slug} entry={entry} guidance={guidanceFor(entry)} oauth={oauthFor(entry.slug)} />
           ))}
         </div>
       </Rise>
@@ -62,6 +66,7 @@ export default async function ConnectionsPage() {
                     key={tool.slug}
                     entry={byId.get(tool.slug) as CatalogEntry}
                     guidance={guidanceFor(byId.get(tool.slug) as CatalogEntry)}
+                    oauth={oauthFor(tool.slug)}
                   />
                 ))}
               </div>

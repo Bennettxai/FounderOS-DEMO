@@ -1,6 +1,6 @@
 /**
  * GoHighLevel provider — the Launchpad Cohort pipeline
- * (owner@example.com sub-account) mapped into the same
+ * (alex@launchpadcohort.example.com sub-account) mapped into the same
  * FunnelJourney shape as Attio, so both CRMs share one space. Auth is a
  * Private Integration Token (Settings → Private Integrations, read scopes):
  * set GHL_API_KEY + GHL_LOCATION_ID in .env.local. Honest null when unkeyed
@@ -43,7 +43,7 @@ const GHL_VERSION = '2021-07-28';
 
 /**
  * Pipeline-position fraction → canonical hub for open opportunities. Stage
- * names win over position where the semantics are explicit (Alex's Main
+ * names win over position where the semantics are explicit (the operator's Main
  * Pipeline parks "Nurture 2 Weeks" stages late in the list).
  */
 function stageFor(fraction: number, stageName: string): FunnelStage {
@@ -156,8 +156,8 @@ export async function ghlFunnelJourneys(
   now = new Date(),
 ): Promise<{ journeys: FunnelJourney[]; excluded: number; total: number } | null> {
   if ((process.env.FUNNEL_PROVIDER ?? 'attio') !== 'attio') return null; // seed-pinned (tests)
-  const key = resolveCred('GHL_API_KEY', [CRED_FILES.agentsEnv]);
-  const locationId = resolveCred('GHL_LOCATION_ID', [CRED_FILES.agentsEnv]);
+  const key = resolveCred('GHL_API_KEY', [CRED_FILES.brainAgent]);
+  const locationId = resolveCred('GHL_LOCATION_ID', [CRED_FILES.brainAgent]);
   if (!key || !locationId) return null;
   const headers = { Authorization: `Bearer ${key}`, Version: GHL_VERSION, Accept: 'application/json' };
   try {

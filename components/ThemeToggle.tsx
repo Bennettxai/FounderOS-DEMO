@@ -55,7 +55,7 @@ export function ThemeToggle() {
         title="Choose a theme"
         aria-label="Choose a theme"
         aria-expanded={open}
-        className="grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+        className="pressable grid h-[30px] w-[30px] place-items-center rounded-sm-t border border-os-border bg-os-surface text-os-muted hover:border-os-border-strong hover:text-os-text"
       >
         <Palette className="h-3.5 w-3.5" />
       </button>
@@ -70,9 +70,9 @@ export function ThemeToggle() {
               <button
                 key={t}
                 onClick={() => apply(t)}
-                className={`flex w-full items-center gap-2.5 rounded-sm-t px-2 py-1.5 text-left transition-colors ${
-                  active ? 'bg-os-surface-2' : 'hover:bg-os-surface-2'
-                }`}
+                className={`pressable flex w-full items-center gap-2.5 rounded-sm-t px-2 py-1.5 text-left ${
+ active ? 'bg-os-surface-2' : 'hover:bg-os-surface-2'
+ }`}
               >
                 <span className="flex shrink-0 -space-x-1">
                   {meta.swatch.map((c, i) => (

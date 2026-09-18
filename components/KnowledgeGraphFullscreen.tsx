@@ -123,7 +123,7 @@ export function KnowledgeGraphFullscreen({
           <div className="absolute left-5 top-5 z-20 flex items-center gap-2.5 rounded-sm-t border border-os-border-strong bg-os-bg/85 px-2.5 py-1.5 backdrop-blur">
             <div className="flex flex-col">
               <span
-                className="max-w-[150px] truncate text-[12.5px] font-bold leading-tight transition-colors duration-300"
+                className="state-fade max-w-[150px] truncate text-[12.5px] font-bold leading-tight"
                 style={currentDept ? { color: currentDept.color } : undefined}
               >
                 {currentDept?.name ?? 'Pick a pillar'}
@@ -142,10 +142,10 @@ export function KnowledgeGraphFullscreen({
                     title={d.name}
                     aria-label={d.name}
                     aria-current={active ? 'true' : undefined}
-                    className="group grid h-6 w-5 place-items-center"
+                    className="pressable group grid h-6 w-5 place-items-center"
                   >
                     <span
-                      className={`rounded-full transition-all duration-200 group-hover:scale-125 ${
+                      className={`rounded-full transition-[width,height,opacity,transform] duration-200 group-hover:scale-125 ${
                         active ? 'h-3 w-3' : 'h-2.5 w-2.5 opacity-50 group-hover:opacity-100'
                       }`}
                       style={{
@@ -181,7 +181,7 @@ export function KnowledgeGraphFullscreen({
                 title="Drag to resize"
                 className="group absolute -left-2 top-0 z-10 flex h-full w-4 cursor-ew-resize touch-none items-center justify-center"
               >
-                <span className="h-12 w-0.5 rounded-full bg-os-border-strong transition-colors group-hover:bg-os-accent" />
+                <span className="state-fade h-12 w-0.5 rounded-full bg-os-border-strong group-hover:bg-os-accent" />
               </div>
             )}
             <div className="min-w-0 flex-1">{directorySlot}</div>
@@ -191,7 +191,7 @@ export function KnowledgeGraphFullscreen({
         {/* exit fullscreen — top-right */}
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 z-20 flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-surface px-2.5 py-1 font-mono text-[11px] text-os-muted transition-colors hover:border-os-border-strong hover:text-os-text"
+          className="pressable absolute right-5 top-5 z-20 flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-surface px-2.5 py-1 font-mono text-[11px] text-os-muted hover:border-os-border-strong hover:text-os-text"
         >
           <Minimize2 className="h-3.5 w-3.5" /> Exit
         </button>
@@ -206,7 +206,7 @@ export function KnowledgeGraphFullscreen({
               onClick={() => step(-1)}
               aria-label="Previous department"
               title="Previous pillar (←)"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-os-muted transition-colors hover:bg-os-surface hover:text-os-text"
+              className="pressable flex h-10 w-10 items-center justify-center rounded-full text-os-muted hover:bg-os-surface hover:text-os-text"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -220,7 +220,7 @@ export function KnowledgeGraphFullscreen({
               onClick={() => step(1)}
               aria-label="Next department"
               title="Next pillar (→)"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-os-muted transition-colors hover:bg-os-surface hover:text-os-text"
+              className="pressable flex h-10 w-10 items-center justify-center rounded-full text-os-muted hover:bg-os-surface hover:text-os-text"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -240,7 +240,7 @@ export function KnowledgeGraphFullscreen({
           <button
             onClick={onBack}
             aria-label={`Back to the ${currentDept?.name ?? 'graph'} pillar`}
-            className="flex shrink-0 items-center gap-1.5 border-b border-os-border px-3 py-2 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-os-dim transition-colors hover:text-os-text"
+            className="pressable flex shrink-0 items-center gap-1.5 border-b border-os-border px-3 py-2 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-os-dim hover:text-os-text"
           >
             <ArrowLeft className="h-3 w-3 shrink-0" />
             <span className="truncate">

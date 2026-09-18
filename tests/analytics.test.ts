@@ -45,3 +45,45 @@ describe('runsWithin', () => {
     expect(runsWithin(runs, '2026-06-14', 60)).toBe(5);
   });
 });
+
+/**
+ * Mock 5i polish (the operator, 2026-09-07): the run-volume card grows the 7d/14d/30d
+ * range chips, hoverable per-day bars, and the "hover a day / today" footer from
+ * the mock. Interactivity means a client component: the server page hands it the
+ * real 30-day run log and the card slices per range.
+ */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
+
+describe('/analytics mock-5i run-volume card', () => {
+  const card = read('components/RunVolumeCard.tsx');
+  const page = read('app/analytics/page.tsx');
+
+  test('the card is a client component with 7d / 14d / 30d range chips, 14d default', () => {
+    expect(card).toContain("'use client'");
+    expect(card).toMatch(/from '@\/components\/Pressable'/);
+    // chips render {r}d over the ranges array, so pin the array + template
+    expect(card).toMatch(/RANGES[^=]*= \[7, 14, 30\]/);
+    expect(card).toMatch(/\{r\}d/);
+    expect(card).toMatch(/useState[^;]*14/);
+  });
+
+  test('per-day bars respond to hover and zero days keep an honest stub', () => {
+    expect(card).toMatch(/setHovered/);
+    expect(card).toMatch(/Math\.max\(2,/);
+  });
+
+  test('the footer reads first day / hover a day / today', () => {
+    expect(card).toMatch(/hover a day/);
+    expect(card).toMatch(/today/);
+  });
+
+  test('the page feeds the card the real 30-day run log and retires the inline chart', () => {
+    expect(page).toContain('RunVolumeCard');
+    expect(page).toMatch(/agentRunVolume\(runs, today, 30\)/);
+    expect(page).not.toContain('RunVolumeChart');
+    expect(page).not.toContain('runs7d'); // computed and never used
+  });
+});

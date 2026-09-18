@@ -22,9 +22,9 @@ export function CohortBanner() {
           href={COHORT_URL}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-sm-t border border-os-border-strong px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-os-text transition-colors hover:border-os-accent hover:bg-os-surface2 sm:self-auto"
+          className="inline-flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-sm-t border border-os-border-strong px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.18em] text-os-text transition-[background-color,border-color,color] duration-[var(--dur-press)] hover:border-os-accent hover:bg-os-surface2 sm:self-auto"
         >
-          TheFounderOS.com
+          founderos.example.com
           <ArrowUpRight className="h-3 w-3" />
         </a>
       </div>

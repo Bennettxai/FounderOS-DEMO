@@ -2,8 +2,8 @@ import type { Agent, Department, Person, SopTask } from '@/lib/schemas';
 import { lifeAreaForDepartment } from '@/lib/life-map';
 
 /**
- * The operating-knowledge graph that powers the /brain force graph — the operator's
- * life and the org in one. Five concentric rings: the operator at the core (ring 0),
+ * The operating-knowledge graph that powers the /brain force graph — Alex's
+ * life and the org in one. Five concentric rings: Alex at the core (ring 0),
  * the life pillars / teams tinted by their life-area color (ring 1), the
  * written-out SOP tasks — the actual jobs (ring 2), the workers who do them —
  * AI agents AND human employees (ring 3), and the software tools they use
@@ -28,7 +28,7 @@ export type KGNode = {
   id: string;
   kind: KGNodeKind;
   label: string;
-  ring: number; // 0 = operator core → 4 = outer (tools)
+  ring: number; // 0 = Alex core → 4 = outer (tools)
   color?: string; // life-area tint (teams)
 };
 
@@ -85,7 +85,7 @@ export function workerNodeId(kind: SopTask['assigneeKind'], assigneeId: string):
 
 /**
  * Tool node id → tool slug. Tools shared by several departments are split
- * into one node per department (`tool:attio@dept-sales`) so no line has to
+ * into one node per department (`tool:ledger@dept-sales`) so no line has to
  * cross the whole wheel to a far-away shelf; single-department tools keep
  * the plain `tool:slug` id.
  */
@@ -93,7 +93,10 @@ export function toolSlugOf(nodeId: string): string {
   return nodeId.replace(/^tool:/, '').split('@')[0];
 }
 
-export type DirectoryRow = { id: string; label: string; sub: string };
+/** `deptIds` are the pillars a row belongs to — one for an agent, a human or
+    an SOP, and every pillar whose workers reach it for a shared tool. The
+    pillar chips on /brain filter the directory through this field. */
+export type DirectoryRow = { id: string; label: string; sub: string; deptIds: string[] };
 export type DirectoryGroup = { kind: 'employee' | 'person' | 'task' | 'tool'; title: string; rows: DirectoryRow[] };
 
 /**
@@ -112,6 +115,12 @@ export function graphDirectory(
   const deptName = new Map(departments.map((d) => [d.id, d.name]));
   const byLabel = (a: DirectoryRow, b: DirectoryRow) => a.label.localeCompare(b.label);
 
+  // worker node id → its pillar, so a tool can inherit the pillars that use it
+  const deptOfNode = new Map<string, string>([
+    ...agents.map((a) => [`emp:${a.id}`, a.departmentId] as const),
+    ...people.map((p) => [`person:${p.id}`, p.departmentId] as const),
+  ]);
+
   const toolRows = new Map<string, DirectoryRow>();
   for (const n of graph.nodes) {
     if (n.kind !== 'tool') continue;
@@ -120,7 +129,13 @@ export function graphDirectory(
       const users = new Set(
         graph.edges.filter((e) => e.kind === 'uses' && toolSlugOf(e.target) === slug).map((e) => e.source),
       );
-      toolRows.set(slug, { id: slug, label: n.label, sub: `${users.size} user${users.size === 1 ? '' : 's'}` });
+      const deptIds = [...new Set([...users].map((u) => deptOfNode.get(u)).filter((d): d is string => !!d))].sort();
+      toolRows.set(slug, {
+        id: slug,
+        label: n.label,
+        sub: `${users.size} user${users.size === 1 ? '' : 's'}`,
+        deptIds,
+      });
     }
   }
 
@@ -128,17 +143,23 @@ export function graphDirectory(
     {
       kind: 'employee',
       title: 'AI agents',
-      rows: agents.map((a) => ({ id: `emp:${a.id}`, label: a.name, sub: deptName.get(a.departmentId) ?? a.departmentId })).sort(byLabel),
+      rows: agents
+        .map((a) => ({ id: `emp:${a.id}`, label: a.name, sub: deptName.get(a.departmentId) ?? a.departmentId, deptIds: [a.departmentId] }))
+        .sort(byLabel),
     },
     {
       kind: 'person',
       title: 'Humans',
-      rows: people.map((p) => ({ id: `person:${p.id}`, label: p.name, sub: deptName.get(p.departmentId) ?? p.departmentId })).sort(byLabel),
+      rows: people
+        .map((p) => ({ id: `person:${p.id}`, label: p.name, sub: deptName.get(p.departmentId) ?? p.departmentId, deptIds: [p.departmentId] }))
+        .sort(byLabel),
     },
     {
       kind: 'task',
       title: 'SOPs',
-      rows: tasks.map((t) => ({ id: `task:${t.id}`, label: t.title, sub: deptName.get(t.departmentId) ?? t.departmentId })).sort(byLabel),
+      rows: tasks
+        .map((t) => ({ id: `task:${t.id}`, label: t.title, sub: deptName.get(t.departmentId) ?? t.departmentId, deptIds: [t.departmentId] }))
+        .sort(byLabel),
     },
     {
       kind: 'tool',
@@ -158,13 +179,13 @@ export function buildKnowledgeGraph(
   const nodes: KGNode[] = [];
   const edges: KGEdge[] = [];
 
-  // the operator at the core — every pillar hangs off him (the life-at-the-core idea
+  // Alex at the core — every pillar hangs off him (the life-at-the-core idea
   // folded in from the old life map).
   nodes.push({ id: SELF_ID, kind: 'self', label: 'Alex', ring: RING.self });
 
   // Live Paperclip board agents (Conductor, Forge, the Hermes pool, …) orbit
-  // the operator as an inner ring — real seats from the board API, [] when it's
-  // unreachable, so nothing here is larp. The five department LEADS are not in
+  // Alex as an inner ring — real seats from the board API, [] when it's
+  // unreachable, so nothing here is demo. The five department LEADS are not in
   // this list: the pillar node IS that agent. Sorted so the ring's seat order
   // is deterministic.
   for (const b of [...boardAgents].sort((a, z) => a.name.localeCompare(z.name))) {
@@ -198,7 +219,7 @@ export function buildKnowledgeGraph(
 
   // First pass: which departments touch each tool? A tool used from several
   // departments is DUPLICATED — one copy per department — so its lines stay
-  // local instead of crossing the wheel (no messy long edges).
+  // local instead of crossing the wheel (Alex: no messy long edges).
   const deptsOfTool = new Map<string, Set<string>>();
   const workerRows: { nodeId: string; kind: 'employee' | 'person'; label: string; deptId: string; tools: string[] }[] = [
     ...agents.map((a) => ({ nodeId: `emp:${a.id}`, kind: 'employee' as const, label: a.name, deptId: a.departmentId, tools: a.tools })),

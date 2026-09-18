@@ -42,8 +42,8 @@ describe('commsLane — work keywords rescue untagged work mail from misc', () =
     expect(commsLane(item({ title: 'Inbox — x', preview: 'LAUNCHPAD COHORT renewal' }), ['launchpad cohort'])).toBe('work');
   });
 
-  it('matches a keyword in the sender (Frederick Potticary -> work)', () => {
-    expect(commsLane(item({ title: 'Inbox — Frederick Potticary', sender: 'Frederick Potticary' }), ['potticary'])).toBe('work');
+  it('matches a keyword in the sender (Edmund Hartwell -> work)', () => {
+    expect(commsLane(item({ title: 'Inbox — Edmund Hartwell', sender: 'Edmund Hartwell' }), ['hartwell'])).toBe('work');
   });
 
   it('lets a work keyword beat a personal-named inbox', () => {
@@ -61,10 +61,10 @@ describe('commsLane — work keywords rescue untagged work mail from misc', () =
 
 describe('parseWorkKeywords', () => {
   it('splits on commas, trims, and drops empties', () => {
-    expect(parseWorkKeywords('Vantage, Launchpad Cohort ,, Potticary')).toEqual([
+    expect(parseWorkKeywords('Vantage, Launchpad Cohort ,, Edmund Hartwell')).toEqual([
       'Vantage',
       'Launchpad Cohort',
-      'Potticary',
+      'Edmund Hartwell',
     ]);
   });
 

@@ -11,9 +11,9 @@ import {
   type PostingActivityDay,
 } from '@/lib/posting-activity';
 
-type Range = 7 | 30 | 60 | 'all';
-const RANGES: Range[] = [7, 30, 60, 'all'];
-const RANGE_LABEL: Record<string, string> = { '7': '7d', '30': '30d', '60': '60d', all: 'All' };
+type Range = 30 | 90 | 365;
+const RANGES: Range[] = [30, 90, 365];
+const RANGE_LABEL: Record<string, string> = { '30': '30d', '90': '90d', '365': '1y' };
 
 type AudPoint = { date: string; value: number };
 
@@ -24,7 +24,7 @@ const PREFERRED = ['instagram', 'tiktok', 'twitter', 'youtube', 'linkedin', 'fac
 const COLORS: Record<string, string> = {
   instagram: '#e1306c',
   tiktok: '#25f4ee',
-  twitter: '#1d9bf0',
+  twitter: '#f2f2f2',
   youtube: '#ff4d4d',
   linkedin: '#0a85c2',
   facebook: '#1877f2',
@@ -32,7 +32,7 @@ const COLORS: Record<string, string> = {
 const LABELS: Record<string, string> = {
   instagram: 'Instagram',
   tiktok: 'TikTok',
-  twitter: 'Twitter / X',
+  twitter: 'X',
   youtube: 'YouTube',
   linkedin: 'LinkedIn',
   facebook: 'Facebook',
@@ -51,11 +51,11 @@ function RangeChips({ value, onChange }: { value: Range; onChange: (r: Range) =>
         <button
           key={String(r)}
           onClick={() => onChange(r)}
-          className={`rounded-sm-t border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
-            value === r
-              ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
-              : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
-          }`}
+          data-lens="c" className={`pressable rounded-ctl border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+ value === r
+ ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
+ : 'border-os-border text-os-dim hover:border-os-border-strong hover:text-os-muted'
+ }`}
         >
           {RANGE_LABEL[String(r)]}
         </button>
@@ -202,7 +202,7 @@ function ChartPair({
           className="pointer-events-none absolute top-0 z-10 -translate-x-1/2"
           style={{ left: `${Math.min(88, Math.max(12, tooltipLeft))}%` }}
         >
-          <div className="min-w-[150px] rounded-sm-t border border-os-border-strong bg-os-bg/95 px-2.5 py-2 font-mono shadow-lg backdrop-blur-sm">
+          <div className="min-w-[150px] rounded-panel border border-os-border-strong bg-os-bg/95 px-2.5 py-2 font-mono shadow-lg backdrop-blur-sm">
             <div className="mb-1 flex items-center justify-between gap-3 text-[10px] text-os-dim">
               <span>{axis[hover] ? fmtDay(axis[hover]) : ''}</span>
               <span className="text-os-muted">
@@ -264,20 +264,17 @@ export function AudienceConsistency({
   /** Rendered as a right-hand column sharing the card with the charts. */
   aside?: React.ReactNode;
 }) {
-  const [range, setRange] = useState<Range>(30);
+  const [range, setRange] = useState<Range>(90);
   const [expanded, setExpanded] = useState(false);
 
   const { axis, audienceVals, days, platforms, net } = useMemo(() => {
     const dates = [...audience.map((a) => a.date), ...postDays.map((p) => p.date)].sort();
     const earliest = dates[0] ?? today;
     const end = today;
-    let start: string;
-    if (range === 'all') start = earliest;
-    else {
-      const d = new Date(`${end}T00:00:00Z`);
-      d.setUTCDate(d.getUTCDate() - (range - 1));
-      start = d.toISOString().slice(0, 10);
-    }
+    const d = new Date(`${end}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - (range - 1));
+    // Never ask the chart for days older than the data actually has.
+    const start = d.toISOString().slice(0, 10) < earliest ? earliest : d.toISOString().slice(0, 10);
     const axis = dateAxis(start, end);
     const audienceVals = forwardFill(
       audience.map((a) => ({ date: a.date, value: a.value })),
@@ -317,7 +314,7 @@ export function AudienceConsistency({
       <div className={aside ? 'grid gap-6 lg:grid-cols-[1.55fr_1fr]' : ''}>
         <div className="flex min-w-0 flex-col">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-os-dim">Combined audience</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-os-dim">Audience · {RANGE_LABEL[String(range)]}</span>
             <div className="flex items-center gap-2.5">
               {netLabel}
               <RangeChips value={range} onChange={setRange} />
@@ -325,7 +322,7 @@ export function AudienceConsistency({
                 onClick={() => setExpanded(true)}
                 aria-label="Expand to fullscreen"
                 title="Fullscreen"
-                className="flex h-[22px] w-[22px] items-center justify-center rounded-sm-t border border-os-border text-os-dim transition-colors hover:border-os-border-strong hover:text-os-accent"
+                className="pressable flex h-[22px] w-[22px] items-center justify-center rounded-ctl border border-os-border text-os-dim hover:border-os-border-strong hover:text-os-accent"
               >
                 <Maximize2 className="h-3 w-3" />
               </button>
@@ -357,7 +354,7 @@ export function AudienceConsistency({
           onClick={() => setExpanded(false)}
         >
           <div
-            className="flex max-h-[94vh] w-[min(1240px,96vw)] flex-col overflow-hidden rounded-lg-t border border-os-border-strong bg-os-bg shadow-2xl"
+            className="flex max-h-[94vh] w-[min(1240px,96vw)] flex-col overflow-hidden rounded-panel border border-os-border-strong bg-os-bg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-os-border px-5 py-3.5">
@@ -370,7 +367,7 @@ export function AudienceConsistency({
                 <button
                   onClick={() => setExpanded(false)}
                   aria-label="Close"
-                  className="flex h-7 w-7 items-center justify-center rounded-sm-t border border-os-border text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
+                  className="pressable flex h-7 w-7 items-center justify-center rounded-ctl border border-os-border text-os-dim hover:border-os-border-strong hover:text-os-text"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -379,7 +376,7 @@ export function AudienceConsistency({
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-os-dim">Combined audience</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-os-dim">Audience · {RANGE_LABEL[String(range)]}</span>
                 {netLabel}
               </div>
               <ChartPair

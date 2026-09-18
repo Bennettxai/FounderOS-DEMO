@@ -16,7 +16,7 @@ export default function ReferencePage() {
       />
       <Rise i={1} className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-4 ultra:grid-cols-6">
         {domains.map((domain) => (
-          <div key={domain.id} className="hoverable rounded-lg-t border border-os-border bg-os-surface px-[17px] py-[15px]">
+          <div key={domain.id} data-lens="r" className="pressable is-row rounded-lg-t border border-os-border bg-os-surface px-[17px] py-[15px]">
             <div className="font-mono text-[10px] tracking-[0.14em] text-os-accent">
               {String(domain.number).padStart(2, '0')}
             </div>

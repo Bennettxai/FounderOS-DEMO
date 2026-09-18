@@ -1,8 +1,8 @@
 import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
-import { Rise } from '@/components/motion';
 import { PersonasViewer } from '@/components/PersonasViewer';
 import { Badge } from '@/components/terminal';
+import { Rise } from '@/components/motion';
 
 export const dynamic = 'force-dynamic';
 

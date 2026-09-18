@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/data';
 import { funnelSummary, splitFunnelJourneys } from '@/lib/funnel';
-import { attioFunnelJourneys } from '@/lib/funnel-live';
-import { ghlFunnelJourneys } from '@/lib/funnel-ghl';
-import { mergeTrakyoTouches, trakyoTouches } from '@/lib/funnel-trakyo';
+import { composeFunnelJourneys, funnelSourceLabel } from '@/lib/funnel-compose';
 import { FunnelVentureSchema, type FunnelVenture } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
@@ -19,28 +16,20 @@ export async function GET(req: Request) {
     venture = parsed.data;
   }
   const now = new Date();
-  // Live Attio ∪ GHL when available (Attio venture = deal-name heuristic,
-  // GHL is all LC); seeded funnel otherwise. Quiet >90d splits into `archived`.
-  const [attioLive, ghlLive] = await Promise.all([attioFunnelJourneys(now), ghlFunnelJourneys(now)]);
-  const liveJourneys = [...(attioLive?.journeys ?? []), ...(ghlLive?.journeys ?? [])];
-  const isLive = liveJourneys.length > 0;
-  const all = isLive
-    ? mergeTrakyoTouches(liveJourneys, await trakyoTouches()).filter((j) => !venture || j.venture === venture)
-    : getDb().funnel.journeys(venture);
-  const { active, archived } = splitFunnelJourneys(all, now);
+  // One shared composer with the page: Attio ∪ GHL live journeys, Trakyo
+  // touches + Stripe settled payments folded on, venture-filtered; seeded
+  // funnel when nothing is live. Quiet >90d splits into `archived`.
+  const composed = await composeFunnelJourneys(now, venture);
+  const { active, archived } = splitFunnelJourneys(composed.journeys, now);
   return NextResponse.json({
     summary: funnelSummary(active),
     journeys: active,
     archived,
-    source: isLive
-      ? [attioLive?.journeys.length ? 'attio' : null, ghlLive?.journeys.length ? 'ghl' : null]
-          .filter(Boolean)
-          .join('+')
-      : 'seed',
-    ...(isLive
+    source: funnelSourceLabel(composed),
+    ...(composed.isLive
       ? {
-          excluded: (attioLive?.closedLost ?? 0) + (ghlLive?.excluded ?? 0),
-          total: (attioLive?.total ?? 0) + (ghlLive?.total ?? 0),
+          excluded: (composed.attioLive?.closedLost ?? 0) + (composed.ghlLive?.excluded ?? 0),
+          total: (composed.attioLive?.total ?? 0) + (composed.ghlLive?.total ?? 0),
         }
       : {}),
   });

@@ -64,12 +64,11 @@ describe('theme registry', () => {
     const css = readFileSync(join(process.cwd(), 'app/globals.css'), 'utf8');
     for (const t of THEMES) expect(css, t).toContain(`data-theme='${t}'`);
   });
-});
 
-describe('Daylight (mono-light) G-Brain blue skin', () => {
-  test('steel-azure accent on a cool blue-white canvas', () => {
-    // 2026-08-20: Daylight re-anchored to the inverted G-Brain graph palette
-    // (invert(#E07B39) ≈ #1F84C6), replacing the old neutral slate accent.
+  test('Daylight is the G-Brain blue skin: steel-azure accent on a cool blue-white canvas', () => {
+    // 2026-08-20: the operator re-anchored Daylight to the inverted G-Brain graph
+    // from the Zero API cover (invert(#E07B39) ≈ #1F84C6), replacing the
+    // old neutral slate accent.
     expect(THEME_META['mono-light'].swatch).toEqual(['#f2f6f9', '#1f84c6', '#16222c']);
     const css = readFileSync(join(process.cwd(), 'app/globals.css'), 'utf8');
     const block = css.match(/:root\[data-theme='mono-light'\] \{[^}]+\}/)?.[0] ?? '';

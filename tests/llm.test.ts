@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { z } from 'zod';
-import { chat, llmStatus } from '@/lib/connectors/llm';
+import { chat, isModelUnavailableError, llmStatus, modelChain } from '@/lib/connectors/llm';
 
 const KEY = 'AI_GATEWAY_API_KEY';
 const prevKey = process.env[KEY];
@@ -61,5 +61,47 @@ describe('stub provider chat — deterministic, no network', () => {
     expect(calledWith).not.toBe('NOT_CALLED');
     expect(res.toolCalls.map((c) => c.name)).toContain('lookup');
     expect(res.toolCalls[0].result).toEqual({ ok: true, value: 42 });
+  });
+});
+
+/**
+ * the operator, 2026-09-04: "I needed you to fix the conductor and agent board.
+ * They're not responsive to me."
+ *
+ * The board chat was 500ing on every message. The gateway key is on the free
+ * tier, which answers `anthropic/*` with a 403 RestrictedModelsError while
+ * open-weight models on the SAME key return 200. One dead model took the whole
+ * chat down, so the chain below falls through to a model the key can actually
+ * use instead of failing the request. Topping up credits is a spend decision;
+ * the board should not wait on it.
+ */
+describe('model fallback — a model the key cannot use must not kill the chat', () => {
+  test('reads the requested model first, then the free-tier fallbacks', () => {
+    const chain = modelChain('anthropic/claude-sonnet-5');
+    expect(chain[0]).toBe('anthropic/claude-sonnet-5');
+    expect(chain.length).toBeGreaterThan(1);
+    expect(new Set(chain).size).toBe(chain.length); // no model tried twice
+  });
+
+  test('every fallback after the first is an open-weight model the free tier allows', () => {
+    for (const model of modelChain('anthropic/claude-sonnet-5').slice(1)) {
+      expect(model.startsWith('anthropic/')).toBe(false);
+    }
+  });
+
+  test('recognises the free-tier refusal as worth retrying on another model', () => {
+    expect(
+      isModelUnavailableError(
+        new Error('Free tier users do not have access to this model. Upgrade to paid credits'),
+      ),
+    ).toBe(true);
+    expect(isModelUnavailableError({ statusCode: 403, message: 'RestrictedModelsError' })).toBe(true);
+    expect(isModelUnavailableError(new Error('model not found: bogus/model'))).toBe(true);
+  });
+
+  test('does not burn the chain on errors another model would not fix', () => {
+    expect(isModelUnavailableError(new Error('rate limit exceeded'))).toBe(false);
+    expect(isModelUnavailableError({ statusCode: 500, message: 'internal server error' })).toBe(false);
+    expect(isModelUnavailableError(new Error('AI_GATEWAY_API_KEY is not set'))).toBe(false);
   });
 });

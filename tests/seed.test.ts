@@ -34,7 +34,7 @@ describe('seedDatabase', () => {
     }
   });
 
-  test('every seeded agent maps to a real runtime agent — no larp', async () => {
+  test('every seeded agent maps to a real runtime agent — no demo', async () => {
     const { realAgents } = await import('@/lib/agents/real');
     db = openDb(':memory:');
     seedDatabase(db);
@@ -95,7 +95,7 @@ describe('seedDatabase', () => {
       expect(byId.get(id)).toBe('dept-marketing-growth');
     }
     // TECH: AI head, the G-Brain data crew, and automations
-    for (const id of ['conductor', 'data-agent', 'markdown-auditor', 'vector-auditor', 'notion-sync', 'stack-monitor']) {
+    for (const id of ['conductor', 'data-agent', 'markdown-auditor', 'vector-auditor', 'stack-monitor']) {
       expect(byId.get(id)).toBe('dept-tech');
     }
     for (const id of ['comms-agent', 'gmail-worker', 'whatsapp-worker', 'slack-worker']) {
@@ -176,12 +176,12 @@ describe('seedDatabase', () => {
     expect(db.tools.all().length).toBe(counts.tools);
   });
 
-  test('email list reflects the real Beehiiv account, not the retired ~30k larp', () => {
+  test('email list reflects the real Beehiiv account, not the retired ~30k demo', () => {
     db = openDb(':memory:');
     seedDatabase(db);
     const snaps = db.emailList.snapshots();
     expect(snaps.length).toBeGreaterThan(0);
-    // Latest count is the seeded "Alex Rivera" subscriber count
+    // Latest count is the seeded newsletter subscriber count.
     // Bumped deliberately as the list grows.
     expect(db.emailList.latest()?.subscribers).toBe(1850);
     // Honest shape: the list only exists from its seeded bulk import — no

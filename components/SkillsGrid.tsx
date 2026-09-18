@@ -1,10 +1,12 @@
 'use client';
 
 /**
- * The skill catalog. Compact, icon-led cards packed many-per-row; click a card
- * to expand its real SKILL.md in a reader. The full doc loads on demand
- * (GET /api/skills/[slug]) so the page ships light, unless a card carries inline
- * markdown (the seeded fallback). Rendered with a tiny built-in markdown pass.
+ * The skill catalog as one filtered card wall (mock 5g): a text filter, the
+ * All / Claude Code / Operator / Draft chips with live counts, and cards that
+ * read eyebrow (source · scope) / status / title / two-line description /
+ * footer path-or-owner. Click a card to expand its real SKILL.md in a reader.
+ * The full doc loads on demand (GET /api/skills/[slug]) so the page ships
+ * light, unless a card carries inline markdown (the seeded fallback).
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -24,33 +26,30 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { SectionHead } from '@/components/terminal';
+import { Chip } from '@/components/Pressable';
 
 export type SkillCard = {
   id: string; // slug — also the /api/skills/[slug] key
   name: string;
   group: string;
+  kind: 'claude' | 'operator';
   description: string;
-  meta: string; // source path or owner (shown in the reader header)
+  meta: string; // source path or owner — the card footer
   filePath: string;
   status?: 'live' | 'learning' | 'planned';
   markdown?: string; // inline (fallback); otherwise fetched by id
 };
 
 const STATUS: Record<string, string> = { live: 'var(--ok)', learning: 'var(--warn)', planned: 'var(--text-3)' };
-const GROUP_ORDER = [
-  'Spec · build · review',
-  'Engineering',
-  'Sales',
-  'Content',
-  'Ops',
-  'Creative',
-  'Skills',
-  'Firecrawl',
-  'Operator · Sales',
-  'Operator · Content',
-  'Operator · Ops',
-];
+
+type Filter = 'All' | 'Claude Code' | 'Operator' | 'Draft';
+const isDraft = (c: SkillCard) => c.status != null && c.status !== 'live';
+const matches = (c: SkillCard, f: Filter) =>
+  f === 'All' ? true : f === 'Draft' ? isDraft(c) : f === 'Claude Code' ? c.kind === 'claude' : c.kind === 'operator';
+
+/** What sits above the title: the card's source and scope. */
+const eyebrowOf = (c: SkillCard) =>
+  c.kind === 'claude' ? `Claude Code · ${c.id.includes(':') ? 'plugin' : 'user'}` : c.group;
 
 /** The tool/nature each skill runs on, as an icon. */
 function skillIcon(card: SkillCard): LucideIcon {
@@ -122,6 +121,8 @@ function Markdown({ src }: { src: string }) {
 export function SkillsGrid({ cards, sourceNote }: { cards: SkillCard[]; sourceNote: string }) {
   const [viewing, setViewing] = useState<SkillCard | null>(null);
   const [md, setMd] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>('All');
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setViewing(null);
@@ -145,11 +146,13 @@ export function SkillsGrid({ cards, sourceNote }: { cards: SkillCard[]; sourceNo
     }
   };
 
-  const groups = [...new Set(cards.map((c) => c.group))].sort((a, b) => {
-    const ia = GROUP_ORDER.indexOf(a);
-    const ib = GROUP_ORDER.indexOf(b);
-    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
-  });
+  const FILTERS: Filter[] = ['All', 'Claude Code', 'Operator', 'Draft'];
+  const q = query.trim().toLowerCase();
+  const shown = cards.filter(
+    (c) =>
+      matches(c, filter) &&
+      (q === '' || `${c.name} ${c.description} ${c.meta} ${c.group}`.toLowerCase().includes(q)),
+  );
 
   const ViewingIcon = viewing ? skillIcon(viewing) : Sparkles;
 
@@ -170,35 +173,61 @@ export function SkillsGrid({ cards, sourceNote }: { cards: SkillCard[]; sourceNo
 
   return (
     <div>
-      <p className="mb-4 font-mono text-[11px] text-os-dim">{sourceNote}</p>
-      {groups.map((group) => {
-        const inGroup = cards.filter((c) => c.group === group);
-        return (
-          <section key={group} className="mb-6">
-            <SectionHead label={group} count={inGroup.length} />
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {inGroup.map((c) => {
-                const Icon = skillIcon(c);
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => open(c)}
-                    title={`${c.name} — open SKILL.md`}
-                    className="group flex flex-col gap-1.5 rounded-lg border border-os-border bg-os-surface p-2.5 text-left transition-colors hover:border-os-border-strong hover:bg-os-surface2"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Icon className="h-[15px] w-[15px] shrink-0 text-os-accent" strokeWidth={1.8} />
-                      <span className="min-w-0 flex-1 truncate font-mono text-[11px] font-semibold group-hover:text-os-text">{c.name}</span>
-                      {c.status && <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: STATUS[c.status] }} />}
-                    </div>
-                    <p className="line-clamp-2 text-[10px] leading-snug text-os-dim">{c.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <p className="min-w-0 flex-1 font-mono text-[11px] text-os-dim">{sourceNote}</p>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="filter skills"
+          className="h-[26px] w-44 rounded-ctl border border-os-border bg-os-bg px-2.5 font-mono text-[11px] text-os-text placeholder:text-os-dim focus:border-os-border-strong focus:outline-none"
+        />
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        {FILTERS.map((f) => (
+          <Chip key={f} on={filter === f} onClick={() => setFilter(f)}>
+            {f} {cards.filter((c) => matches(c, f)).length}
+          </Chip>
+        ))}
+      </div>
+
+      {shown.length === 0 ? (
+        <p className="font-mono text-[11px] text-os-dim">
+          no skills match{q ? ` "${query.trim()}"` : ''} · clear the filter to see all {cards.length}
+        </p>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((c) => {
+            const Icon = skillIcon(c);
+            const status = c.status ?? 'live';
+            return (
+              <button
+                key={c.id}
+                onClick={() => open(c)}
+                title={`${c.name} · open SKILL.md`}
+                data-lens="r"
+                className="pressable is-row group flex flex-col gap-2 rounded-lg-t border border-os-border bg-os-surface p-4 text-left"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-mono text-[9.5px] uppercase tracking-[0.14em] text-os-dim">
+                    {eyebrowOf(c)}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5 font-mono text-[9.5px] uppercase tracking-[0.1em] text-os-dim">
+                    <span className="h-1.5 w-1.5" style={{ background: STATUS[status] }} />
+                    {status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 shrink-0 text-os-accent" strokeWidth={1.8} />
+                  <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold group-hover:text-os-text">{c.name}</span>
+                </div>
+                <p className="line-clamp-2 min-h-[30px] text-[11px] leading-snug text-os-dim">{c.description}</p>
+                <div className="truncate border-t border-os-border pt-2 font-mono text-[9.5px] text-os-dim">{c.meta}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {viewing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm" onClick={() => setViewing(null)}>
@@ -212,12 +241,12 @@ export function SkillsGrid({ cards, sourceNote }: { cards: SkillCard[]; sourceNo
                 <button
                   onClick={() => download(viewing)}
                   title="Download SKILL.md"
-                  className="flex items-center gap-1.5 rounded-md border border-os-border px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-os-dim transition-colors hover:border-os-border-strong hover:text-os-text"
+                  className="pressable flex items-center gap-1.5 rounded-md border border-os-border px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-os-dim hover:border-os-border-strong hover:text-os-text"
                 >
                   <Download className="h-3 w-3" />
                   skill.md
                 </button>
-                <button onClick={() => setViewing(null)} aria-label="Close" className="shrink-0 text-os-dim transition-colors hover:text-os-text">
+                <button onClick={() => setViewing(null)} aria-label="Close" className="pressable shrink-0 text-os-dim hover:text-os-text">
                   <X className="h-4 w-4" />
                 </button>
               </span>

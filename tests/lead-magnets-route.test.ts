@@ -5,7 +5,7 @@ import path from 'node:path';
 import { GET, POST } from '@/app/api/lead-magnets/route';
 
 /** POST /api/lead-magnets is how a lead magnet gets registered from inside the
- *  OS: the create form on /content/lead-magnets and a content pipeline both
+ *  OS: the create form on /content/lead-magnets and the Content Gen skill both
  *  post here after a page is deployed. */
 
 let dir: string;
@@ -26,14 +26,14 @@ const post = (body: unknown) =>
 describe('POST /api/lead-magnets', () => {
   it('creates one, slugs the id, stamps origin os and today', async () => {
     const res = await post({
-      name: 'The Operator Teardown',
-      url: 'https://teardown.example.com',
-      offer: 'The workflow pulled apart, step by step',
-      source: 'Short (comment TEARDOWN)',
+      name: 'The Claude Trading Setup',
+      url: 'https://founderos-trading-demo.example.com',
+      offer: 'The Robinhood MCP setup and the agent prompt',
+      source: 'IG reel (comment TRADE)',
     });
     expect(res.status).toBe(201);
     const { leadMagnet } = (await res.json()) as { leadMagnet: Record<string, string> };
-    expect(leadMagnet.id).toBe('the-operator-teardown');
+    expect(leadMagnet.id).toBe('the-claude-trading-setup');
     expect(leadMagnet.origin).toBe('os');
     expect(leadMagnet.status).toBe('live'); // sensible default
     expect(leadMagnet.captures).toBe('email');
@@ -41,9 +41,9 @@ describe('POST /api/lead-magnets', () => {
   });
 
   it('never collides an id with an existing row', async () => {
-    const res = await post({ name: 'The Operator Teardown', url: 'https://example.com/again' });
+    const res = await post({ name: 'The Claude Trading Setup', url: 'https://example.com/again' });
     const { leadMagnet } = (await res.json()) as { leadMagnet: { id: string } };
-    expect(leadMagnet.id).toBe('the-operator-teardown-2');
+    expect(leadMagnet.id).toBe('the-claude-trading-setup-2');
   });
 
   it('400s on a bad url rather than storing junk', async () => {
@@ -58,6 +58,6 @@ describe('POST /api/lead-magnets', () => {
 
   it('GET lists what was created', async () => {
     const body = (await (await GET()).json()) as { leadMagnets: { id: string }[] };
-    expect(body.leadMagnets.map((m) => m.id)).toContain('the-operator-teardown');
+    expect(body.leadMagnets.map((m) => m.id)).toContain('the-claude-trading-setup');
   });
 });

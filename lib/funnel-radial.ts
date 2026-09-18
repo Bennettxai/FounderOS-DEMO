@@ -3,28 +3,22 @@
  * enter at the rim in one of seven acquisition segments (where they actually
  * came from) and travel inward ring by ring until the center — the purchase.
  *
- * Attribution is honest: keyword classification over the entry touch, with
- * `word_of_mouth` as the explicit catch-all for what nothing tracked. Trakyo
- * UTM links (DMFlow sends, YouTube titles) and the GHL `source` field feed
- * the same labels, so live attribution sharpens as those land — no schema
- * change needed.
+ * Attribution is honest and layered: a touch that arrives with its own
+ * `acquisition` stamp (Trakyo attributed the first touch structurally —
+ * source type + source name) is trusted outright; everything else falls to
+ * keyword classification over the entry touch, with `word_of_mouth` as the
+ * explicit catch-all for what nothing tracked.
  */
 import { funnelSpaceModel, type FunnelSpaceNode } from '@/lib/funnel';
-import type { FunnelJourney, FunnelTouch } from '@/lib/schemas';
+import type { FunnelAcquisition, FunnelJourney, FunnelTouch } from '@/lib/schemas';
 
 /** Journeys and space nodes both qualify — classification reads touches only. */
 type HasTouches = { touches: FunnelTouch[] };
 
-export type FunnelAcquisition =
-  | 'instagram'
-  | 'youtube'
-  | 'newsletter'
-  | 'x_linkedin'
-  | 'form'
-  | 'word_of_mouth';
+export type { FunnelAcquisition };
 
 /** The rim segments, in render order around the circle. X and LinkedIn share
- * one wedge (Alex condensed them — both are his text-platform funnels). */
+ * one wedge (the operator condensed them — both are his text-platform funnels). */
 export const ACQUISITIONS: { id: FunnelAcquisition; label: string }[] = [
   { id: 'instagram', label: 'Instagram' },
   { id: 'youtube', label: 'YouTube' },
@@ -41,27 +35,38 @@ const SEGMENT_INDEX: Record<FunnelAcquisition, number> = Object.fromEntries(
 /**
  * Keyword families, first match wins. Order matters: youtube before form so
  * "long-form" stays YouTube; explicit word-of-mouth before the form fallback.
- * Instagram owns Meta paid + DMFlow + TikTok short-form (Alex runs ads
+ * Instagram owns Meta paid + ManyChat + TikTok short-form (the operator runs ads
  * and DM automations through the IG/FB machine).
  */
 const MATCHERS: { id: FunnelAcquisition; re: RegExp }[] = [
   { id: 'youtube', re: /youtube|\byt\b|long-form/i },
-  { id: 'instagram', re: /instagram|\big\b|insta\b|reel|tiktok|meta ad|dmflow|facebook|\bfb\b/i },
+  { id: 'instagram', re: /instagram|\big\b|insta\b|reel|tiktok|meta ad|manychat|facebook|\bfb\b/i },
   { id: 'newsletter', re: /newsletter|beehiiv/i },
   { id: 'x_linkedin', re: /twitter|\bx thread|\bx post|\bx dm|\bon x\b|linkedin/i },
   { id: 'word_of_mouth', re: /referr|word of mouth|recommend/i },
-  { id: 'form', re: /\bform\b|application|typeform|survey|landing page|opt.?in/i },
+  { id: 'form', re: /\bform\b|application|typeform|survey|landing page|opt.?in|waitlist/i },
 ];
 
+/** The bare keyword pass — exported so Trakyo's source names run through the
+ * exact same taxonomy. Null when nothing matches (callers own the fallback). */
+export function matchAcquisition(text: string): FunnelAcquisition | null {
+  for (const m of MATCHERS) if (m.re.test(text)) return m.id;
+  return null;
+}
+
 /**
- * Which rim segment a journey enters through — classified from its entry
- * touch (label + channel). Unattributed stays word_of_mouth: the honest
- * bucket for "we didn't track this", exactly Alex's framing of referrals.
+ * Which rim segment a journey enters through. A touch stamped with its own
+ * `acquisition` (Trakyo knew the source structurally) is trusted outright;
+ * otherwise classify from the entry touch (label + channel). Unattributed
+ * stays word_of_mouth: the honest bucket for "we didn't track this", exactly
+ * the operator's framing of referrals.
  */
 export function acquisitionFor(j: HasTouches): FunnelAcquisition {
   const entry = j.touches[0];
   if (!entry) return 'word_of_mouth';
-  for (const m of MATCHERS) if (m.re.test(entry.label)) return m.id;
+  if (entry.acquisition) return entry.acquisition;
+  const matched = matchAcquisition(entry.label);
+  if (matched) return matched;
   if (entry.channel === 'ads') return 'instagram'; // paid traffic = the IG/FB machine
   return 'word_of_mouth';
 }

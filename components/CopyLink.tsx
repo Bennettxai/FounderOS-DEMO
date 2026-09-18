@@ -23,7 +23,7 @@ export function CopyLink({ url }: { url: string }) {
     <button
       onClick={copy}
       title={`Copy ${url}`}
-      className="inline-flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-bg px-2 py-1 font-mono text-[10px] text-os-muted transition-colors hover:border-os-dim hover:text-os-text"
+      className="pressable inline-flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-bg px-2 py-1 font-mono text-[10px] text-os-muted hover:border-os-dim hover:text-os-text"
     >
       {state === 'ok' ? (
         <>

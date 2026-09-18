@@ -6,7 +6,8 @@ import { openDb, type FounderDb } from '@/lib/db';
 import { seedDatabase } from '@/lib/seed';
 
 /**
- * Lead magnets are created FROM the OS, not only from the seed file. Two things
+ * Lead magnets are created FROM the OS (the operator, 2026-08-14: "I want to be
+ * able to create these in the OS"), not only from the seed file. Two things
  * have to hold for that to be true:
  *   1. a row can be inserted at runtime with an `origin` of 'os'
  *   2. re-seeding must not delete it — the seed may only prune its own rows
@@ -28,14 +29,14 @@ afterEach(() => {
 });
 
 const made = (over: Partial<Parameters<FounderDb['leadMagnets']['insert']>[0]> = {}) => ({
-  id: 'operator-teardown',
-  name: 'The Operator Teardown',
-  offer: 'The workflow pulled apart, step by step',
-  url: 'https://teardown.example.com',
+  id: 'claude-trading',
+  name: 'The Claude Trading Setup',
+  offer: 'The Robinhood MCP setup, the agent prompt, and the guardrails',
+  url: 'https://founderos-trading-demo.example.com',
   status: 'live' as const,
   captures: 'email' as const,
-  destination: 'Newsletter · main list',
-  source: 'Short · workflow teardown (comment TEARDOWN)',
+  destination: 'Beehiiv · newsletter',
+  source: 'IG reel · trading agent (comment TRADE)',
   launchedAt: '2026-08-14',
   notes: '',
   origin: 'os' as const,
@@ -45,9 +46,9 @@ const made = (over: Partial<Parameters<FounderDb['leadMagnets']['insert']>[0]> =
 describe('lead magnets created in the OS', () => {
   it('round-trips a runtime row, defaulting origin to os', () => {
     db.leadMagnets.insert(made());
-    const [row] = db.leadMagnets.all().filter((r) => r.id === 'operator-teardown');
-    expect(row.name).toBe('The Operator Teardown');
-    expect(row.url).toBe('https://teardown.example.com');
+    const [row] = db.leadMagnets.all().filter((r) => r.id === 'claude-trading');
+    expect(row.name).toBe('The Claude Trading Setup');
+    expect(row.url).toBe('https://founderos-trading-demo.example.com');
     expect(row.origin).toBe('os');
   });
 
@@ -63,7 +64,7 @@ describe('lead magnets created in the OS', () => {
     db.leadMagnets.insert(made());
     seedDatabase(db); // the destructive step
     const ids = db.leadMagnets.all().map((r) => r.id);
-    expect(ids, 'an OS-created lead magnet must not be deleted by seeding').toContain('operator-teardown');
+    expect(ids, 'an OS-created lead magnet must not be deleted by seeding').toContain('claude-trading');
   });
 
   it('still prunes a seeded row that has left the seed file', () => {

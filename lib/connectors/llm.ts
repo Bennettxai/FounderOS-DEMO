@@ -1,3 +1,4 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 /**
  * LLM connector — backs agent & Conductor chat through the Vercel AI Gateway.
  *
@@ -30,7 +31,12 @@ export type LlmChatRequest = {
   model?: string;
 };
 
-export type LlmChatResult = { text: string; toolCalls: LlmToolCall[] };
+export type LlmChatResult = {
+  text: string;
+  toolCalls: LlmToolCall[];
+  /** Token usage from the gateway, for run cost accounting. Absent on the stub. */
+  usage?: { inputTokens: number; outputTokens: number };
+};
 
 export interface LlmProvider {
   name: string;
@@ -38,11 +44,45 @@ export interface LlmProvider {
 }
 
 const GATEWAY_KEY = 'AI_GATEWAY_API_KEY';
-const DEFAULT_MODEL = process.env.LLM_MODEL ?? 'anthropic/claude-sonnet-5';
+const FALLBACK_MODEL = 'anthropic/claude-sonnet-5';
 
-/** process.env first (Next auto-loads .env.local), then Alex's cred files. */
+/** Read at call time, not module load, so a model set on the box lands without a rebuild. */
+const defaultModel = (): string => process.env.LLM_MODEL ?? FALLBACK_MODEL;
+
+/**
+ * Models to fall back to when the gateway refuses the preferred one. The key is
+ * on the gateway's free tier, which answers every `anthropic/*` model with a
+ * 403 RestrictedModelsError while these open-weight ones return 200 on the same
+ * key, so the board keeps answering while paid credits stay an explicit
+ * upgrade choice. Verified against the live key.
+ */
+export const FREE_TIER_MODELS = ['openai/gpt-oss-20b', 'alibaba/qwen-3-14b'] as const;
+
+/** The preferred model first, then the models that work without credits. */
+export function modelChain(preferred?: string): string[] {
+  const chain = [preferred ?? defaultModel(), ...FREE_TIER_MODELS];
+  return [...new Set(chain)];
+}
+
+/**
+ * Is this a refusal that a different model would survive? A restricted or
+ * unknown model is worth retrying down the chain; a rate limit, a missing key
+ * or a gateway fault is not — retrying those just burns the chain and hides
+ * the real error from the caller.
+ */
+export function isModelUnavailableError(err: unknown): boolean {
+  const e = err as { statusCode?: number; status?: number; message?: unknown } | null;
+  const message = typeof e?.message === 'string' ? e.message.toLowerCase() : '';
+  if (message.includes('api_key') || message.includes('api key')) return false;
+  if (/restrictedmodels|do not have access to this model|upgrade to paid credits/.test(message)) return true;
+  if (/model[^.]{0,20}(not found|not available|unsupported|does not exist)/.test(message)) return true;
+  const code = e?.statusCode ?? e?.status;
+  return (code === 403 || code === 404) && !message.includes('rate limit');
+}
+
+/** process.env first (Next auto-loads .env.local), then the operator's cred files. */
 function resolveGatewayKey(): string | undefined {
-  return resolveCred(GATEWAY_KEY, [CRED_FILES.agentsEnv, CRED_FILES.socialMedia]);
+  return resolveCred(GATEWAY_KEY, [CRED_FILES.brainAgent, CRED_FILES.socialMedia]);
 }
 
 /** Stub trigger: a user message containing `use-tool:<name>` fires that tool. */
@@ -67,12 +107,12 @@ export const stubLlmProvider: LlmProvider = {
   },
 };
 
-export function createGatewayProvider(model: string = DEFAULT_MODEL): LlmProvider {
+export function createGatewayProvider(model?: string): LlmProvider {
   return {
     name: 'gateway',
     async chat(req) {
       // Fail fast with an honest message instead of letting the SDK hang —
-      // and hydrate process.env from Alex's cred files so a key that
+      // and hydrate process.env from the operator's cred files so a key that
       // exists outside .env.local still works.
       const key = resolveGatewayKey();
       if (!key) {
@@ -90,13 +130,31 @@ export function createGatewayProvider(model: string = DEFAULT_MODEL): LlmProvide
         .filter((m) => m.role !== 'tool')
         .map((m) => ({ role: m.role as 'system' | 'user' | 'assistant', content: m.content }));
 
-      const result = await generateText({
-        model: gateway(req.model ?? model),
-        system: req.system,
-        messages,
-        tools: req.tools?.length ? tools : undefined,
-        stopWhen: stepCountIs(6),
-      });
+      // Walk the chain: the preferred model, then the ones the key can use
+      // without credits. Anything that is not a model problem throws straight
+      // out, so a rate limit or a bad key still reads as itself.
+      const attempt = (candidate: string) =>
+        generateText({
+          model: gateway(candidate),
+          system: req.system,
+          messages,
+          tools: req.tools?.length ? tools : undefined,
+          stopWhen: stepCountIs(6),
+        });
+
+      const chain = modelChain(req.model ?? model);
+      let result: Awaited<ReturnType<typeof attempt>> | undefined;
+      let lastError: unknown;
+      for (const candidate of chain) {
+        try {
+          result = await attempt(candidate);
+          break;
+        } catch (err) {
+          lastError = err;
+          if (!isModelUnavailableError(err)) throw err;
+        }
+      }
+      if (!result) throw lastError ?? new Error('no model in the chain answered');
 
       const toolCalls: LlmToolCall[] = [];
       for (const step of result.steps ?? []) {
@@ -110,7 +168,14 @@ export function createGatewayProvider(model: string = DEFAULT_MODEL): LlmProvide
           toolCalls.push({ name: c.toolName, args: c.input, result: hit?.output });
         }
       }
-      return { text: result.text, toolCalls };
+      return {
+        text: result.text,
+        toolCalls,
+        usage: {
+          inputTokens: result.usage?.inputTokens ?? 0,
+          outputTokens: result.usage?.outputTokens ?? 0,
+        },
+      };
     },
   };
 }
@@ -126,6 +191,7 @@ export function chat(req: LlmChatRequest): Promise<LlmChatResult> {
 }
 
 export async function llmStatus(): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('llm', 'LLM Gateway', 'orchestration', 'Claude Sonnet · via AI Gateway');
   const base = { id: 'llm', name: 'LLM (Gateway)', kind: 'orchestration' } as const;
   if (process.env.LLM_PROVIDER === 'stub') {
     return { ...base, state: 'connected', detail: 'stub provider active (tests)' };
@@ -138,5 +204,5 @@ export async function llmStatus(): Promise<ConnectorStatus> {
       detail: 'Set AI_GATEWAY_API_KEY in .env.local to enable agent chat via the Vercel AI Gateway.',
     };
   }
-  return { ...base, state: 'connected', detail: `Vercel AI Gateway · default model ${DEFAULT_MODEL}` };
+  return { ...base, state: 'connected', detail: `Vercel AI Gateway · default model ${defaultModel()}` };
 }

@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
-import path from 'node:path';
 import type { BankSummary } from '@/lib/bank-statements';
+import { resolveDbPath } from '@/lib/paths';
 
 /**
  * Bank statement-summary store — a SEPARATE better-sqlite3 file (data/bank.db,
@@ -8,7 +8,10 @@ import type { BankSummary } from '@/lib/bank-statements';
  * in place. Holds per-business monthly income/outflow, not transactions.
  */
 
-const DEFAULT_PATH = process.env.BANK_DB ?? path.join(process.cwd(), 'data', 'bank.db');
+// Resolved per platform (Railway volume / Vercel /tmp / local data/); BANK_DB
+// overrides. Resolved per CALL, not at import, so a runtime env change (tests,
+// deploys) is honoured.
+const defaultPath = (): string => resolveDbPath('bank.db', process.env.BANK_DB);
 
 export type BankStore = {
   upsert(summary: BankSummary): void;
@@ -16,7 +19,7 @@ export type BankStore = {
   close(): void;
 };
 
-export function openBankStore(file: string = DEFAULT_PATH): BankStore {
+export function openBankStore(file: string = defaultPath()): BankStore {
   const db = new Database(file);
   db.pragma('journal_mode = WAL');
   db.exec(`CREATE TABLE IF NOT EXISTS bank_summaries (

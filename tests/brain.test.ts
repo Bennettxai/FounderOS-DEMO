@@ -6,9 +6,12 @@ afterEach(() => {
 });
 
 describe('G Brain adapter', () => {
-  test('defaults to the real gbrain provider', () => {
+  // The default moved to 'federated' on 2026-08-25: both stores at once,
+  // governed answers first, degrading to gbrain alone wherever the engine is
+  // not running. gbrain stays selectable on its own.
+  test('defaults to the federated brain, which falls back to gbrain', () => {
     const brain = getBrainProvider();
-    expect(brain.name).toBe('gbrain');
+    expect(brain.name).toBe('federated');
   });
 
   test('falls back to stub when BRAIN_PROVIDER=stub', () => {

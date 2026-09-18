@@ -47,7 +47,7 @@ const basicInput = {
 };
 
 describe('GET /api/workflows', () => {
-  test('lists exactly what the workflows table holds', async () => {
+  test('lists exactly what the workflows table holds (the operator seeds its two machines; Slab seeded none)', async () => {
     const body = await (await GET()).json();
     expect(body.workflows.map((w: { id: string }) => w.id)).toEqual(getDb().workflows.all().map((w) => w.id));
   });

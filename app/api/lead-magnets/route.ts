@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * The lead magnet register. GET lists every page we ship; POST adds one from
- * inside the OS (a content pipeline can post here after it deploys a page, and
+ * inside the OS (the Content Gen skill posts here after it deploys a page, and
  * the /content/lead-magnets form posts here by hand).
  *
  * Rows created here are stamped origin 'os' by the repo, so re-seeding the
@@ -28,7 +28,7 @@ const CreateSchema = z.object({
   notes: z.string().max(2000).default(''),
 });
 
-/** "The Operator Teardown" -> "the-operator-teardown" */
+/** "The Claude Trading Setup" -> "the-claude-trading-setup" */
 function slugify(name: string): string {
   return name
     .toLowerCase()

@@ -1,6 +1,6 @@
 /**
- * The agent emblem — the Vantage mark (public/vantage-emblem.png,
- * background keyed out and cropped).
+ * The agent emblem — the real Vantage mark (public/vantage-emblem.png,
+ * processed from the brand asset: background keyed out, cropped).
  *
  * The PNG is used as a CSS mask over a solid color, so `shade` tints the exact
  * brand silhouette to any color — black for the Conductor, each department's

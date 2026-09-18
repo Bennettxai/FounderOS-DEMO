@@ -2,7 +2,8 @@
 
 /**
  * The workflow builder: real CRUD, opened from /workflows' "New workflow"
- * button or a card's edit affordance. An overlay: name + trigger, steps composed one-by-one (title, detail, an
+ * button or a card's edit affordance . A glass overlay, same chrome language as
+ * AgentPanel: name + trigger, steps composed one-by-one (title, detail, an
  * owner picked from the REAL agent roster, tools, an optional automation
  * note, and an optional branch-from + condition), a drafting chat strip
  * that fills the form for review (never auto-saves), Save (POST create /
@@ -63,7 +64,7 @@ function stepsFromWorkflow(workflow: Workflow, agents: { id: string; name: strin
   return workflow.steps.map((s) => ({
     key: keyById.get(s.id) ?? newKey(),
     title: s.title,
-    detail: s.detail ?? '',
+    detail: s.detail,
     ownerAgentId: byName.get(s.owner) ?? '',
     ownerHumanName: s.ownerKind === 'human' ? s.owner : '',
     ownerKind: s.ownerKind,
@@ -278,7 +279,7 @@ export function WorkflowBuilder({
   return (
     <div
       className="agentpanel-backdrop fixed inset-0 z-[100] flex items-center justify-center p-6"
-      style={{ background: 'color-mix(in oklab, var(--bg) 55%, transparent)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+      style={{ background: 'rgba(3, 7, 6, 0.55)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
       onClick={onClose}
       role="presentation"
     >
@@ -293,7 +294,7 @@ export function WorkflowBuilder({
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full border border-os-border bg-os-surface text-os-dim hover:text-os-text"
+          className="pressable absolute right-4 top-4 z-10 grid h-8 w-8 place-items-center rounded-full border border-[color-mix(in oklab, var(--text) 14%, transparent)] bg-black/30 text-os-dim hover:text-os-text"
         >
           <X className="h-4 w-4" />
         </button>
@@ -322,7 +323,7 @@ export function WorkflowBuilder({
                   type="button"
                   onClick={draft}
                   disabled={chatBusy || !chatPrompt.trim()}
-                  className="c-btn shrink-0"
+                  className="pressable c-btn shrink-0"
                 >
                   <Sparkles className="h-[13px] w-[13px]" /> {chatBusy ? 'Drafting…' : 'Draft'}
                 </button>
@@ -361,7 +362,7 @@ export function WorkflowBuilder({
             <section className="mt-6">
               <div className="flex items-center justify-between">
                 <span className="glass-label">Steps</span>
-                <button type="button" onClick={addStep} className="c-btn">
+                <button type="button" onClick={addStep} className="pressable c-btn">
                   <Plus className="h-[12px] w-[12px]" /> Add step
                 </button>
               </div>
@@ -375,7 +376,7 @@ export function WorkflowBuilder({
                           type="button"
                           onClick={() => removeStep(s.key)}
                           aria-label={`Remove step ${i + 1}`}
-                          className="glass-chip grid h-6 w-6 place-items-center text-os-dim hover:text-os-text"
+                          className="pressable glass-chip grid h-6 w-6 place-items-center text-os-dim hover:text-os-text"
                         >
                           <X className="h-3 w-3" strokeWidth={1.8} />
                         </button>
@@ -462,7 +463,7 @@ export function WorkflowBuilder({
                                 key={t}
                                 type="button"
                                 onClick={() => toggleTool(s.key, t)}
-                                className={`rounded-full border px-2 py-[3px] text-[10.5px] ${
+                                className={`pressable rounded-full border px-2 py-[3px] text-[10.5px] ${
                                   on
                                     ? 'border-[var(--accent-line)] bg-[var(--accent-soft)] text-os-accent'
                                     : 'border-os-border text-os-dim hover:text-os-muted'
@@ -555,7 +556,7 @@ export function WorkflowBuilder({
                   type="button"
                   onClick={confirmDelete}
                   disabled={deleting}
-                  className="flex items-center gap-1.5 rounded-sm-t border border-[color-mix(in_oklab,var(--err)_35%,transparent)] bg-[color-mix(in_oklab,var(--err)_9%,transparent)] px-3 py-2 text-[12.5px] text-os-err "
+                  className="pressable flex items-center gap-1.5 rounded-sm-t border border-[color-mix(in_oklab,var(--err)_35%,transparent)] bg-[color-mix(in_oklab,var(--err)_9%,transparent)] px-3 py-2 text-[12.5px] text-os-err "
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   {deleting ? 'Deleting…' : deleteArmed ? 'Really delete? Click again' : 'Delete workflow'}
@@ -563,10 +564,10 @@ export function WorkflowBuilder({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={onClose} className="c-btn">
+              <button type="button" onClick={onClose} className="pressable c-btn">
                 Cancel
               </button>
-              <button type="submit" disabled={busy} className="c-btn c-btn-primary">
+              <button type="submit" disabled={busy} className="pressable c-btn c-btn-primary">
                 {busy ? 'Saving…' : 'Save'}
               </button>
             </div>

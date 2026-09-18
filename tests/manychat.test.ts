@@ -5,13 +5,13 @@ import { parseManyChatPageInfo, manychatStatus, sendManyChatText } from '@/lib/c
 describe('parseManyChatPageInfo', () => {
   it('reads name / username / pro from data', () => {
     expect(
-      parseManyChatPageInfo({ status: 'success', data: { name: 'Alex', username: 'founderos.ai', is_pro: true } }),
-    ).toEqual({ name: 'Alex', username: 'founderos.ai', isPro: true });
+      parseManyChatPageInfo({ status: 'success', data: { name: 'the operator', username: 'vantage.os', is_pro: true } }),
+    ).toEqual({ name: 'the operator', username: 'vantage.os', isPro: true });
   });
 
   it('tolerates a missing username and non-pro accounts', () => {
-    expect(parseManyChatPageInfo({ data: { name: 'Alex' } })).toEqual({
-      name: 'Alex',
+    expect(parseManyChatPageInfo({ data: { name: 'the operator' } })).toEqual({
+      name: 'the operator',
       username: null,
       isPro: false,
     });
@@ -34,10 +34,10 @@ describe('manychatStatus', () => {
 
   it('is connected when getInfo returns a page, showing the handle', async () => {
     const fetchOk = (async () =>
-      ({ ok: true, status: 200, json: async () => ({ data: { name: 'Alex', username: 'founderos.ai', is_pro: true } }) }) as unknown as Response) as typeof fetch;
+      ({ ok: true, status: 200, json: async () => ({ data: { name: 'the operator', username: 'vantage.os', is_pro: true } }) }) as unknown as Response) as typeof fetch;
     const s = await manychatStatus({ MANYCHAT_API_KEY: 'sk-test' }, fetchOk);
     expect(s.state).toBe('connected');
-    expect(s.detail).toMatch(/@founderos\.ai/);
+    expect(s.detail).toMatch(/@vantage\.os/);
   });
 
   it('is error when the key is set but the API rejects it', async () => {

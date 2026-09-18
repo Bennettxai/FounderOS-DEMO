@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
 
 /**
- * Create a lead magnet from inside the OS. Deploy the page wherever, then
- * register it here so the row lives with everything else. A content pipeline
- * can POST to the same route, so a page it ships lands in this table without
- * anyone typing.
+ * Create a lead magnet from inside the OS (the operator). Deploy the
+ * page wherever, then register it here so the row lives with everything else.
+ * The Content Gen skill posts to the same route, so a page it ships lands in
+ * this table without anyone typing.
  */
 export function NewLeadMagnet() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export function NewLeadMagnet() {
     url: '',
     offer: '',
     source: '',
-    destination: 'Newsletter · main list',
+    destination: 'Beehiiv · newsletter',
     captures: 'email',
     status: 'live',
     launchedAt: today,
@@ -73,7 +73,7 @@ export function NewLeadMagnet() {
             setDone(null);
             setOpen(true);
           }}
-          className="flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-surface px-3 py-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-os-accent transition-colors hover:border-os-border-strong"
+          className="pressable flex items-center gap-1.5 rounded-sm-t border border-os-border bg-os-surface px-3 py-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-os-accent hover:border-os-border-strong"
         >
           <Plus className="h-3 w-3" /> New lead magnet
         </button>
@@ -90,14 +90,14 @@ export function NewLeadMagnet() {
     <form onSubmit={submit} className="mb-4 rounded-lg-t border border-os-border bg-os-surface p-4">
       <div className="mb-3 flex items-center">
         <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-os-dim">Register a page</span>
-        <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="ml-auto text-os-dim hover:text-os-text">
+        <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="pressable ml-auto text-os-dim hover:text-os-text">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className={label} htmlFor="lm-name">Name</label>
-          <input id="lm-name" className={field} value={form.name} onChange={set('name')} required placeholder="The Operator Teardown" />
+          <input id="lm-name" className={field} value={form.name} onChange={set('name')} required placeholder="The Claude Trading Setup" />
         </div>
         <div>
           <label className={label} htmlFor="lm-url">Live URL</label>
@@ -105,11 +105,11 @@ export function NewLeadMagnet() {
         </div>
         <div className="sm:col-span-2">
           <label className={label} htmlFor="lm-offer">What they get</label>
-          <input id="lm-offer" className={field} value={form.offer} onChange={set('offer')} placeholder="The workflow pulled apart, step by step" />
+          <input id="lm-offer" className={field} value={form.offer} onChange={set('offer')} placeholder="The setup, the prompt, and the guardrails" />
         </div>
         <div>
           <label className={label} htmlFor="lm-source">Campaign it was built for</label>
-          <input id="lm-source" className={field} value={form.source} onChange={set('source')} placeholder="Short (comment TEARDOWN)" />
+          <input id="lm-source" className={field} value={form.source} onChange={set('source')} placeholder="IG reel (comment TRADE)" />
         </div>
         <div>
           <label className={label} htmlFor="lm-dest">Where leads land</label>
@@ -152,7 +152,7 @@ export function NewLeadMagnet() {
       <button
         type="submit"
         disabled={busy}
-        className="mt-3 rounded-sm-t border border-os-border bg-os-surface2 px-3 py-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-os-accent transition-colors hover:border-os-border-strong disabled:opacity-40"
+        className="pressable mt-3 rounded-sm-t border border-os-border bg-os-surface2 px-3 py-1.5 font-mono text-[10.5px] font-semibold uppercase tracking-widest text-os-accent hover:border-os-border-strong disabled:opacity-40"
       >
         {busy ? 'saving…' : 'add to the register'}
       </button>

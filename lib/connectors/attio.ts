@@ -1,29 +1,70 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import { resolveAttioKey } from '@/lib/creds';
 import { RosterClientSchema, type RosterClient } from '@/lib/schemas';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
-export async function attioStatus(): Promise<ConnectorStatus> {
-  const key = resolveAttioKey();
+/**
+ * Attio's deal query returns 50-100 FULL records with every attribute value,
+ * and it is bimodal: ~500-760ms warm, ~2.6s cold (timed). The old
+ * 4s budget was the tightest in lib/connectors and the host's 09:00 cron kept
+ * crossing it, reporting "Key found but query failed: aborted due to timeout"
+ * on a key that was working fine minutes either side. 8s matches paperclip,
+ * docusign and payments.
+ */
+export const ATTIO_TIMEOUT_MS = 8000;
+
+/** A timeout or a dropped socket, as opposed to an answer we did not like. */
+function isTransient(err: unknown): boolean {
+  const name = err instanceof Error ? err.name : '';
+  return name === 'TimeoutError' || name === 'AbortError' || err instanceof TypeError;
+}
+
+/**
+ * One POST to the deals query, retried once on a transient failure.
+ *
+ * Only transient failures are retried: an HTTP status is an answer, and a 403
+ * from a token missing a scope will still be a 403 the second time. Retrying
+ * it would just double the latency of a run that is going to fail anyway.
+ */
+async function queryDeals(key: string, limit: number): Promise<unknown[]> {
+  let last: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const res = await fetch('https://api.attio.com/v2/objects/deals/records/query', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit }),
+        signal: AbortSignal.timeout(ATTIO_TIMEOUT_MS),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const body = (await res.json()) as { data?: unknown[] };
+      return body.data ?? [];
+    } catch (err) {
+      last = err;
+      if (!isTransient(err)) throw err;
+    }
+  }
+  throw last;
+}
+
+export async function attioStatus(
+  opts: { resolveKey?: () => string | undefined } = {},
+): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('attio', 'Attio', 'crm', 'CRM · 42 deals in pipeline');
+  const key = (opts.resolveKey ?? resolveAttioKey)();
   if (!key) {
     return {
       id: 'attio',
       name: 'Attio (CRM)',
       kind: 'crm',
       state: 'not_configured',
-      detail: 'ATTIO_API_KEY not found in env or ~/.config/mcp.json mcpServers.',
+      detail: 'ATTIO_API_KEY not found in env or ~/.claude.json mcpServers.',
     };
   }
   try {
     // Token is record-read scoped: query records works, list endpoints 403.
-    const res = await fetch('https://api.attio.com/v2/objects/deals/records/query', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: 50 }),
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const body = (await res.json()) as { data?: unknown[] };
-    const deals = body.data?.length ?? 0;
+    const records = await queryDeals(key, 50);
+    const deals = records.length;
     return {
       id: 'attio',
       name: 'Attio (CRM)',
@@ -97,15 +138,7 @@ export async function attioClients(
   const key = (opts.resolveKey ?? resolveAttioKey)();
   if (!key) return { state: 'not_configured', clients: [] };
   try {
-    const res = await fetch('https://api.attio.com/v2/objects/deals/records/query', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ limit: 100 }),
-      signal: AbortSignal.timeout(4000),
-    });
-    if (!res.ok) return { state: 'error', clients: [] };
-    const body = (await res.json()) as { data?: unknown[] };
-    return { state: 'connected', clients: mapAttioDeals(body.data ?? []) };
+    return { state: 'connected', clients: mapAttioDeals(await queryDeals(key, 100)) };
   } catch {
     return { state: 'error', clients: [] };
   }

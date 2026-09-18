@@ -13,7 +13,7 @@ export function PageHeader({
       short bar tucked top-right, instead of sitting compact against the edge. */
   rightWide?: boolean;
 }) {
-  // No descriptions under titles — Alex built it, he knows what it does.
+  // No descriptions under titles — the operator built it and already knows what it does.
   return (
     <header className={`rise mb-6 flex justify-between gap-4 ${rightWide ? 'items-start' : 'items-end'}`}>
       <div className="min-w-0 shrink-0">

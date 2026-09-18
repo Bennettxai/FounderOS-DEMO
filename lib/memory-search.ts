@@ -1,7 +1,7 @@
 import type { MemoryNode } from '@/lib/memory-core';
 
 /**
- * Type-to-find over the open Notes vault: rank label prefix hits above
+ * Type-to-find over the open Obsidian vault: rank label prefix hits above
  * label substrings, above folder hits, above excerpt hits. Deterministic
  * (score, then label, then id), capped so the highlight overlay stays light.
  * Pure — no React, no DOM.

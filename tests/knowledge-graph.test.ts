@@ -53,18 +53,18 @@ const agents: Agent[] = [
   agent({ id: 'data-agent', departmentId: 'dept-tech', name: 'Data Agent', parentId: 'conductor', tools: ['openclaw', 'comms-feed'] }),
   agent({ id: 'sales-agent', departmentId: 'dept-sales', name: 'Sales Agent', tools: ['attio'] }),
 ];
-const people: Person[] = [person('person-marco', 'dept-sales', ['fathom'])];
+const people: Person[] = [person('person-lee', 'dept-sales', ['fathom'])];
 const tasks: SopTask[] = [
   task('sop-conductor', 'dept-tech', 'agent', 'conductor'),
   task('sop-data', 'dept-tech', 'agent', 'data-agent'),
   task('sop-sales', 'dept-sales', 'agent', 'sales-agent'),
-  task('sop-marco', 'dept-sales', 'person', 'person-marco'),
+  task('sop-lee', 'dept-sales', 'person', 'person-lee'),
 ];
 
 const build = () => buildKnowledgeGraph(agents, departments, people, tasks);
 
 describe('buildKnowledgeGraph — dept → task → worker → tools chain', () => {
-  test('a single Alex center node on ring 0, linked to every team (pillar edges)', () => {
+  test('a single the operator center node on ring 0, linked to every team (pillar edges)', () => {
     const { nodes, edges } = build();
     const self = nodes.filter((n) => n.kind === 'self');
     expect(self).toHaveLength(1);
@@ -88,7 +88,7 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
     const taskNodes = nodes.filter((n) => n.kind === 'task');
     expect(taskNodes).toHaveLength(4);
     expect(taskNodes.every((t) => t.ring === 2)).toBe(true);
-    expect(taskNodes.find((t) => t.id === 'task:sop-marco')?.label).toBe('Do sop-marco');
+    expect(taskNodes.find((t) => t.id === 'task:sop-lee')?.label).toBe('Do sop-lee');
   });
 
   test('agents are employee nodes and humans are person nodes, both on ring 3', () => {
@@ -97,7 +97,7 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
     const humans = nodes.filter((n) => n.kind === 'person');
     expect(emps).toHaveLength(3);
     expect(humans).toHaveLength(1);
-    expect(humans[0].id).toBe('person:person-marco');
+    expect(humans[0].id).toBe('person:person-lee');
     expect([...emps, ...humans].every((w) => w.ring === 3)).toBe(true);
   });
 
@@ -114,7 +114,7 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
   test('team→task sop edges, exactly one per task', () => {
     const { edges } = build();
     const sop = edges.filter((e) => e.kind === 'sop');
-    expect(sop).toContainEqual({ source: 'team:dept-sales', target: 'task:sop-marco', kind: 'sop' });
+    expect(sop).toContainEqual({ source: 'team:dept-sales', target: 'task:sop-lee', kind: 'sop' });
     expect(sop).toHaveLength(4);
   });
 
@@ -122,7 +122,7 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
     const { edges } = build();
     const does = edges.filter((e) => e.kind === 'does');
     expect(does).toContainEqual({ source: 'task:sop-conductor', target: 'emp:conductor', kind: 'does' });
-    expect(does).toContainEqual({ source: 'task:sop-marco', target: 'person:person-marco', kind: 'does' });
+    expect(does).toContainEqual({ source: 'task:sop-lee', target: 'person:person-lee', kind: 'does' });
     expect(does).toHaveLength(4);
     // no task fans out to two workers, no worker takes two tasks
     expect(new Set(does.map((e) => e.source)).size).toBe(4);
@@ -146,7 +146,7 @@ describe('buildKnowledgeGraph — dept → task → worker → tools chain', () 
     const { edges } = build();
     const uses = edges.filter((e) => e.kind === 'uses');
     expect(uses).toContainEqual({ source: 'emp:data-agent', target: 'tool:openclaw', kind: 'uses' });
-    expect(uses).toContainEqual({ source: 'person:person-marco', target: 'tool:fathom', kind: 'uses' });
+    expect(uses).toContainEqual({ source: 'person:person-lee', target: 'tool:fathom', kind: 'uses' });
     expect(uses.filter((e) => e.source === 'emp:data-agent')).toHaveLength(2);
   });
 
@@ -245,7 +245,7 @@ describe('graphDirectory — the scrollable everything-index', () => {
       }
     }
     const roster = dir[0].rows.find((r) => r.label === 'Client Roster');
-    expect(roster).toEqual({ id: 'emp:client-roster', label: 'Client Roster', sub: 'Clients' });
+    expect(roster).toEqual({ id: 'emp:client-roster', label: 'Client Roster', sub: 'Clients', deptIds: ['dept-clients'] });
   });
 });
 
@@ -263,5 +263,20 @@ describe('graph department order (AC1)', () => {
 
   test('unknown departments rank after the known ones', () => {
     expect(graphDeptRank('dept-mystery')).toBeGreaterThan(graphDeptRank('dept-comms'));
+  });
+});
+
+
+describe('department exec titles (the pillar IS the head agent)', () => {
+  test('title map covers all six departments', async () => {
+    const { DEPT_EXEC_TITLES } = await import('@/lib/knowledge-graph');
+    expect(DEPT_EXEC_TITLES).toMatchObject({
+      'dept-sales': 'CRO',
+      'dept-marketing-growth': 'CMO',
+      'dept-tech': 'CTO',
+      'dept-finance': 'CFO',
+      'dept-comms': 'CCO',
+      'dept-clients': 'COO',
+    });
   });
 });

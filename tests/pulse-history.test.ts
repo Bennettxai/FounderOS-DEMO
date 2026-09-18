@@ -41,10 +41,9 @@ describe('stateOfWorld — honest attention-first status line', () => {
   const base = {
     activeAgents: 5,
     totalAgents: 8,
-    connected: 6,
-    totalConnectors: 6,
+    connectorsDown: 0,
     inbound: 0,
-    health: 95,
+    health: 92,
     brainConnected: true,
     failedRuns: 0,
   };
@@ -52,7 +51,11 @@ describe('stateOfWorld — honest attention-first status line', () => {
   it('leads with "All nominal" when nothing needs attention', () => {
     const segs = stateOfWorld(base);
     expect(segs[0]).toEqual({ text: 'All nominal', tone: 'ok' });
-    expect(segs.at(-1)).toEqual({ text: '5/8 agents live', tone: 'ok' });
+    // mock 3a states the roster as "N live · N idle" and the brain score at
+    // every health, so the tail is three facts, not one fraction
+    expect(segs).toContainEqual({ text: '5 agents live', tone: 'ok' });
+    expect(segs).toContainEqual({ text: '3 idle', tone: 'dim' });
+    expect(segs).toContainEqual({ text: 'brain 92/100', tone: 'ok' });
   });
 
   it('surfaces failed runs first, in error tone', () => {
@@ -62,7 +65,7 @@ describe('stateOfWorld — honest attention-first status line', () => {
   });
 
   it('reports a degraded brain and down connectors', () => {
-    const segs = stateOfWorld({ ...base, health: 55, connected: 4, totalConnectors: 6 });
+    const segs = stateOfWorld({ ...base, health: 55, connectorsDown: 2 });
     expect(segs).toContainEqual({ text: 'G-Brain degraded 55/100', tone: 'warn' });
     expect(segs).toContainEqual({ text: '2 connectors down', tone: 'warn' });
   });
@@ -78,7 +81,7 @@ describe('stateOfWorld — honest attention-first status line', () => {
   });
 
   it('singularizes one failed run and one connector down', () => {
-    const segs = stateOfWorld({ ...base, failedRuns: 1, connected: 5, totalConnectors: 6 });
+    const segs = stateOfWorld({ ...base, failedRuns: 1, connectorsDown: 1 });
     expect(segs).toContainEqual({ text: '1 run failed', tone: 'err' });
     expect(segs).toContainEqual({ text: '1 connector down', tone: 'warn' });
   });

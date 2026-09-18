@@ -57,6 +57,24 @@ const CONE = 1.0;
 const TOOL_SPACING = 90;
 // fraction of a pillar's half-slice the resting layout gives its agents/tools
 const SECTOR_FILL = 0.84;
+// Closest two nodes in the same depth band may sit before their labels collide.
+const MIN_BAND_GAP = 48;
+
+/**
+ * How far to LIFT alternating nodes when a band cannot spread any wider.
+ *
+ * The task fan is capped by the ≤45° cone, not by the canvas, so a dense
+ * department runs out of horizontal room long before it runs out of width:
+ * Sales went to 9 SOPs when Alex's real closer and two setters landed
+ * and its limbs closed to 39px. Staggering every other limb
+ * upward buys the diagonal distance back, and lifting (never dropping) means
+ * the lean only ever gets gentler, so the 45° cap still holds.
+ */
+export function bandLift(spacing: number): number {
+  const target = MIN_BAND_GAP + 1; // clear the bound rather than land exactly on it
+  if (!Number.isFinite(spacing) || spacing >= target) return 0;
+  return Math.sqrt(target ** 2 - spacing ** 2);
+}
 
 const round2 = (n: number): number => {
   const v = Math.round(n * 100) / 100;
@@ -125,7 +143,7 @@ export type RestLayoutResult = { positions: Map<string, Pt> };
 // the SOP-task ring slots between the teams and the workers — spaced so the
 // outer (tool) ring keeps label headroom on an 880×600 canvas. Scaling by the
 // smaller dimension keeps every ring on-canvas on any aspect ratio.
-// the operator 2026-07-30: nudged the department ring out (90 → 105) for a touch
+// Alex: nudged the department ring out (90 → 105) for a touch
 // more clear water between the pillars and the center brain.
 const RING_FRAC = [0, 105 / 600, 152 / 600, 200 / 600, 248 / 600];
 
@@ -207,7 +225,7 @@ export function treeLayout(input: TreeLayoutInput): TreeLayoutResult {
 
   // The department head rides the trunk between the department and its SOP
   // fan — the dotted hop (dept ⇢ head), then every task limb grows from the
-  // head (the operator, 2026-08-06: dept → head → SOPs, for every pillar).
+  // head (Alex,: dept → head → SOPs, for every pillar).
   if (headId) {
     positions.set(headId, { x: cx, y: (yOf(1) + yOf(2)) / 2, depth: 1.5 });
     branches.push({ source: teamId, target: headId, depth: 2, dashed: true });
@@ -222,13 +240,18 @@ export function treeLayout(input: TreeLayoutInput): TreeLayoutResult {
   const workerY = yOf(3);
   const n = taskIds.length;
   const taskX = new Map<string, number>();
+  const taskLift = new Map<string, number>();
+  const dyLimb = limbSourceY - taskY; // > 0 (head→tasks when the junction exists)
+  const halfSpan = Math.min(W / 2 - margin, dyLimb * CONE);
+  const lift = bandLift(n <= 1 ? Infinity : (2 * halfSpan) / (n - 1));
   taskIds.forEach((id, i) => {
-    const dy = limbSourceY - taskY; // > 0 (head→tasks when the junction exists)
-    const half = Math.min(W / 2 - margin, dy * CONE);
     const t = n <= 1 ? 0 : (i / (n - 1)) * 2 - 1; // -1 … 1
-    const x = clampX(cx + t * half);
+    const x = clampX(cx + t * halfSpan);
+    // every other limb rides higher, so a band too dense to widen still reads
+    const up = i % 2 === 1 ? lift : 0;
     taskX.set(id, x);
-    positions.set(id, { x, y: taskY, depth: 2 });
+    taskLift.set(id, up);
+    positions.set(id, { x, y: taskY - up, depth: 2 });
     branches.push({ source: limbSource, target: id, depth: 2 });
   });
 
@@ -242,7 +265,9 @@ export function treeLayout(input: TreeLayoutInput): TreeLayoutResult {
     const x = taskX.get(taskId) ?? cx;
     workerX.set(w, x);
     workerIds.push(w);
-    positions.set(w, { x, y: workerY, depth: 3 });
+    // the worker carries its task's lift, so the hop stays vertical and the
+    // worker band inherits the same de-crowding
+    positions.set(w, { x, y: workerY - (taskLift.get(taskId) ?? 0), depth: 3 });
     branches.push({ source: taskId, target: w, depth: 3 });
   }
 
@@ -287,7 +312,7 @@ export function treeLayout(input: TreeLayoutInput): TreeLayoutResult {
 export type FocusWheel = { hub: Pt; scale: number; stage: number; squeeze: number };
 
 /**
- * The wheel you turn INTO (the operator, 2026-07-12): while a pillar is focused the
+ * The wheel you turn INTO: while a pillar is focused the
  * background wheel is not a diagram floating mid-canvas — it becomes a huge
  * apparatus whose hub sinks BELOW the bottom edge, enlarged so its pillar ring
  * passes exactly through the focused tree's team band. The focused sector
@@ -299,7 +324,7 @@ export type FocusWheel = { hub: Pt; scale: number; stage: number; squeeze: numbe
  * rigid wheel the neighbors would hang ~60° down the rim (below the canvas),
  * so a step read as "rising from the bottom". Squeezed, the neighbors hold at
  * the canvas SIDES and a turn sweeps laterally along the top arc — the motion
- * the operator asked for: from left and right, not from below.
+ * Alex asked for: from left and right, not from below.
  */
 export function focusWheel(width: number, height: number, ringR: number[]): FocusWheel {
   const hub = { x: width / 2, y: height * 1.3 };
@@ -338,7 +363,7 @@ export function cyclicDeltaF(from: number, to: number, n: number): number {
 }
 
 /**
- * The visible top of the wheel (the operator, 2026-07-12): pillars ride the RIM of
+ * The visible top of the wheel: pillars ride the RIM of
  * a huge wheel whose apex is the stage (the focused tree's team band). Offset
  * is in sectors — 0 at the apex, ±1 at the canvas edges a touch below it,
  * beyond that the rim has left the canvas. Feeding a smoothly-eased float

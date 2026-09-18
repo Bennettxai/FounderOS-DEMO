@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { CaptureInput, CaptureOutcome } from '@/lib/connectors/gbrain';
 
-const DEFAULT_STORE = process.env.GBRAIN_STORE ?? path.join(os.homedir(), 'knowledge', 'brain-store');
+const DEFAULT_STORE = process.env.GBRAIN_STORE ?? path.join(os.homedir(), 'brain-agent', 'brain-store');
 
 export type BrainDumpInput = {
   text: string;

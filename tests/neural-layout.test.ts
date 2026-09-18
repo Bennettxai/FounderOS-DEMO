@@ -24,12 +24,12 @@ const agents: Agent[] = [
   agent({ id: 'data-agent', departmentId: 'dept-tech', name: 'Data Agent', parentId: 'conductor', tools: ['openclaw', 'comms-feed'] }),
   agent({ id: 'sales-agent', departmentId: 'dept-sales', name: 'Sales Agent', tools: ['attio'] }),
 ];
-const people: Person[] = [person('person-marco', 'dept-sales', ['fathom'])];
+const people: Person[] = [person('person-lee', 'dept-sales', ['fathom'])];
 const tasks: SopTask[] = [
   task('sop-conductor', 'dept-tech', 'agent', 'conductor'),
   task('sop-data', 'dept-tech', 'agent', 'data-agent'),
   task('sop-sales', 'dept-sales', 'agent', 'sales-agent'),
-  task('sop-marco', 'dept-sales', 'person', 'person-marco'),
+  task('sop-lee', 'dept-sales', 'person', 'person-lee'),
 ];
 
 const layout = () => neuralLayout(buildKnowledgeGraph(agents, departments, people, tasks));
@@ -39,7 +39,7 @@ describe('neuralLayout — the feedforward view of the same graph', () => {
     const { layers } = layout();
     expect(layers.map((l) => l.kind)).toEqual(['tool', 'worker', 'task', 'team', 'self']);
     expect(layers[0].nodeIds.length).toBe(4); // openclaw, comms-feed, attio, fathom
-    expect(layers[1].nodeIds.length).toBe(4); // 3 agents + Marco
+    expect(layers[1].nodeIds.length).toBe(4); // 3 agents + Lee
     expect(layers[2].nodeIds.length).toBe(4);
     expect(layers[3].nodeIds.length).toBe(2);
     expect(layers[4].nodeIds).toEqual(['self']);

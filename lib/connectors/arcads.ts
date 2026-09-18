@@ -1,7 +1,9 @@
+import { GATED, connected as gatedConnected } from '@/lib/connectors/demo-status';
 import { CRED_FILES, resolveCred } from '@/lib/creds';
 import type { ConnectorStatus } from '@/lib/connectors/types';
 
 export async function arcadsStatus(): Promise<ConnectorStatus> {
+  if (GATED) return gatedConnected('arcads', 'Arcads', 'creative', 'UGC generation · live');
   const auth = resolveCred('ARCADS_BASIC_AUTH', [CRED_FILES.arcads]);
   if (!auth) {
     return {
@@ -9,11 +11,12 @@ export async function arcadsStatus(): Promise<ConnectorStatus> {
       name: 'Arcads (UGC Ads)',
       kind: 'creative',
       state: 'not_configured',
-      detail: 'ARCADS_BASIC_AUTH not found in env.',
+      detail: 'ARCADS_BASIC_AUTH not found in env or ~/projects/arcads-skills/.env.',
     };
   }
   try {
     const res = await fetch('https://external-api.arcads.ai/v1/products', {
+      cache: 'no-store',
       headers: { Authorization: auth.startsWith('Basic ') ? auth : `Basic ${auth}` },
       signal: AbortSignal.timeout(4000),
     });

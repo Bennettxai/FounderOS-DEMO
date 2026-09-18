@@ -7,8 +7,8 @@
  * focus. Switching venture in the hierarchy or life map swaps which crew
  * lights up; the agents themselves keep full visibility of everything.
  *
- * Personal Brand (brand-deals) was retired from this lens — the OS focuses on
- * Vantage (the agency) and Launchpad Cohort (the mentorship).
+ * Personal Brand (brand-deals) was retired from this lens — the OS
+ * focuses on Vantage (the agency) and Launchpad Cohort (the mentorship).
  */
 import type { LifeArea } from '@/lib/life-map';
 import { LIFE_AREAS } from '@/lib/life-map';
@@ -49,7 +49,7 @@ export const VENTURES: Venture[] = [
       sales: ['vantage-sales', 'vantage-paykit', 'sales-agent', 'sales-calls-data'],
       communication: ['comms-agent', 'gmail-worker', 'slack-worker', 'crm-pulse'],
       finances: ['payments-pulse', 'stripe-sales', 'processor-confirmation'],
-      knowledge: [...SHARED_KNOWLEDGE, 'notion-sync'],
+      knowledge: [...SHARED_KNOWLEDGE],
       operations: SHARED_OPS,
     },
   },

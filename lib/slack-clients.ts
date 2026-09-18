@@ -2,12 +2,13 @@
  * Slack, seen through the client roster: one card per CURRENT client showing
  * the real last message, or an honest empty state.
  *
- * The board follows two rules so the public demo stays honest:
+ * Two rules, both load-bearing:
  *
  *  1. Only current clients. The roster is the live Attio DEAL list, which is
- *     mostly cold pipeline ("Contacted" and "Closed Lost" stages). Won and active
- *     work is a client; a lead is not. A lead with a real Slack thread counts
- *     too, because talking in Slack is stronger evidence than a deal stage.
+ *     mostly cold pipeline (Contacted and Closed Lost dominate it). Won and
+ *     active work is a client; a lead is not. A lead with a real Slack thread
+ *     counts too, because talking in Slack is stronger evidence than a deal
+ *     stage.
  *  2. Nothing is invented. Cards used to fabricate a last message, unread
  *     count, heat and a #channel hashed from the client id, badged "demo".
  *     A quiet client now says so.
@@ -54,7 +55,7 @@ function heatFromAge(lastTsMs: number, now: number): SlackClientCard['heat'] {
 
 /**
  * Build one card per client. A card is live when a Slack message's channel or
- * user matches the client name; otherwise it shows an honest empty state.
+ * user matches the client name; otherwise it is a deterministic seeded card.
  * `now` is injected so the result is pure and testable.
  */
 export function slackClientBoard(clients: RosterClient[], messages: SlackMessage[], now: number): SlackClientCard[] {
@@ -132,3 +133,4 @@ export async function gatherSlackClientBoard(): Promise<{ cards: SlackClientCard
 
   return { cards: slackClientBoard(attio.clients, messages, Date.now()), status };
 }
+
