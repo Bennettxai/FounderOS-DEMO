@@ -1,8 +1,8 @@
 {
-  "name": "founder-os",
+  "name": "startup",
   "version": "1.0.0",
   "private": true,
-  "description": "FOUNDER OS — personal operating system and AI agent command center",
+  "description": "AI investment company operating system",
   "scripts": {
     "dev": "next dev -p 4100",
     "build": "next build",

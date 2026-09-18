@@ -24,17 +24,17 @@ const validHalf = (s: string) => SLUG_RE.test(s) && s !== '.' && s !== '..';
 /**
  * Where to read real Claude Code skills from. OPT-IN ONLY: this is a public
  * demo, and defaulting to ~/.claude would make any machine that runs it serve
- * its owner's private skill files over HTTP. Set FOUNDER_OS_SKILLS_DIR to a
+ * its owner's private skill files over HTTP. Set STARTUP_SKILLS_DIR to a
  * directory you are happy to publish; unset, the catalog stays empty and the
  * page falls back to the seeded skills.
  */
 function skillsDir(): string | null {
-  return process.env.FOUNDER_OS_SKILLS_DIR || null;
+  return process.env.STARTUP_SKILLS_DIR || null;
 }
 
 /** Installed-plugin skills. Opt-in for the same reason as skillsDir(). */
 function pluginsDir(): string | null {
-  return process.env.FOUNDER_OS_PLUGINS_DIR || null;
+  return process.env.STARTUP_PLUGINS_DIR || null;
 }
 
 /** plugin name → live installPath, resolved through installed_plugins.json so

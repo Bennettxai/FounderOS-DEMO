@@ -59,11 +59,11 @@ function readEnvFileSafe(filePath: string): Record<string, string> {
  * Next only loads .env.local into process.env at boot; the connect flow needs
  * a paste to take effect immediately. So .env.local is ALSO read fresh at
  * call time, and it outranks process.env (the file is what booted the process,
- * so a fresh read is never staler than boot). FOUNDER_OS_ENV_LOCAL overrides
+ * so a fresh read is never staler than boot). STARTUP_ENV_LOCAL overrides
  * the path for tests. */
 
 export function envLocalPath(): string {
-  return process.env.FOUNDER_OS_ENV_LOCAL ?? path.join(process.cwd(), '.env.local');
+  return process.env.STARTUP_ENV_LOCAL ?? path.join(process.cwd(), '.env.local');
 }
 
 export function readEnvLocal(): Record<string, string> {

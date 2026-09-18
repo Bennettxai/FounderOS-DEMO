@@ -135,7 +135,7 @@ export function ConnectFlow({
           </button>
         ) : (
           <span
-            title="Credentials managed outside Founder OS (canonical machine files)"
+            title="Credentials managed outside the application"
             className="cursor-default rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-os-dim/60"
           >
             Managed

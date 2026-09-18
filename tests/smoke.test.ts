@@ -7,7 +7,7 @@ import path from 'node:path';
 // before any page module is imported. 
 
 beforeAll(() => {
-  process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-smoke-')), 'test.db');
+  process.env.STARTUP_DB = path.join(mkdtempSync(path.join(tmpdir(), 'startup-smoke-')), 'test.db');
 });
 
 type PageEntry = {
@@ -27,7 +27,6 @@ const PAGES: PageEntry[] = [
   { file: 'workflows/page.tsx', load: () => import('@/app/workflows/page') },
   { file: 'org/page.tsx', load: () => import('@/app/org/page'), props: { searchParams: {} } },
   { file: 'brain/page.tsx', load: () => import('@/app/brain/page') },
-  { file: 'finances/page.tsx', load: () => import('@/app/finances/page') },
   { file: 'integrations/page.tsx', load: () => import('@/app/integrations/page') },
   { file: 'analytics/page.tsx', load: () => import('@/app/analytics/page') },
 ];

@@ -20,8 +20,8 @@ export function getDb(): FounderDb {
   }
 
   const dbPath =
-    process.env.FOUNDER_OS_DB ??
-    path.join(process.cwd(), 'data', 'founder-os.db');
+    process.env.STARTUP_DB ??
+    path.join(process.cwd(), 'data', 'startup.db');
 
   if (dbPath !== ':memory:') {
     fs.mkdirSync(path.dirname(dbPath), {

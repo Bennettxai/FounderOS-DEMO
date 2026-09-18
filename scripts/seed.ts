@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { openDb } from '../lib/db';
 import { seedDatabase } from '../lib/seed';
 
-const dbPath = process.env.FOUNDER_OS_DB ?? path.join(process.cwd(), 'data', 'founder-os.db');
+const dbPath = process.env.STARTUP_DB ?? path.join(process.cwd(), 'data', 'startup.db');
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = openDb(dbPath);
 seedDatabase(db);

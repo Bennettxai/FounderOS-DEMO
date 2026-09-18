@@ -73,12 +73,6 @@ export type IntegrationCategory = z.infer<typeof IntegrationCategorySchema>;
 
 
 
-// Persona = one variant of the platform configured for a different kind of
-// operator. Same skeleton as the creator-founder: pillars (departments) → the
-// agents that run them, the connectors they wire, the metrics they track, and
-// how they use the shared Startup Brain.
-
-
 export const AgentRunSchema = z.object({
   id: z.string().min(1),
   agentId: z.string().min(1),
@@ -150,12 +144,6 @@ export const AgentCronSchema = z.object({
 
 
 
-// ── People + SOP tasks — the humans in the process and the written-out jobs ──
-// A person is a human employee on the org graph (distinct from agents). A SOP
-// task is one written-out job owned by exactly ONE worker — an agent or a
-// person, never both, never shared (the "monogamy" rule; enforced by tests).
-
-
 
 // ── Workflows — the machine, mapped as a chain of owned process steps ───────
 // Each step is owned by a human or an agent, costs weekly hours, may leak money
@@ -216,8 +204,6 @@ export const RosterClientSchema = z.object({
   source: z.enum(['attio', 'funnel']),
 });
 
-// ── Funnel — client journeys from first touch to conversion ─────────────────
-// Canonical stages; `nurtured` is optional so a journey renders as 4–5 touches.
 
 
 export type Department = z.infer<typeof DepartmentSchema>;

@@ -55,15 +55,15 @@ describe('extractMcpEnvKey', () => {
 
 describe('env.local as a live credential store (connect flow)', () => {
   let tmp: string;
-  const prevOverride = process.env.FOUNDER_OS_ENV_LOCAL;
+  const prevOverride = process.env.STARTUP_ENV_LOCAL;
 
   beforeEach(() => {
     tmp = path.join(os.tmpdir(), `alex-env-local-${process.pid}-${Math.random().toString(36).slice(2)}`);
-    process.env.FOUNDER_OS_ENV_LOCAL = tmp;
+    process.env.STARTUP_ENV_LOCAL = tmp;
   });
   afterEach(() => {
-    if (prevOverride === undefined) delete process.env.FOUNDER_OS_ENV_LOCAL;
-    else process.env.FOUNDER_OS_ENV_LOCAL = prevOverride;
+    if (prevOverride === undefined) delete process.env.STARTUP_ENV_LOCAL;
+    else process.env.STARTUP_ENV_LOCAL = prevOverride;
     try { fs.unlinkSync(tmp); } catch {}
   });
 

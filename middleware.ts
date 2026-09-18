@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { challengePage, gateDecision, GATE_COOKIE } from '@/lib/access-gate';
 
 /**
- * Whole-app access gate. Active only when FOUNDER_OS_ACCESS_TOKEN is set
- * (production deployments on public URLs); unset keeps dev and the demo
- * completely open. See lib/access-gate.ts for the decision logic + tests.
+ * Whole-app access gate.
+ * Active only when the configured access token is present.
+ * When unset, development remains open.
  */
+
 export function middleware(req: NextRequest) {
   const decision = gateDecision({
-    token: process.env.FOUNDER_OS_ACCESS_TOKEN,
+    token: process.env.STARTUP_ACCESS_TOKEN,
     cookie: req.cookies.get(GATE_COOKIE)?.value ?? null,
     queryToken: req.nextUrl.searchParams.get('token'),
   });

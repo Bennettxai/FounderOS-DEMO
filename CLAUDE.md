@@ -1,146 +1,183 @@
-# FOUNDER OS
+# STARTUP — AI Investment Company
 
-Personal OS / AI agent command center. Live web recreation of the FounderOS
-"Conducting AI" board. Runs on port **4100** (command-center owns 4000).
+AI-operated investment and personal portfolio management company.
+
+Current state: Foundation Mode.
+
+The repository is being rebuilt from FounderOS into the operating system of the investment company.
 
 ## Commands
 
 ```bash
-npm run dev        # dev server → http://localhost:4100
-npm test           # vitest suite (must stay green)
-npm run typecheck  # tsc --noEmit
-npm run seed       # re-seed data/founder-os.db (idempotent)
-npm run build && npm start
-```
+npm run dev
+npm test
+npm run typecheck
+npm run seed
+npm run build
+npm start
 
-## Stack
+On Windows PowerShell use npm.cmd when required.
 
-Next.js 14 App Router (server components) + TypeScript + Tailwind +
-better-sqlite3 (`data/founder-os.db`, WAL, auto-seeded on first touch) +
-Zod + Vitest.
+Current stack
+Next.js 14 App Router
+TypeScript
+Tailwind CSS
+SQLite prototype via better-sqlite3
+Zod
+Vitest
 
-## Architecture: larp-first, real-ready
+SQLite is temporary infrastructure. The planned operational source of truth is PostgreSQL.
 
-This is the load-bearing design rule. v1 looks alive because of rich seeded
-data, but every page and API route reads through the repository layer — never
-query SQLite directly from a page or route:
+Canonical company specification
 
-- `lib/data.ts` — `getDb()` app singleton; seeds on first touch
-- `lib/db.ts` — `openDb()` + repos (`departments`, `agents`, `metrics`, `tools`, …)
-- `lib/seed.ts` — all seeded content lives here
-- `lib/schemas.ts` — Zod schemas validate every row on the way OUT of the DB
+The authoritative company model lives in:
 
-Swapping seeded tables for live sources (Attio, Zernio, OpenClaw, MCP status)
-is a repo-level change. Keep it that way: new data = new repo method + Zod
-schema + seed entry + test.
+company/company.yaml
+company/organization.yaml
+company/governance.yaml
+policies/memory_policy.yaml
 
-## G-Brain — ANSWERED (2026-06-11)
+Application code must not silently contradict these files.
 
-G-Brain = **GBrain v0.41** (`gbrain` CLI on PATH): markdown
-knowledge in `~/knowledge/brain-store/` + Supabase backend ("Second Brain",
-free tier — pauses on idle) + ZeroEntropy embeddings (key in
-`~/.config/knowledge/config.json`). The real provider in `lib/connectors/gbrain.ts`
-shells out to the CLI (`doctor --json --fast`, `query --no-expand`) and falls
-back to local brain-store grep when the database is unreachable. Default
-`BRAIN_PROVIDER=gbrain`; `stub` exists for tests.
+Company structure
 
-## Real connectors & agents (v2)
+Three departments:
 
-Alex's directive: real integrations, not larp. Strict black & white theme
-(UI polish deferred — he'll design it himself once everything is wired).
+Research Investments
+Risk Analysis
+Portfolio Monitoring & Performance
 
-- `lib/connectors/` — 12 connector groups, all returning honest
-  `ConnectorStatus` (never fake "connected"): `email.ts` (4 IMAP slots),
-  `slack.ts`, `payments.ts` (Stripe + registry), `notion.ts`, `gbrain.ts`,
-  `zernio.ts` (key from ~/.config/social/.env — LIVE), `attio.ts` (key reused
-  from ~/.config/mcp.json mcpServers — LIVE), `arcads.ts` (local `.env` —
-  LIVE), `miro.ts` (knowledge/.env.agents — LIVE),
-  `wispr.ts` (local flow.sqlite readonly — LIVE), `obsidian.ts` (vault fs;
-  needs macOS Documents permission), `local-stack.ts` (local service ports
-  + tmux + brew binaries).
-- `lib/creds.ts` — credential resolution: process.env first, then Alex's
-  canonical files at runtime. NEVER copy secret values into this repo.
-- `lib/agents/runtime.ts` + `real.ts` — agent registry; every seeded agent row
-  maps 1:1 to a `RuntimeAgent` with a real `run()` (enforced by seed tests).
-  Runs persist to `agent_runs`. `POST /api/agents/[id]/run`.
-- `/integrations` is the live Connections board (`GET /api/connections`).
-- Credentials go in `.env.local` (gitignored) — see `.env.example`. NEVER
-  commit keys; never copy keys from `~/knowledge/.env.agents` into the repo.
+Total planned workforce: 19 AI agents.
 
-## Views
+The human CEO retains final authority.
 
-`/` operator console (pulse row, connections strip, agent list, compact
-G-Brain core) · `/comms` unified feed · `/social` Zernio growth dashboard ·
-`/agents` roster with Run buttons + last-run state · `/org` hierarchy board
-(operator → Conductor super agent → 5 pillars: Sales, Marketing/Growth, TECH,
-Finances, Communications → worker pills; broadcast composer; markup frozen —
-do not restructure) · `/brain` G-Brain knowledge core (signature `BrainViz`
-rings + live `gbrain ›` query card + doctor warnings, with the original
-capture / life-map / pipeline / graph / query-path sections kept underneath) ·
-`/roadmap` phases + quarters · `/analytics` real connector numbers ·
-`/funnel` living client-journey flow (Vantage + Launchpad Cohort: stage
-columns left→right, one node per client, 4–5 touch markers per path; seeded
-dummy, real-ready for Trakyo organic + Meta Ads MCP paid attribution) ·
-`/reference` reference model · `/integrations` live connections board. Chrome:
-fixed `Sidebar` (Operate/System groups) + sticky `Topbar` (breadcrumb + ⌘K) +
-`CommandPalette` (⌘K, digit-key view jumps). API routes mirror these under
-`app/api/*` — note `GET /api/brain?q=` runs a hybrid search; bare `GET` returns
-provider status.
+No agent may autonomously:
 
-## Cohort invite (demo growth surface)
+buy or sell assets
+deposit or withdraw funds
+modify or cancel broker orders
+obtain unrestricted brokerage credentials
 
-Copy + URL live once in `lib/cohort.ts` (`COHORT_URL`, `COHORT_CTA`,
-`COHORT_STORAGE_KEY`) so the two placements can't drift:
+Agents may research, analyse, propose, review and monitor.
 
-- `CohortBanner` — static footer CTA, rendered in `app/layout.tsx` right after
-  `{children}`, so it is the last thing on **every** view. No client JS.
-- `CohortModal` — first-run welcome pop-up, home screen only, once per browser
-  (`shouldShowCohortModal`; dismissal persists to localStorage). Mounted beside
-  `ConductorPanel` in the layout; it gates itself on `usePathname()`.
+Foundation Mode
 
-Contract lives in `tests/cohort.test.ts`.
+The application currently seeds only:
 
-## Conventions
+3 departments
+19 planned agents
 
-- TDD: failing test first, then implementation. Tests live in `tests/`,
-  one file per module; use `FOUNDER_OS_DB=:memory:` pattern (see `tests/db.test.ts`).
-- Zod-validate anything that crosses the DB or API boundary.
-- THEME: **Monolith Signal (`mono`) is the default** (2026-07-12,
-  `DEFAULT_THEME` in `lib/theme.ts`; bare `:root` in `app/globals.css` carries
-  the mono tokens). "Terminal" (`dark`) — the phosphor-green command deck on
-  near-black — stays as a pickable colorway. Tokens live in
-  `tailwind.config.ts` (`os.*` colors) AND as raw CSS vars in
-  `app/globals.css` (the brain viz SVG + `color-mix` effects need `var()`
-  access; keep the two in sync). Terminal tokens: `bg #050807`, `surface
-  #0a0f0c`, `border #18211b` / `border-strong #243029`, `text #e4efe6` /
-  `muted #8fa295` / `dim #54665b`, `accent #3df08c` (phosphor green), honest
-  status colors `ok`/`warn #ffc53d`/`err #ff6259`. G-Brain viz uses its own
-  independent violet/cyan/green palette (`--brain-1/2/3`). Lettering (Monolith pass,
-  2026-07-10): JetBrains Mono everywhere — `font-sans` and `font-mono` both
-  resolve to `--font-mono`; Space Grotesk is retired. Page titles 25px/700
-  uppercase tracking 0.06em (`PageHeader`), eyebrows 9.5px/0.32em with a `//`
-  prefix, section labels 10px/700/0.26em. Square corners (radius tokens are
-  0), square LED status dots (blink, no pulse ring), no emblem hover-spin,
-  hairline borders, no shadows on cards, 48px grid texture on the canvas
-  (mono theme flattens it). The `mono` theme is **Monolith Signal**: bare
-  black `#0a0a0a`, white accent, `--hairline #1c1c1c`, and color means
-  status only (`ok #2fd36f`/`warn #ffb000`/`err #ff2d3f`). Shared primitives in `components/terminal.tsx`
-  (`Dot`, `Badge`, `Label`, `SectionHead`, `Kbd`, `Spark`). `/org` keeps its
-  existing markup — it inherits the tokens through Tailwind classes only.
-- Env vars: `FOUNDER_OS_DB`, `BRAIN_PROVIDER`, `GBRAIN_BIN`, `GBRAIN_STORE`,
-  plus connector creds in `.env.local`.
-- Heavy interaction-driven visualizations load via `next/dynamic`
-  (`ssr: false`) behind dimension-matched skeletons (see
-  `BrainGraphView`/`AudienceConsistencyLazy`; contract in
-  `tests/code-splitting.test.ts`). Use `next/image` for any future raster
-  images — every current visual is SVG/canvas, so nothing needed a retrofit.
-- Future: migrate hosting to a dedicated host; Supabase stays managed.
+No fabricated operational history, workflows, tasks, skills, market history or company performance data should be seeded.
 
-## Multi-agent etiquette
+Empty operational datasets are valid.
 
-Multiple Claude Code sessions work on this repo concurrently:
+Control Plane
 
-- Commit small checkpoints often (`git log --oneline` to see where others are).
-- Run `npm test && npm run typecheck` before claiming anything done.
-- Don't kill the dev server on 4100 — another session may be using it.
-- Leave handoff notes in `docs/` if you stop mid-feature.
+The planned Company Control Plane is deterministic infrastructure responsible for:
+
+state transitions
+permissions
+approvals
+scheduling
+routing constraints
+retries and timeouts
+audit history
+
+Core rule:
+
+Agents propose actions. The Control Plane determines whether those actions are technically permitted.
+
+Startup Brain
+
+The future institutional memory system is called Startup Brain.
+
+Cognee is the planned memory engine.
+
+Startup Brain stores institutional experience and knowledge, including:
+
+facts used
+interpretations
+assumptions
+theses
+decisions
+outcomes
+lessons
+errors and corrections
+process knowledge
+source and tool reliability
+validated SOP knowledge
+
+Raw historical market price series do not belong in Startup Brain.
+
+Market data should be retrieved from external providers when needed.
+
+No legacy FounderOS G-Brain memory is part of the new company.
+
+Internet and external research
+
+Agents are expected to use external information when required.
+
+Startup Brain is not their only source of information.
+
+Agents may use:
+
+public web research
+market data providers
+filings
+economic data
+specialist research
+external opinions and analysis
+
+External information must be evaluated rather than accepted automatically.
+
+Data architecture
+
+Current prototype:
+
+SQLite
+
+Planned production architecture:
+
+PostgreSQL — operational source of truth
+Cognee — institutional memory
+MinIO / S3 — large artifacts
+Langfuse + OpenTelemetry — observability
+Repository conventions
+Pages and routes access operational data through repository abstractions.
+Validate structured boundaries with Zod.
+Do not fabricate production data to make the UI look populated.
+Keep tests and type checking green.
+Prefer small coherent changes.
+Preserve reusable infrastructure where it fits the new company.
+Remove FounderOS-specific business logic rather than adapting tests to preserve it.
+Git workflow
+
+Primary development branch:
+
+foundation/company-spec-v1
+
+Before a checkpoint:
+
+npm run typecheck
+npm test
+
+Do not push changes without explicit human approval.
+
+Current product surfaces
+/
+/agents
+/tasks
+/skills
+/org
+/brain
+/workflows
+/integrations
+/analytics
+
+Legacy FounderOS product surfaces should not be reintroduced.
+
+
+Poi salva con:
+
+```text
+Ctrl + S

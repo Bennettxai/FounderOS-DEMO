@@ -45,7 +45,6 @@ describe('INTEGRATIONS catalog', () => {
     // spot-check a few expected wirings
     expect(ids.has('slack')).toBe(true);
     expect(ids.has('notion')).toBe(true);
-    expect(ids.has('payments')).toBe(true);
   });
 });
 
@@ -53,7 +52,6 @@ describe('connectionCatalog — merges live connector state onto the catalog', (
   const statuses: ConnectorStatus[] = [
     { id: 'slack', name: 'Slack', kind: 'slack', state: 'connected', detail: 'ok' },
     { id: 'notion', name: 'Notion', kind: 'notion', state: 'not_configured', detail: 'no key' },
-    { id: 'payments', name: 'Payments', kind: 'payments', state: 'error', detail: 'bad key' },
   ];
 
   test('a connected connector marks its catalog entry connected', () => {

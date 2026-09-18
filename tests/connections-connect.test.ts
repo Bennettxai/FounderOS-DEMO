@@ -9,15 +9,15 @@ import { readEnvLocal } from '@/lib/creds';
  *  Alex's canonical machine files, never into the repo. */
 describe('POST /api/connections/connect', () => {
   let tmp: string;
-  const prevOverride = process.env.FOUNDER_OS_ENV_LOCAL;
+  const prevOverride = process.env.STARTUP_ENV_LOCAL;
 
   beforeEach(() => {
     tmp = path.join(os.tmpdir(), `alex-connect-${process.pid}-${Math.random().toString(36).slice(2)}`);
-    process.env.FOUNDER_OS_ENV_LOCAL = tmp;
+    process.env.STARTUP_ENV_LOCAL = tmp;
   });
   afterEach(() => {
-    if (prevOverride === undefined) delete process.env.FOUNDER_OS_ENV_LOCAL;
-    else process.env.FOUNDER_OS_ENV_LOCAL = prevOverride;
+    if (prevOverride === undefined) delete process.env.STARTUP_ENV_LOCAL;
+    else process.env.STARTUP_ENV_LOCAL = prevOverride;
     try { fs.unlinkSync(tmp); } catch {}
   });
 

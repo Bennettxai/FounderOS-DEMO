@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { imapClientOptions, parseInboxConfigs } from '@/lib/connectors/email';
-import { configuredProcessors } from '@/lib/connectors/payments';
 import { metaAdsStatus } from '@/lib/connectors/meta-ads';
 import { ghlStatus } from '@/lib/connectors/ghl';
 
@@ -109,27 +108,3 @@ describe('ghlStatus', () => {
   });
 });
 
-describe('configuredProcessors', () => {
-  test('reports all processors unconfigured with an empty env', () => {
-    const procs = configuredProcessors({});
-    expect(procs.length).toBeGreaterThanOrEqual(3);
-    expect(procs.every((p) => !p.configured)).toBe(true);
-  });
-
-  test('detects Stripe when STRIPE_SECRET_KEY is set', () => {
-    const procs = configuredProcessors({ STRIPE_SECRET_KEY: 'sk_test_123' });
-    const stripe = procs.find((p) => p.id === 'stripe');
-    expect(stripe?.configured).toBe(true);
-  });
-
-  test('detects PayPal only when both client id and secret are set', () => {
-    expect(
-      configuredProcessors({ PAYPAL_CLIENT_ID: 'cid' }).find((p) => p.id === 'paypal')?.configured,
-    ).toBe(false);
-    expect(
-      configuredProcessors({ PAYPAL_CLIENT_ID: 'cid', PAYPAL_CLIENT_SECRET: 'sec' }).find(
-        (p) => p.id === 'paypal',
-      )?.configured,
-    ).toBe(true);
-  });
-});

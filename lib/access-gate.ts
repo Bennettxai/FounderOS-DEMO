@@ -1,14 +1,13 @@
 /**
- * Production access gate, pure logic (middleware.ts is the thin edge wrapper).
+ * Production access gate, pure logic.
+ * middleware.ts is the thin edge wrapper.
  *
- * Deployed FounderOS instances live on public URLs (Railway hands out
- * *.up.railway.app). Set FOUNDER_OS_ACCESS_TOKEN and every request must
- * present the token once (?token=… or the challenge form); a cookie remembers
- * the browser after that. Leave it unset and the gate stays open — local dev
- * and the read-only demo deployment are unaffected.
+ * When an access token is configured, every request must present it once.
+ * A cookie remembers the authenticated browser afterwards.
+ * When no token is configured, the gate stays open.
  */
 
-export const GATE_COOKIE = 'founder_os_access';
+export const GATE_COOKIE = 'startup_access';
 
 export type GateDecision =
   | { kind: 'open' } // no token configured — gate disabled
@@ -37,7 +36,7 @@ export function challengePage(): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>FounderOS · Private</title>
+<title>Startup · Private</title>
 <style>
   body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
          background:#0a0a0a; color:#f5f5f5; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -54,8 +53,8 @@ export function challengePage(): string {
 </head>
 <body>
   <div class="card">
-    <div class="mark"><b>F</b>OUNDER OS</div>
-    <p>This OS is private. Enter your access token.</p>
+    <div class="mark">STARTUP</div>
+    <p>This application is private. Enter your access token.</p>
     <form method="GET" action="/">
       <input name="token" type="password" placeholder="access token" autofocus>
       <button type="submit">Unlock</button>

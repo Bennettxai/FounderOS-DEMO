@@ -4,7 +4,6 @@ export type ConnectorKind =
   | 'email'
   | 'calendar'
   | 'slack'
-  | 'payments'
   | 'notion'
   | 'brain'
   | 'social'

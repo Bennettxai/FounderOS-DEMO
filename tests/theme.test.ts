@@ -9,7 +9,7 @@ describe('theme registry', () => {
     expect(THEMES[0]).toBe(DEFAULT_THEME);
     expect(THEMES).toEqual(['mono', 'mono-light', 'dark', 'light', 'midnight', 'ember']);
     expect(new Set(THEMES).size).toBe(THEMES.length);
-    expect(THEME_STORAGE_KEY).toBe('alex-theme');
+    expect(THEME_STORAGE_KEY).toBe('startup-theme');
   });
 
   test('every theme carries picker metadata: name, blurb, 3 swatch colors', () => {
@@ -66,10 +66,11 @@ describe('theme registry', () => {
   });
 });
 
-describe('Daylight (mono-light) G-Brain blue skin', () => {
+describe('Daylight (mono-light) theme', () => {
   test('steel-azure accent on a cool blue-white canvas', () => {
-    // 2026-08-20: Daylight re-anchored to the inverted G-Brain graph palette
-    // (invert(#E07B39) ≈ #1F84C6), replacing the old neutral slate accent.
+    
+    // Daylight uses a steel-blue accent on a cool light canvas.
+
     expect(THEME_META['mono-light'].swatch).toEqual(['#f2f6f9', '#1f84c6', '#16222c']);
     const css = readFileSync(join(process.cwd(), 'app/globals.css'), 'utf8');
     const block = css.match(/:root\[data-theme='mono-light'\] \{[^}]+\}/)?.[0] ?? '';

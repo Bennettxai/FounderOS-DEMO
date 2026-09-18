@@ -16,9 +16,9 @@ import { seedDatabase } from '../lib/seed';
  */
 
 const dbPath =
-  process.env.FOUNDER_OS_DB ??
-  path.join(process.cwd(), 'data', 'founder-os.db');
-
+  process.env.STARTUP_DB ??
+  path.join(process.cwd(), 'data', 'startup.db');
+  
 if (dbPath === ':memory:') {
   throw new Error('Refusing to reset an in-memory database.');
 }

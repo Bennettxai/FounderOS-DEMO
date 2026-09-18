@@ -38,7 +38,7 @@ describe('recentActivity', () => {
 
 describe('GET /api/agents/activity', () => {
   beforeAll(() => {
-    process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-activity-')), 'test.db');
+    process.env.STARTUP_DB = path.join(mkdtempSync(path.join(tmpdir(), 'startup-activity-')), 'test.db');
   });
 
   test('returns an events array', async () => {

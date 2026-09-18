@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 beforeAll(() => {
-  process.env.FOUNDER_OS_DB = path.join(mkdtempSync(path.join(tmpdir(), 'founder-os-apismoke-')), 'test.db');
+  process.env.STARTUP_DB = path.join(mkdtempSync(path.join(tmpdir(), 'startup-apismoke-')), 'test.db');
 });
 
 type RouteEntry = {
