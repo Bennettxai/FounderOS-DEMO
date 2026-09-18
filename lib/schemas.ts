@@ -3,7 +3,6 @@ import { z } from 'zod';
 export const AgentStatusSchema = z.enum(['active', 'idle', 'training', 'planned']);
 export const AgentTierSchema = z.enum(['lead', 'specialist', 'worker']);
 export const ToolStatusSchema = z.enum(['connected', 'available', 'planned']);
-export const RoadmapStatusSchema = z.enum(['done', 'now', 'next', 'later']);
 
 export const DepartmentSchema = z.object({
   id: z.string().min(1),
@@ -72,37 +71,12 @@ export const IntegrationSchema = z.object({
 export type Integration = z.infer<typeof IntegrationSchema>;
 export type IntegrationCategory = z.infer<typeof IntegrationCategorySchema>;
 
-export const RoadmapItemSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  quarter: z.string().regex(/^\d{4}-Q[1-4]$/, 'quarter must look like 2026-Q2'),
-  status: RoadmapStatusSchema,
-  departmentId: z.string().nullable(),
-  description: z.string(),
-});
 
-export const MetricSchema = z.object({
-  id: z.string().min(1),
-  key: z.string().min(1),
-  label: z.string().min(1),
-  value: z.number(),
-  unit: z.string(),
-  delta: z.number(),
-  period: z.string(),
-});
-
-export const DomainSchema = z.object({
-  id: z.string().min(1),
-  number: z.number().int(),
-  title: z.string().min(1),
-  color: z.string().min(1),
-  items: z.array(z.string()),
-});
 
 // Persona = one variant of the platform configured for a different kind of
 // operator. Same skeleton as the creator-founder: pillars (departments) → the
 // agents that run them, the connectors they wire, the metrics they track, and
-// how they use the shared G-Brain.
+// how they use the shared Startup Brain.
 
 
 export const AgentRunSchema = z.object({
@@ -205,12 +179,6 @@ export const BrainGraphSchema = z.object({
   }),
 });
 
-export const PhaseSchema = z.object({
-  id: z.string().min(1),
-  number: z.number().int(),
-  title: z.string().min(1),
-  items: z.array(z.string()),
-});
 
 export const LifeMapNodeSchema = z.object({
   id: z.string().min(1),
@@ -328,11 +296,6 @@ export type Department = z.infer<typeof DepartmentSchema>;
 export type Agent = z.infer<typeof AgentSchema>;
 export type AgentStatus = z.infer<typeof AgentStatusSchema>;
 export type Tool = z.infer<typeof ToolSchema>;
-export type RoadmapItem = z.infer<typeof RoadmapItemSchema>;
-export type RoadmapStatus = z.infer<typeof RoadmapStatusSchema>;
-export type Metric = z.infer<typeof MetricSchema>;
-export type Domain = z.infer<typeof DomainSchema>;
-export type Phase = z.infer<typeof PhaseSchema>;
 export type BrainOverview = z.infer<typeof BrainOverviewSchema>;
 export type AgentTier = z.infer<typeof AgentTierSchema>;
 export type Broadcast = z.infer<typeof BroadcastSchema>;

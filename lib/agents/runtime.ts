@@ -13,7 +13,7 @@ export type RuntimeAgent = {
   run(): Promise<AgentRunResult>;
   /**
    * Optional conversational entry point used by broadcasts. Agents that can
-   * actually act on a message (e.g. the data agent querying G-Brain)
+   * actually act on a message (e.g. an agent querying institutional memory)
    * implement this; everyone else falls back to run() and replies with live
    * status. A future OpenClaw/Claude Code binding plugs in here.
    */

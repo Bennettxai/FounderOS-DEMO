@@ -5,7 +5,7 @@ const COMMANDS: Command[] = [
   { id: 'nav-home', label: 'Home', keywords: 'dashboard today overview', href: '/' },
   { id: 'nav-agents', label: 'Agents', keywords: 'runtime run real', href: '/agents' },
   { id: 'nav-connections', label: 'Connections', keywords: 'integrations tools status', href: '/integrations' },
-  { id: 'tool-gbrain', label: 'G-Brain', keywords: 'knowledge brain search supabase zeroentropy', href: '/integrations' },
+  { id: 'nav-brain', label: 'Startup Brain', keywords: 'memory knowledge experience decisions lessons', href: '/brain' },
   { id: 'agent-inbox-triage', label: 'Inbox Triage', keywords: 'email imap unread', href: '/agents' },
 ];
 
@@ -25,12 +25,12 @@ describe('filterCommands', () => {
   });
 
   test('ranks label prefix matches above keyword matches', () => {
-    const hits = filterCommands(COMMANDS, 'g');
-    expect(hits[0].id).toBe('tool-gbrain');
+    const hits = filterCommands(COMMANDS, 'startup');
+    expect(hits[0].id).toBe('nav-brain');
   });
 
   test('matches all terms of a multi-word query', () => {
-    expect(filterCommands(COMMANDS, 'brain search').map((c) => c.id)).toEqual(['tool-gbrain']);
+    expect(filterCommands(COMMANDS, 'brain memory').map((c) => c.id)).toEqual(['nav-brain']);
     expect(filterCommands(COMMANDS, 'brain zzz')).toEqual([]);
   });
 });

@@ -19,7 +19,7 @@ export const THEME_META: Record<Theme, { name: string; blurb: string; swatch: [s
   midnight: { name: 'Midnight', blurb: 'deep navy, signal blue', swatch: ['#070d1f', '#5ec9f8', '#e8ecf9'] },
   ember: { name: 'Ember', blurb: 'coal dark, vault orange', swatch: ['#0c0806', '#e35c35', '#f2e9e2'] },
   mono: { name: 'Monolith', blurb: 'white on black, color = status only', swatch: ['#0a0a0a', '#f2f2f2', '#2fd36f'] },
-  'mono-light': { name: 'Daylight', blurb: 'G-Brain blue on cool white', swatch: ['#f2f6f9', '#1f84c6', '#16222c'] },
+  'mono-light': { name: 'Daylight', blurb: 'steel blue on cool white', swatch: ['#f2f6f9', '#1f84c6', '#16222c'] },
 };
 
 export const THEME_STORAGE_KEY = 'alex-theme';

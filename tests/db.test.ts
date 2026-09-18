@@ -13,10 +13,6 @@ describe('openDb', () => {
     expect(db.departments.all()).toEqual([]);
     expect(db.agents.all()).toEqual([]);
     expect(db.tools.all()).toEqual([]);
-    expect(db.roadmap.all()).toEqual([]);
-    expect(db.metrics.all()).toEqual([]);
-    expect(db.domains.all()).toEqual([]);
-    expect(db.phases.all()).toEqual([]);
   });
 
   test('round-trips an agent including its tools array', () => {
@@ -100,16 +96,4 @@ describe('openDb', () => {
     expect(db.departments.all().map((d) => d.id)).toEqual(['first', 'second']);
   });
 
-  test('round-trips a business reference model domain with items array', () => {
-    db = openDb(':memory:');
-    const domain = {
-      id: 'brm-9',
-      number: 9,
-      title: 'Legal',
-      color: '#fbbf24',
-      items: ['Contracts', 'Compliance'],
-    };
-    db.domains.insert(domain);
-    expect(db.domains.all()).toEqual([domain]);
-  });
 });

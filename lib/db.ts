@@ -9,10 +9,6 @@ import {
   BroadcastReplySchema,
   BroadcastSchema,
   DepartmentSchema,
-  DomainSchema,
-  MetricSchema,
-  PhaseSchema,
-  RoadmapItemSchema,
   WorkflowSchema,
   SkillSchema,
   ToolSchema,
@@ -24,10 +20,6 @@ import {
   type Broadcast,
   type BroadcastReply,
   type Department,
-  type Domain,
-  type Metric,
-  type Phase,
-  type RoadmapItem,
   type Workflow,
   type Skill,
   type Tool,
@@ -61,37 +53,7 @@ CREATE TABLE IF NOT EXISTS tools (
   color TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT ''
 );
-CREATE TABLE IF NOT EXISTS roadmap_items (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  quarter TEXT NOT NULL,
-  status TEXT NOT NULL,
-  department_id TEXT,
-  description TEXT NOT NULL DEFAULT ''
-);
-CREATE TABLE IF NOT EXISTS metrics (
-  id TEXT PRIMARY KEY,
-  key TEXT NOT NULL UNIQUE,
-  label TEXT NOT NULL,
-  value REAL NOT NULL,
-  unit TEXT NOT NULL DEFAULT '',
-  delta REAL NOT NULL DEFAULT 0,
-  period TEXT NOT NULL DEFAULT ''
-);
-CREATE TABLE IF NOT EXISTS domains (
-  id TEXT PRIMARY KEY,
-  number INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  color TEXT NOT NULL,
-  items TEXT NOT NULL DEFAULT '[]'
-);
 
-CREATE TABLE IF NOT EXISTS phases (
-  id TEXT PRIMARY KEY,
-  number INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  items TEXT NOT NULL DEFAULT '[]'
-);
 CREATE TABLE IF NOT EXISTS agent_runs (
   id TEXT PRIMARY KEY,
   agent_id TEXT NOT NULL,
@@ -130,7 +92,7 @@ CREATE TABLE IF NOT EXISTS agent_crons (
   created_at TEXT NOT NULL
 );
 
-);
+
 CREATE TABLE IF NOT EXISTS broadcast_replies (
   id TEXT PRIMARY KEY,
   broadcast_id TEXT NOT NULL REFERENCES broadcasts(id),
@@ -277,79 +239,7 @@ export function openDb(path: string) {
     },
   };
 
-  const roadmap = {
-    all(): RoadmapItem[] {
-      return db
-        .prepare('SELECT * FROM roadmap_items ORDER BY quarter, title')
-        .all()
-        .map((r: any) =>
-          RoadmapItemSchema.parse({
-            id: r.id,
-            title: r.title,
-            quarter: r.quarter,
-            status: r.status,
-            departmentId: r.department_id,
-            description: r.description,
-          }),
-        );
-    },
-    insert(item: RoadmapItem): void {
-      db.prepare(
-        'INSERT OR REPLACE INTO roadmap_items (id, title, quarter, status, department_id, description) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(item.id, item.title, item.quarter, item.status, item.departmentId, item.description);
-    },
-  };
 
-  const metrics = {
-    all(): Metric[] {
-      return db
-        .prepare('SELECT * FROM metrics ORDER BY label')
-        .all()
-        .map((r) => MetricSchema.parse(r));
-    },
-    insert(m: Metric): void {
-      db.prepare(
-        'INSERT OR REPLACE INTO metrics (id, key, label, value, unit, delta, period) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).run(m.id, m.key, m.label, m.value, m.unit, m.delta, m.period);
-    },
-  };
-
-  const domains = {
-    all(): Domain[] {
-      return db
-        .prepare('SELECT * FROM domains ORDER BY number')
-        .all()
-        .map((r: any) => DomainSchema.parse({ ...r, items: JSON.parse(r.items) }));
-    },
-    insert(d: Domain): void {
-      db.prepare('INSERT OR REPLACE INTO domains (id, number, title, color, items) VALUES (?, ?, ?, ?, ?)').run(
-        d.id,
-        d.number,
-        d.title,
-        d.color,
-        JSON.stringify(d.items),
-      );
-    },
-  };
-
-  
-
-  const phases = {
-    all(): Phase[] {
-      return db
-        .prepare('SELECT * FROM phases ORDER BY number')
-        .all()
-        .map((r: any) => PhaseSchema.parse({ ...r, items: JSON.parse(r.items) }));
-    },
-    insert(p: Phase): void {
-      db.prepare('INSERT OR REPLACE INTO phases (id, number, title, items) VALUES (?, ?, ?, ?)').run(
-        p.id,
-        p.number,
-        p.title,
-        JSON.stringify(p.items),
-      );
-    },
-  };
 
   const rowToRun = (r: any): AgentRun =>
     AgentRunSchema.parse({
@@ -577,10 +467,6 @@ export function openDb(path: string) {
     departments,
     agents,
     tools,
-    roadmap,
-    metrics,
-    domains,
-    phases,
     agentRuns,
     agentMessages,
     agentTasks,

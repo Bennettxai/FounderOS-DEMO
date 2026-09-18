@@ -28,7 +28,6 @@ export const KEY_SLOTS: KeySlot[] = [
   { envVar: 'SQUARE_ACCESS_TOKEN', label: 'Square access token', group: 'Payments' },
   { envVar: 'WHOP_API_KEY', label: 'Whop API key', group: 'Payments' },
   { envVar: 'NOTION_API_KEY', label: 'Notion integration secret', group: 'Notion' },
-  { envVar: 'GBRAIN_STORE', label: 'Brain-store path override', group: 'G-Brain' },
 ];
 
 export function maskSecret(value: string): string {

@@ -11,5 +11,4 @@ console.log(`Seeded ${dbPath}`);
 console.log(`  departments: ${db.departments.all().length}`);
 console.log(`  agents:      ${db.agents.all().length}`);
 console.log(`  tools:       ${db.tools.all().length}`);
-console.log(`  roadmap:     ${db.roadmap.all().length}`);
 db.close();

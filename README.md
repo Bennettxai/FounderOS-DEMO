@@ -162,7 +162,6 @@ lib/
   schemas.ts         Zod schemas (validate every DB/API boundary)
   connectors/        20+ honest-status integrations
   agents/            agent registry plus runtimes
-  knowledge-graph.ts, memory-core.ts   brain graph plus memory model
 scripts/             seed plus doc-generation scripts
 tests/               vitest suite (one file per module)
 ```

@@ -5,9 +5,7 @@ import { describe, expect, test } from 'vitest';
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
 
 /**
- * Branding (Alex, 2026-07-13): the sidebar reads FOUNDER OS with the OS
- * ring mark from his Founder OS assets — the mark only, the wordmark rides
- * the mark; no raster emblem in the app chrome.
+ * Startup shell branding.
  */
 describe('OS mark branding', () => {
   test('the mark is the ring with an UPRIGHT letter-S seam in brand red', () => {
@@ -22,7 +20,9 @@ describe('OS mark branding', () => {
   test('the sidebar brands with the mark, no raster emblem', () => {
     const sidebar = read('components/Sidebar.tsx');
     expect(sidebar).toContain('OsMark');
-    expect(sidebar).toContain('FOUNDER OS');
+    expect(sidebar).toContain('STARTUP');
+    expect(sidebar).toContain('Investment Company');
+    expect(sidebar).not.toContain('FOUNDER OS');
     expect(sidebar).not.toMatch(/emblem|\.png/i);
     // the mark renders no text at all — the logo is the only lockup element
     expect(read('components/OsMark.tsx')).not.toMatch(/<text/);

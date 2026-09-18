@@ -2,10 +2,6 @@ import { describe, expect, test } from 'vitest';
 import {
   AgentSchema,
   DepartmentSchema,
-  DomainSchema,
-  MetricSchema,
-  PhaseSchema,
-  RoadmapItemSchema,
   ToolSchema,
 } from '@/lib/schemas';
 
@@ -69,32 +65,7 @@ describe('DepartmentSchema', () => {
   });
 });
 
-describe('RoadmapItemSchema', () => {
-  test('accepts a valid roadmap item with null department', () => {
-    const item = {
-      id: 'rm-1',
-      title: 'Ship FOUNDER OS v1',
-      quarter: '2026-Q2',
-      status: 'now',
-      departmentId: null,
-      description: 'Live web app on port 4100.',
-    };
-    expect(RoadmapItemSchema.parse(item)).toEqual(item);
-  });
 
-  test('rejects a malformed quarter', () => {
-    expect(() =>
-      RoadmapItemSchema.parse({
-        id: 'rm-2',
-        title: 'X',
-        quarter: 'Q2 2026',
-        status: 'next',
-        departmentId: null,
-        description: '',
-      }),
-    ).toThrow();
-  });
-});
 
 describe('ToolSchema', () => {
   test('rejects an unknown integration status', () => {
@@ -111,42 +82,4 @@ describe('ToolSchema', () => {
   });
 });
 
-describe('MetricSchema', () => {
-  test('accepts a valid metric', () => {
-    const metric = {
-      id: 'metric-mrr',
-      key: 'mrr',
-      label: 'Monthly Recurring Revenue',
-      value: 18400,
-      unit: 'usd',
-      delta: 12.5,
-      period: '30d',
-    };
-    expect(MetricSchema.parse(metric)).toEqual(metric);
-  });
-});
 
-describe('DomainSchema', () => {
-  test('accepts a business reference model domain with items', () => {
-    const domain = {
-      id: 'brm-1',
-      number: 1,
-      title: 'Company Leadership',
-      color: '#8b5cf6',
-      items: ['Vision & strategy', 'Quarterly planning', 'Decision log'],
-    };
-    expect(DomainSchema.parse(domain)).toEqual(domain);
-  });
-});
-
-describe('PhaseSchema', () => {
-  test('accepts a high-level functionality phase', () => {
-    const phase = {
-      id: 'phase-1',
-      number: 1,
-      title: 'Foundation',
-      items: ['Agent org chart', 'Seeded data layer'],
-    };
-    expect(PhaseSchema.parse(phase)).toEqual(phase);
-  });
-});
