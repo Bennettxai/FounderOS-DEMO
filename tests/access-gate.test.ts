@@ -62,3 +62,31 @@ describe('middleware wiring', () => {
     expect(src).toMatch(/matcher/);
   });
 });
+
+/**
+ * The gate is opt-in, so the docs are the only thing standing between a
+ * first-time deployer and a public URL with live keys behind it (issue #2).
+ * If the deploy steps stop naming the token, the gate may as well not exist.
+ */
+describe('deploy docs name the gate', () => {
+  const readme = readFileSync(join(process.cwd(), 'README.md'), 'utf8');
+  const envExample = readFileSync(join(process.cwd(), '.env.example'), 'utf8');
+
+  test('the Railway steps require FOUNDER_OS_ACCESS_TOKEN', () => {
+    const start = readme.indexOf('## Deploying to Railway');
+    expect(start).toBeGreaterThan(-1);
+    const next = readme.indexOf('\n## ', start + 1);
+    const railway = readme.slice(start, next === -1 ? undefined : next);
+    expect(railway).toContain('FOUNDER_OS_ACCESS_TOKEN');
+  });
+
+  test('README has an Access control section saying unset means open', () => {
+    expect(readme).toContain('## Access control');
+    const section = readme.slice(readme.indexOf('## Access control'));
+    expect(section.toLowerCase()).toContain('unset means open');
+  });
+
+  test('.env.example lists the token so it is discoverable', () => {
+    expect(envExample).toMatch(/^FOUNDER_OS_ACCESS_TOKEN=/m);
+  });
+});

@@ -216,10 +216,41 @@ so they never touch the seeded dev DB.
 1. Create a Railway project and point it at this repo.
 2. Set the build command to `npm run build` and the start command to `npm start`
    (the app serves on the `PORT` Railway provides).
-3. Add a database service and any connector credentials as environment variables
+3. **Set `FOUNDER_OS_ACCESS_TOKEN` before adding any credentials.** Railway
+   serves the app on a public `*.up.railway.app` URL, and with the token unset
+   every page and API route is open to anyone who finds it. See
+   [Access control](#access-control).
+4. Add a database service and any connector credentials as environment variables
    in the Railway dashboard.
-4. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
+5. Deploy. The knowledge services (G-Brain and Optimal Engine) run as companion
    services and are referenced by URL from the app's environment.
+6. Open the deployed URL in a private window and confirm you get the token
+   prompt, not the dashboard.
+
+---
+
+## Access control
+
+Founder OS is a single-operator app: it has no user accounts and **no
+authentication of its own**. On your laptop that is fine. On a public URL it
+means anyone who finds the domain can read connector status, send replies as
+you through `/api/comms/reply`, and run any agent through
+`/api/agents/[id]/run`.
+
+The access gate closes that. Set one environment variable on the host:
+
+```bash
+FOUNDER_OS_ACCESS_TOKEN=$(openssl rand -hex 32)
+```
+
+With it set, `middleware.ts` challenges every page and API route. Enter the
+token once (the prompt, or `https://your-app/?token=…`) and an `httpOnly` cookie
+remembers that browser for 30 days. Rotating the token signs every browser out.
+
+The gate is opt-in. **Unset means open**, which keeps local dev and the
+read-only public demo working with no setup, so a deployment that holds real
+credentials must set it. The decision logic lives in `lib/access-gate.ts`, with
+its contract in `tests/access-gate.test.ts`.
 
 ---
 
